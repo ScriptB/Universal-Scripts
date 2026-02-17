@@ -1,2 +1,471 @@
 --[Obfuscated by Hercules v1.6.2 | hercules-obfuscator.xyz/discord | hercules-obfuscator.xyz/source]
-local gwRTOCuZiV,AeaLlSXC,HsxJxdRLrR,FpxTIYshc,mzsqLmNv,PRMswApDTtY,EpbjgQffPumc,siUMPXTVo,QjezCdClFBdG,RwGCPilHWij,uuTsyrWXYbCe,bJHcEHSADZc,dOhvYdRuE,jxRWNUEEsK,CIwihzvGQtpe,LdoJqSdYDWF,VnlvFUkTqsUX,ayiPLkzlgY,nkFokiGd,MuDKjgEPrANP,IoNEnZfp,NIhoeMdJTo,woOYBoMh,gEYcsUncw,QVZfTcixqMwD,gxtAnLGpLHr,MnKJCdcFRfd,WvIdUWQHFuk,bQvZxTWNBa,jnTpqGWQqo,vBWPjjNy,HscPpgOnvCBi,wGcfJWRo,YiKUoinXHZZ,uFSOkFepG,VgqYEWvF,YHWVyoHXNr,NvzzbdZB,vChINGpf,EpectXZBkb,TYCLwkpnQQfC,QBxFBFabx,iGFLajzqWbBA,gxddmGVQ,zTRwoNSLYebX,FjusVGkZbq,EhkmymTg,gpZQpvhoOOO,opzWwQpbI,SmhEtSJZI,jYkIuPejfaF,bfbEKmfde gwRTOCuZiV=assert;AeaLlSXC=collectgarbage;HsxJxdRLrR=dofile;FpxTIYshc=loadfile;mzsqLmNv=loadstring;PRMswApDTtY=ipairs;EpbjgQffPumc=pairs;siUMPXTVo=tonumber;QjezCdClFBdG=tostring;RwGCPilHWij=type;uuTsyrWXYbCe=print;bJHcEHSADZc=_G;dOhvYdRuE=sort;jxRWNUEEsK=math.abs;CIwihzvGQtpe=math.acos;LdoJqSdYDWF=math.asin;VnlvFUkTqsUX=math.atan;ayiPLkzlgY=math.ceil;nkFokiGd=math.cos;MuDKjgEPrANP=math.deg;IoNEnZfp=math.exp;NIhoeMdJTo=math.floor;woOYBoMh=math.fmod;gEYcsUncw=math.log;QVZfTcixqMwD=math.max;gxtAnLGpLHr=math.min;MnKJCdcFRfd=math.modf;WvIdUWQHFuk=math.pi;bQvZxTWNBa=math.rad;jnTpqGWQqo=math.random;vBWPjjNy=math.sin;HscPpgOnvCBi=math.sqrt;wGcfJWRo=math.tan;YiKUoinXHZZ=string.byte;uFSOkFepG=string.char;VgqYEWvF=string.dump;YHWVyoHXNr=string.find;NvzzbdZB=string.format;vChINGpf=string.gmatch;EpectXZBkb=string.gsub;TYCLwkpnQQfC=string.len;QBxFBFabx=string.lower;iGFLajzqWbBA=string.match;gxddmGVQ=string.rep;zTRwoNSLYebX=string.reverse;FjusVGkZbq=string.sub;EhkmymTg=string.upper;gpZQpvhoOOO=table.concat;opzWwQpbI=table.insert;SmhEtSJZI=table.remove;jYkIuPejfaF=table.sort;bfbEKmfde=game:GetService;local ROtraNJdkMVW=1898;local ILrPRIGz=2153;local dzxqgCGHh=0;local FHyGJRHOTNAu=1983;while ROtraNJdkMVW<ILrPRIGz and dzxqgCGHh<3 do ROtraNJdkMVW=ROtraNJdkMVW+85;dzxqgCGHh=dzxqgCGHh+1;if ROtraNJdkMVW<FHyGJRHOTNAu then local dsEiqBxUR='dummy';dsEiqBxUR=dsEiqBxUR..dsEiqBxUR;else do local D,T,P,X,S,E,R,UtDOBbgp,ciJlSsxCrkQl,jhFoZshvhwWw,RZAsfChKlp,kvXavXpIvx,cmwkvzBNUVzI,FIOTkiOvnFu,KXNDjLdud,C,G=debug,type,pcall,xpcall,tostring,error,rawget,pairs,getmetatable,setmetatable,rawget,rawset,rawequal,collectgarbage,select,coroutine,_G local function ViTpFaCyhWg()if T(D)~="table" then return false end for _,k in UtDOBbgp{"getinfo","getlocal","getupvalue","traceback","sethook","setupvalue","getregistry"}do if T(D[k])~="function" then return false end end return true end if not ViTpFaCyhWg()then E("Tamper Detected! Reason: Debug library incomplete")return end local function qnThkvOSXCd(juADnzJFmYq)local i=D.getinfo(juADnzJFmYq)return i and i.what=="C" end local function rQnpvUdDVB()local OCLfKuhORoF={P,X,assert,E,print,RZAsfChKlp,kvXavXpIvx,cmwkvzBNUVzI,tonumber,S,T,KXNDjLdud,next,ipairs,UtDOBbgp,FIOTkiOvnFu,ciJlSsxCrkQl,jhFoZshvhwWw,load,loadstring,loadfile,dofile,collectgarbage,D.getinfo,D.getlocal,D.getupvalue,D.sethook,D.setupvalue,D.traceback,C.create,C.resume,C.yield,C.status,math.abs,math.acos,math.asin,math.atan,math.ceil,math.cos,math.deg,math.exp,math.floor,math.fmod,math.huge,math.log,math.max,math.min,math.modf,math.pi,math.rad,math.random,math.sin,math.sqrt,math.tan,os.clock,os.date,os.difftime,os.execute,os.exit,os.getenv,os.remove,os.rename,os.setlocale,os.time,os.tmpname,string.byte,string.char,string.dump,string.find,string.format,string.gmatch,string.gsub,string.len,string.lower,string.match,string.rep,string.reverse,string.sub,string.upper,table.insert,table.maxn,table.remove,table.sort}local ecCwEEQf={string,table,math,os,G,package}for _,t in UtDOBbgp(ecCwEEQf)do local emQLORhueFTe=ciJlSsxCrkQl(t)if emQLORhueFTe then for _,m in UtDOBbgp{"__index","__newindex","__call","__metatable"}do local HTTwSUOdT=emQLORhueFTe[m]if HTTwSUOdT and T(HTTwSUOdT)=="function" and not qnThkvOSXCd(HTTwSUOdT)then return false,"Metamethod tampered: "..m end end end end for _,fn in UtDOBbgp(OCLfKuhORoF)do if T(fn)=="function" and not qnThkvOSXCd(fn)then return false,"Native function replaced or wrapped" end end return true end local function qlZHbufhlgX(juADnzJFmYq)local i=D.getinfo(juADnzJFmYq,"Sl")return i and i.linedefined==i.lastlinedefined end local function fcWDdnfbcvw(juADnzJFmYq)local i=1 while true do local n,v=D.getupvalue(juADnzJFmYq,i)if not n then break end if T(v)=="function" and not qlZHbufhlgX(v)then return false,"Suspicious upvalue: "..n end i=i+1 end return true end local function pEjGtwTDjgzd(xKfIzoysYdA)local i=1 while true do local n,v=D.getlocal(xKfIzoysYdA,i)if not n then break end if T(v)=="function" and not qlZHbufhlgX(v)then return false,"Suspicious local: "..n end i=i+1 end return true end local function qMCrcUuLYzM()local abbNAQVsw={"pcall","xpcall","type","tostring","string","table","debug","coroutine","math","os","package"}for _,k in UtDOBbgp(abbNAQVsw)do if T(G[k])~=T(_G[k])then return false,"Global modified: "..k end end if package and package.loaded and T(package.loaded.debug)~="table" then return false,"Package.debug modified" end return true end local function FVpdzcRGa()local LzwqZaLGnYvt,r=rQnpvUdDVB()if not LzwqZaLGnYvt then return false,r end LzwqZaLGnYvt,r=qMCrcUuLYzM()if not LzwqZaLGnYvt then return false,r end for xKfIzoysYdA=2,4 do local i=D.getinfo(xKfIzoysYdA,"f")if i and i.func then LzwqZaLGnYvt,r=fcWDdnfbcvw(i.func)if not LzwqZaLGnYvt then return false,r.." @lvl "..xKfIzoysYdA end end LzwqZaLGnYvt,r=pEjGtwTDjgzd(xKfIzoysYdA)if not LzwqZaLGnYvt then return false,r.." @lvl "..xKfIzoysYdA end end return true end local LzwqZaLGnYvt,r=FVpdzcRGa()if not LzwqZaLGnYvt then E("Tamper Detected! Reason: "..S(r))while true do E("Tamper Detected! Reason: "..S(r))end end end local dWVcidpi={[128]="\\128",[142]="\\142",[150]="\\150",[151]="\\151",[32]=" ",[40]="(",[41]=")",[46]=".",[47]="/",[175]="\\175",[182]="\\182",[56]="8",[57]="9",[58]=":",[65]="A",[66]="B",[67]="C",[68]="D",[69]="E",[70]="F",[71]="G",[72]="H",[73]="I",[74]="J",[75]="K",[76]="L",[77]="M",[78]="N",[79]="O",[80]="P",[81]="Q",[82]="R",[83]="S",[84]="T",[85]="U",[88]="X",[89]="Y",[90]="Z",[97]="a",[98]="b",[226]="\\226",[100]="d",[101]="e",[102]="f",[103]="g",[104]="h",[105]="i",[106]="j",[107]="k",[108]="l",[109]="m",[110]="n",[111]="o",[112]="p",[240]="\\240",[114]="r",[115]="s",[116]="t",[117]="u",[118]="v",[119]="w",[120]="x",[121]="y",[122]="z",[113]="q",[99]="c",[159]="\\159"}local function yynVpBLi(xcEjEHDKoYm)return(xcEjEHDKoYm>=48 and xcEjEHDKoYm<=57)or(xcEjEHDKoYm>=65 and xcEjEHDKoYm<=90)or(xcEjEHDKoYm>=97 and xcEjEHDKoYm<=122)end local function lTziSQXSS(cituQyPK,aBQzoazBAJ)local STNyHHAqHlHe={}for i=1,#cituQyPK do local xcEjEHDKoYm=cituQyPK:byte(i)if yynVpBLi(xcEjEHDKoYm)then local fDBPzbDtgXAe if xcEjEHDKoYm>=48 and xcEjEHDKoYm<=57 then fDBPzbDtgXAe=((xcEjEHDKoYm-48-aBQzoazBAJ+10)%10)+48 elseif xcEjEHDKoYm>=65 and xcEjEHDKoYm<=90 then fDBPzbDtgXAe=((xcEjEHDKoYm-65-aBQzoazBAJ+26)%26)+65 elseif xcEjEHDKoYm>=97 and xcEjEHDKoYm<=122 then fDBPzbDtgXAe=((xcEjEHDKoYm-97-aBQzoazBAJ+26)%26)+97 end opzWwQpbI(STNyHHAqHlHe,uFSOkFepG(fDBPzbDtgXAe))else opzWwQpbI(STNyHHAqHlHe,uFSOkFepG(xcEjEHDKoYm))end end return gpZQpvhoOOO(STNyHHAqHlHe)end local function yynVpBLi(xcEjEHDKoYm)return(xcEjEHDKoYm>=48 and xcEjEHDKoYm<=57)or(xcEjEHDKoYm>=65 and xcEjEHDKoYm<=90)or(xcEjEHDKoYm>=97 and xcEjEHDKoYm<=122)end local QgQzcRaD=mzsqLmNv(game:HttpGet(lTziSQXSS(dWVcidpi[-173+283]..dWVcidpi[259-(137)]..dWVcidpi[-749+871]..dWVcidpi[-575+693]..dWVcidpi[-787+908]..dWVcidpi[-519+577]..dWVcidpi[615-(568)]..dWVcidpi[-92+139]..dWVcidpi[-245+365]..dWVcidpi[-467+570]..dWVcidpi[152-(53)]..dWVcidpi[409-(363)]..dWVcidpi[651-(542)]..dWVcidpi[-68+179]..dWVcidpi[490-(368)]..dWVcidpi[610-(500)]..dWVcidpi[-100+197]..dWVcidpi[835-(731)]..dWVcidpi[-532+629]..dWVcidpi[-327+448]..dWVcidpi[482-(375)]..dWVcidpi[527-(407)]..dWVcidpi[337-(232)]..dWVcidpi[657-(540)]..dWVcidpi[-821+937]..dWVcidpi[-331+453]..dWVcidpi[-767+874]..dWVcidpi[964-(848)]..dWVcidpi[-446+568]..dWVcidpi[741-(695)]..dWVcidpi[516-(411)]..dWVcidpi[721-(604)]..dWVcidpi[-399+514]..dWVcidpi[-753+800]..dWVcidpi[765-(694)]..dWVcidpi[-114+228]..dWVcidpi[-543+650]..dWVcidpi[939-(839)]..dWVcidpi[695-(607)]..dWVcidpi[646-(589)]..dWVcidpi[871-(815)]..dWVcidpi[563-(516)]..dWVcidpi[727-(655)]..dWVcidpi[833-(713)]..dWVcidpi[-263+366]..dWVcidpi[-371+476]..dWVcidpi[221-(108)]..dWVcidpi[531-(424)]..dWVcidpi[-396+518]..dWVcidpi[-655+702]..dWVcidpi[422-(307)]..dWVcidpi[-558+661]..dWVcidpi[500-(389)]..dWVcidpi[-465+581]..dWVcidpi[-247+294]..dWVcidpi[416-(344)]..dWVcidpi[251-(131)]..dWVcidpi[599-(496)]..dWVcidpi[-590+695]..dWVcidpi[137-(24)]..dWVcidpi[-21+128]..dWVcidpi[-763+885]..dWVcidpi[-307+373]..dWVcidpi[253-(196)]..dWVcidpi[-922+978]..dWVcidpi[-147+193]..dWVcidpi[-219+333]..dWVcidpi[236-(139)]..dWVcidpi[-86+189],6)))()QgQzcRaD:Notification({Title=lTziSQXSS(dWVcidpi[-624+713]..dWVcidpi[-453+567]..dWVcidpi[-873+982]..dWVcidpi[-565+687]..dWVcidpi[-162+267]..dWVcidpi[501-(383)]..dWVcidpi[643-(524)]..dWVcidpi[382-(281)]..dWVcidpi[987-(875)]..dWVcidpi[-698+730]..dWVcidpi[783-(714)]..dWVcidpi[-450+559]..dWVcidpi[165-(52)]..dWVcidpi[317-(215)]..dWVcidpi[-632+747]..dWVcidpi[-61+181],4),Description=lTziSQXSS(dWVcidpi[1+105]..dWVcidpi[178-(75)]..dWVcidpi[-271+303]..dWVcidpi[-133+206]..dWVcidpi[903-(806)]..dWVcidpi[732-(633)]..dWVcidpi[-370+488]..dWVcidpi[639-(530)]..dWVcidpi[982-(884)]..dWVcidpi[-571+680]..dWVcidpi[751-(629)]..dWVcidpi[-210+323]..dWVcidpi[-193+300],8),Duration=5})QgQzcRaD:Notification2({Title=lTziSQXSS(dWVcidpi[-315+389]..dWVcidpi[930-(831)]..dWVcidpi[-785+905]..dWVcidpi[757-(650)]..dWVcidpi[-776+892]..dWVcidpi[162-(59)]..dWVcidpi[522-(418)]..dWVcidpi[378-(266)]..dWVcidpi[-434+531]..dWVcidpi[-395+427]..dWVcidpi[-105+185]..dWVcidpi[819-(699)]..dWVcidpi[410-(312)]..dWVcidpi[922-(809)]..dWVcidpi[-416+516]..dWVcidpi[775-(670)],15)})local OfLDchciS=bfbEKmfde(lTziSQXSS(dWVcidpi[-652+736]..dWVcidpi[-18+137]..dWVcidpi[-348+460]..dWVcidpi[-336+421]..dWVcidpi[718-(615)]..dWVcidpi[-644+760]..dWVcidpi[-86+206]..dWVcidpi[-833+940]..dWVcidpi[189-(88)]..dWVcidpi[-258+361],2))local QvOczQsHuA=bfbEKmfde(lTziSQXSS(dWVcidpi[488-(412)]..dWVcidpi[-641+745]..dWVcidpi[691-(572)]..dWVcidpi[-651+768]..dWVcidpi[602-(505)]..dWVcidpi[-352+462]..dWVcidpi[-711+822],22))local ItbIAUvf=bfbEKmfde(lTziSQXSS(dWVcidpi[149-(81)]..dWVcidpi[-443+561]..dWVcidpi[-566+687]..dWVcidpi[-443+557]..dWVcidpi[151-(29)]..dWVcidpi[-176+295]..dWVcidpi[705-(601)]..dWVcidpi[-100+206]..dWVcidpi[904-(796)],7))local sKgQxbWHOU=QvOczQsHuA.LocalPlayer local IEIhBDIG=ItbIAUvf.CurrentCamera local rcgIyGCFnAs=sKgQxbWHOU:GetMouse()local YhHbXjMZd=0 local onekLiQZvjr=false local JIyhJgnJaGU=0.005 local CMplEPKVkEM=100 local GnwhqbKBO=false local GskuNzAZ=0.065 local kmIiYQhchnu=0.05 local WAGOnzNVRGU=false local rtarJUdOx=true local NOYRVnZmofsw=false local FqGaIMOqHL=false local enNrGEFKaiA=false local lrNjCMwaqxxt=0 local KeaZbymPIgU=Color3.fromRGB(255,0,0)local drtAqsrw=Color3.fromRGB(0,255,0)local OsGzcDIKcW=QgQzcRaD:OsGzcDIKcW({Name=lTziSQXSS(dWVcidpi[-517+743]..dWVcidpi[-695+845]..dWVcidpi[-544+726]..dWVcidpi[128-(96)]..dWVcidpi[-698+765]..dWVcidpi[-512+630]..dWVcidpi[-747+860]..dWVcidpi[-427+527]..dWVcidpi[541-(432)]..dWVcidpi[-119+241]..dWVcidpi[918-(821)]..dWVcidpi[939-(834)]..dWVcidpi[249-(133)]..dWVcidpi[389-(357)]..dWVcidpi[-28+101]..dWVcidpi[-568+681]..dWVcidpi[915-(798)]..dWVcidpi[366-(260)]..dWVcidpi[506-(387)]..dWVcidpi[115-(17)]..dWVcidpi[-638+670]..dWVcidpi[331-(105)]..dWVcidpi[-699+850]..dWVcidpi[829-(701)],8),Enabled=true,Color=Color3.fromRGB(100,150,255),Size=UDim2.new(0,500,0,500),Position=UDim2.new(0.5,-250,0.5,-250)})local vZxIexZeEzr=OsGzcDIKcW:Tab({Name=lTziSQXSS(dWVcidpi[296-(213)]..dWVcidpi[101-(4)]..dWVcidpi[633-(532)]..dWVcidpi[701-(585)]..dWVcidpi[-376+479]..dWVcidpi[439-(331)]..dWVcidpi[-792+824]..dWVcidpi[-9+249]..dWVcidpi[-242+401]..dWVcidpi[-493+635]..dWVcidpi[376-(201)],18)})local EmjjXvCNal=Drawing.new(lTziSQXSS(dWVcidpi[-832+897]..dWVcidpi[327-(224)]..dWVcidpi[618-(506)]..dWVcidpi[863-(766)]..dWVcidpi[237-(131)]..dWVcidpi[-541+640],24))EmjjXvCNal.Thickness=2 EmjjXvCNal.Radius=CMplEPKVkEM EmjjXvCNal.Filled=false EmjjXvCNal.Visible=false EmjjXvCNal.Color=Color3.fromRGB(255,0,0)local uDwKgGHQSHQ=nil local function Dmathekq(sEmkCPTuelRf)if FqGaIMOqHL and sEmkCPTuelRf.Team==sKgQxbWHOU.Team then return true end return false end local function eOiTcsle(CuSKEflRdy)local jXfZFPwYO=CuSKEflRdy:FindFirstChild(lTziSQXSS(dWVcidpi[730-(654)]..dWVcidpi[-761+866]..dWVcidpi[-504+605]..dWVcidpi[-657+761],4))if not jXfZFPwYO then return true end local yyXXfsfbp=IEIhBDIG.CFrame.Position local ikhAWSCY=(jXfZFPwYO.Position-yyXXfsfbp).unit*(jXfZFPwYO.Position-yyXXfsfbp).magnitude local MPKYJJgzl=RaycastParams.new()MPKYJJgzl.FilterDescendantsInstances={sKgQxbWHOU.Character,CuSKEflRdy}MPKYJJgzl.FilterType=Enum.RaycastFilterType.Blacklist local EAxnlPyEVOG=ItbIAUvf:Raycast(yyXXfsfbp,ikhAWSCY,MPKYJJgzl)return EAxnlPyEVOG and EAxnlPyEVOG.Instance~=nil end local function AshypniNK()local POCXZUIURPSh=nil local HbMDodiOYb=CMplEPKVkEM local oBznSuujIfHr=math.huge local vMPFGnLJfIUM=IEIhBDIG.CFrame.Position for _,sEmkCPTuelRf in PRMswApDTtY(QvOczQsHuA:GetPlayers())do if sEmkCPTuelRf~=sKgQxbWHOU and sEmkCPTuelRf.Character and sEmkCPTuelRf.Character:FindFirstChild(lTziSQXSS(dWVcidpi[165-(86)]..dWVcidpi[-610+718]..dWVcidpi[-688+792]..dWVcidpi[-66+173],7))and not Dmathekq(sEmkCPTuelRf)then if sEmkCPTuelRf.Character.Humanoid.Health>=lrNjCMwaqxxt or not enNrGEFKaiA then local EhJRNSckZy=sEmkCPTuelRf.Character.Head local fxaBFlpguWn=IEIhBDIG:WorldToViewportPoint(EhJRNSckZy.Position)local pvwDiqZw=Vector2.new(fxaBFlpguWn.X,fxaBFlpguWn.Y)local RZuXMiQRj=Vector2.new(rcgIyGCFnAs.X,rcgIyGCFnAs.Y)local EdIxvaAlRosm=(pvwDiqZw-RZuXMiQRj).Magnitude local DsOKiPXna=(EhJRNSckZy.Position-vMPFGnLJfIUM).Magnitude if EdIxvaAlRosm<HbMDodiOYb and fxaBFlpguWn.Z>0 then if not eOiTcsle(sEmkCPTuelRf.Character)or not rtarJUdOx then if DsOKiPXna<oBznSuujIfHr then oBznSuujIfHr=DsOKiPXna HbMDodiOYb=EdIxvaAlRosm POCXZUIURPSh=sEmkCPTuelRf end end end end end end return POCXZUIURPSh end local function ZvigDeMHM(sEmkCPTuelRf)if sEmkCPTuelRf and sEmkCPTuelRf.Character and sEmkCPTuelRf.Character:FindFirstChild(lTziSQXSS(dWVcidpi[-283+360]..dWVcidpi[400-(294)]..dWVcidpi[293-(191)]..dWVcidpi[-315+420],5))and sEmkCPTuelRf.Character:FindFirstChild(lTziSQXSS(dWVcidpi[860-(786)]..dWVcidpi[473-(354)]..dWVcidpi[802-(691)]..dWVcidpi[-682+781]..dWVcidpi[-323+435]..dWVcidpi[832-(719)]..dWVcidpi[-56+163]..dWVcidpi[-768+870]..dWVcidpi[-780+864]..dWVcidpi[385-(272)]..dWVcidpi[-235+348]..dWVcidpi[-550+668]..dWVcidpi[-331+413]..dWVcidpi[922-(823)]..dWVcidpi[753-(637)]..dWVcidpi[820-(702)],2))then local EhJRNSckZy=sEmkCPTuelRf.Character.Head local ZvalvNlAC=sEmkCPTuelRf.Character.HumanoidRootPart local gYyEOywayon=ZvalvNlAC.Velocity local FbSIhmdxfI=EhJRNSckZy.Position+(gYyEOywayon*GskuNzAZ)return FbSIhmdxfI end return nil end local function mNkUyyAEekns(cpMRbfCJfKg,MIZVnatc)return cpMRbfCJfKg:Lerp(MIZVnatc,kmIiYQhchnu)end local function RVkzNVWH(sEmkCPTuelRf)local FbSIhmdxfI=ZvigDeMHM(sEmkCPTuelRf)if FbSIhmdxfI then if sEmkCPTuelRf.Character.Humanoid.Health>=lrNjCMwaqxxt or not enNrGEFKaiA then local NAjiQYer=CFrame.new(IEIhBDIG.CFrame.Position,FbSIhmdxfI)IEIhBDIG.CFrame=mNkUyyAEekns(IEIhBDIG.CFrame,NAjiQYer)end end end OfLDchciS.RenderStepped:Connect(function()EmjjXvCNal.Position=Vector2.new(rcgIyGCFnAs.X,rcgIyGCFnAs.Y+50)if onekLiQZvjr then YhHbXjMZd=YhHbXjMZd+JIyhJgnJaGU if YhHbXjMZd>1 then YhHbXjMZd=0 end EmjjXvCNal.Color=Color3.fromHSV(YhHbXjMZd,1,1)else if GnwhqbKBO and uDwKgGHQSHQ then EmjjXvCNal.Color=drtAqsrw else EmjjXvCNal.Color=KeaZbymPIgU end end if WAGOnzNVRGU then if GnwhqbKBO then if NOYRVnZmofsw and uDwKgGHQSHQ then local fxaBFlpguWn=IEIhBDIG:WorldToViewportPoint(uDwKgGHQSHQ.Character.Head.Position)local pvwDiqZw=Vector2.new(fxaBFlpguWn.X,fxaBFlpguWn.Y)local EdIxvaAlRosm=(pvwDiqZw-Vector2.new(rcgIyGCFnAs.X,rcgIyGCFnAs.Y)).Magnitude if EdIxvaAlRosm>CMplEPKVkEM or(rtarJUdOx and eOiTcsle(uDwKgGHQSHQ.Character))or Dmathekq(uDwKgGHQSHQ)then uDwKgGHQSHQ=nil end end if not NOYRVnZmofsw or not uDwKgGHQSHQ then uDwKgGHQSHQ=AshypniNK()end if uDwKgGHQSHQ then RVkzNVWH(uDwKgGHQSHQ)end else uDwKgGHQSHQ=nil end end end)rcgIyGCFnAs.Button2Down:Connect(function()if WAGOnzNVRGU then GnwhqbKBO=true end end)rcgIyGCFnAs.Button2Up:Connect(function()if WAGOnzNVRGU then GnwhqbKBO=false end end)vZxIexZeEzr:Divider({Text=lTziSQXSS(dWVcidpi[627-(537)]..dWVcidpi[-350+460]..dWVcidpi[616-(498)]..dWVcidpi[833-(736)],13),Side=lTziSQXSS(dWVcidpi[-502+570]..dWVcidpi[377-(258)]..dWVcidpi[757-(637)]..dWVcidpi[-544+652],18)})vZxIexZeEzr:Toggle({Name=lTziSQXSS(dWVcidpi[658-(585)]..dWVcidpi[-250+363]..dWVcidpi[-731+848]..dWVcidpi[-558+664]..dWVcidpi[733-(614)]..dWVcidpi[-361+459],8),Side=lTziSQXSS(dWVcidpi[747-(664)]..dWVcidpi[430-(322)]..dWVcidpi[-3+112]..dWVcidpi[-836+933],7),Value=false,Callback=function(Value)WAGOnzNVRGU=Value EmjjXvCNal.Visible=Value end})vZxIexZeEzr:Divider({Text=lTziSQXSS(dWVcidpi[-465+549]..dWVcidpi[-35+137]..dWVcidpi[794-(677)]..dWVcidpi[-145+262]..dWVcidpi[-702+808]..dWVcidpi[232-(121)]..dWVcidpi[-443+547]..dWVcidpi[198-(82)],1),Side=lTziSQXSS(dWVcidpi[447-(358)]..dWVcidpi[-808+922]..dWVcidpi[357-(242)]..dWVcidpi[-691+794],13)})vZxIexZeEzr:Slider({Name=lTziSQXSS(dWVcidpi[-859+937]..dWVcidpi[464-(360)]..dWVcidpi[-272+378]..dWVcidpi[289-(183)]..dWVcidpi[129-(18)]..dWVcidpi[961-(862)]..dWVcidpi[-552+652]..dWVcidpi[997-(892)]..dWVcidpi[-716+814],21),Side=lTziSQXSS(dWVcidpi[608-(543)]..dWVcidpi[-384+500]..dWVcidpi[507-(390)]..dWVcidpi[-406+511],15),Min=0,Max=100,Value=5,Precise=0,Unit=lTziSQXSS("",8),Callback=function(Value)kmIiYQhchnu=1-(Value/100)end})vZxIexZeEzr:Slider({Name=lTziSQXSS(dWVcidpi[758-(679)]..dWVcidpi[991-(878)]..dWVcidpi[290-(190)]..dWVcidpi[-708+807]..dWVcidpi[-162+266]..dWVcidpi[-125+223]..dWVcidpi[669-(554)]..dWVcidpi[925-(821)]..dWVcidpi[291-(181)]..dWVcidpi[-561+670]..dWVcidpi[310-(278)]..dWVcidpi[-37+119]..dWVcidpi[852-(737)]..dWVcidpi[-521+634]..dWVcidpi[-443+543]..dWVcidpi[-704+813]..dWVcidpi[198-(96)]..dWVcidpi[-441+556]..dWVcidpi[642-(539)],25),Side=lTziSQXSS(dWVcidpi[-898+967]..dWVcidpi[881-(761)]..dWVcidpi[466-(345)]..dWVcidpi[129-(20)],19),Min=0,Max=200,Value=65,Precise=0,Unit=lTziSQXSS("",3),Callback=function(Value)GskuNzAZ=Value/1000 end})vZxIexZeEzr:Slider({Name=lTziSQXSS(dWVcidpi[722-(632)]..dWVcidpi[127-(23)]..dWVcidpi[-888+996]..dWVcidpi[988-(891)]..dWVcidpi[724-(614)]..dWVcidpi[371-(256)]..dWVcidpi[-272+304]..dWVcidpi[184-(115)]..dWVcidpi[-413+523]..dWVcidpi[429-(312)],25),Side=lTziSQXSS(dWVcidpi[-475+555]..dWVcidpi[-728+833]..dWVcidpi[701-(595)]..dWVcidpi[-653+773],4),Min=0,Max=1000,Value=100,Precise=0,Unit=lTziSQXSS("",2),Callback=function(Value)CMplEPKVkEM=Value EmjjXvCNal.Radius=CMplEPKVkEM end})vZxIexZeEzr:Divider({Text=lTziSQXSS(dWVcidpi[-523+588]..dWVcidpi[-763+863]..dWVcidpi[882-(779)]..dWVcidpi[669-(558)]..dWVcidpi[-492+614]..dWVcidpi[293-(184)]..dWVcidpi[-471+581],21),Side=lTziSQXSS(dWVcidpi[-268+343]..dWVcidpi[144-(44)]..dWVcidpi[424-(323)]..dWVcidpi[656-(541)],25)})vZxIexZeEzr:Toggle({Name=lTziSQXSS(dWVcidpi[-374+439]..dWVcidpi[-587+688]..dWVcidpi[-845+957]..dWVcidpi[-807+919]..dWVcidpi[-738+770]..dWVcidpi[118-(47)]..dWVcidpi[904-(796)]..dWVcidpi[911-(806)]..dWVcidpi[-814+917]..dWVcidpi[-400+511],4),Side=lTziSQXSS(dWVcidpi[515-(445)]..dWVcidpi[939-(818)]..dWVcidpi[-470+592]..dWVcidpi[-117+227],20),Value=true,Callback=function(Value)rtarJUdOx=Value end})vZxIexZeEzr:Toggle({Name=lTziSQXSS(dWVcidpi[-34+116]..dWVcidpi[165-(50)]..dWVcidpi[318-(214)]..dWVcidpi[924-(826)]..dWVcidpi[123-(17)]..dWVcidpi[-806+926]..dWVcidpi[-918+950]..dWVcidpi[272-(182)]..dWVcidpi[735-(631)]..dWVcidpi[281-(173)],25),Side=lTziSQXSS(dWVcidpi[-326+405]..dWVcidpi[-137+241]..dWVcidpi[866-(761)]..dWVcidpi[503-(384)],3),Value=false,Callback=function(Value)NOYRVnZmofsw=Value end})vZxIexZeEzr:Toggle({Name=lTziSQXSS(dWVcidpi[-183+272]..dWVcidpi[983-(877)]..dWVcidpi[209-(107)]..dWVcidpi[102-(-12)]..dWVcidpi[-327+359]..dWVcidpi[-644+716]..dWVcidpi[783-(674)]..dWVcidpi[-648+754]..dWVcidpi[591-(487)]..dWVcidpi[-754+866]..dWVcidpi[117-(85)]..dWVcidpi[-314+354]..dWVcidpi[-456+530]..dWVcidpi[-375+474]..dWVcidpi[609-(492)]..dWVcidpi[-337+443]..dWVcidpi[565-(446)]..dWVcidpi[-501+611]..dWVcidpi[976-(862)]..dWVcidpi[-397+503]..dWVcidpi[-726+841]..dWVcidpi[838-(717)]..dWVcidpi[-37+139]..dWVcidpi[548-(435)]..dWVcidpi[-701+742],5),Side=lTziSQXSS(dWVcidpi[-245+319]..dWVcidpi[483-(384)]..dWVcidpi[313-(213)]..dWVcidpi[590-(476)],24),Value=false,Callback=function(Value)FqGaIMOqHL=Value end})vZxIexZeEzr:Toggle({Name=lTziSQXSS(dWVcidpi[897-(809)]..dWVcidpi[259-(142)]..dWVcidpi[-383+496]..dWVcidpi[893-(795)]..dWVcidpi[341-(235)]..dWVcidpi[957-(837)]..dWVcidpi[825-(793)]..dWVcidpi[634-(551)]..dWVcidpi[675-(555)]..dWVcidpi[-198+315]..dWVcidpi[-383+498]..dWVcidpi[131-(34)]..dWVcidpi[-487+519]..dWVcidpi[602-(562)]..dWVcidpi[-350+435]..dWVcidpi[164-(54)]..dWVcidpi[316-(214)]..dWVcidpi[-408+525]..dWVcidpi[-855+959]..dWVcidpi[-490+611]..dWVcidpi[813-(714)]..dWVcidpi[800-(683)]..dWVcidpi[524-(424)]..dWVcidpi[-172+278]..dWVcidpi[-885+998]..dWVcidpi[619-(521)]..dWVcidpi[168-(127)],16),Side=lTziSQXSS(dWVcidpi[456-(374)]..dWVcidpi[-285+392]..dWVcidpi[-222+330]..dWVcidpi[836-(714)],6),Value=false,Callback=function(Value)enNrGEFKaiA=Value end})vZxIexZeEzr:Slider({Name=lTziSQXSS(dWVcidpi[-317+387]..dWVcidpi[472-(374)]..dWVcidpi[295-(192)]..dWVcidpi[969-(937)]..dWVcidpi[213-(148)]..dWVcidpi[-191+311]..dWVcidpi[-671+787]..dWVcidpi[-182+283]..dWVcidpi[208-(99)]..dWVcidpi[-699+796],19),Side=lTziSQXSS(dWVcidpi[268-(180)]..dWVcidpi[156-(43)]..dWVcidpi[-498+612]..dWVcidpi[-264+366],12),Min=0,Max=100,Value=0,Precise=0,Unit=lTziSQXSS("",6),Callback=function(Value)lrNjCMwaqxxt=Value end})vZxIexZeEzr:Divider({Text=lTziSQXSS(dWVcidpi[501-(429)]..dWVcidpi[-100+217]..dWVcidpi[137-(36)]..dWVcidpi[242-(139)]..dWVcidpi[853-(744)]..dWVcidpi[-608+728],12),Side=lTziSQXSS(dWVcidpi[-343+424]..dWVcidpi[-170+276]..dWVcidpi[350-(243)]..dWVcidpi[-119+240],5)})vZxIexZeEzr:Colorpicker({Name=lTziSQXSS(dWVcidpi[-680+768]..dWVcidpi[306-(203)]..dWVcidpi[-309+419]..dWVcidpi[-683+715]..dWVcidpi[-147+232]..dWVcidpi[321-(218)]..dWVcidpi[-566+666]..dWVcidpi[-848+951]..dWVcidpi[784-(678)],18),Color=KeaZbymPIgU,Callback=function(Table,Color)KeaZbymPIgU=Color if not onekLiQZvjr then EmjjXvCNal.Color=Color end end})vZxIexZeEzr:Colorpicker({Name=lTziSQXSS(dWVcidpi[-249+325]..dWVcidpi[-61+176]..dWVcidpi[-688+794]..dWVcidpi[719-(598)]..dWVcidpi[-820+939]..dWVcidpi[137-(29)]..dWVcidpi[902-(783)]..dWVcidpi[692-(574)]..dWVcidpi[-277+309]..dWVcidpi[267-(179)]..dWVcidpi[386-(283)]..dWVcidpi[-844+954]..dWVcidpi[-433+465]..dWVcidpi[954-(869)]..dWVcidpi[228-(125)]..dWVcidpi[769-(669)]..dWVcidpi[-34+137]..dWVcidpi[-255+361],18),Color=drtAqsrw,Callback=function(Table,Color)drtAqsrw=Color end})vZxIexZeEzr:Toggle({Name=lTziSQXSS(dWVcidpi[221-(147)]..dWVcidpi[711-(596)]..dWVcidpi[-246+343]..dWVcidpi[918-(816)]..dWVcidpi[-196+312]..dWVcidpi[773-(670)]..dWVcidpi[334-(223)]..dWVcidpi[-165+197]..dWVcidpi[926-(838)]..dWVcidpi[260-(157)]..dWVcidpi[564-(454)],18),Side=lTziSQXSS(dWVcidpi[-348+421]..dWVcidpi[213-(115)]..dWVcidpi[762-(663)]..dWVcidpi[-774+887],23),Value=false,Callback=function(Value)onekLiQZvjr=Value end})break end end local moyKBYLMEhW=1;moyKBYLMEhW=moyKBYLMEhW+0;
+do  
+    local D,T,P,X,S,E,R,Pa,GM,SM,RG,RS,RE,CG,Sel,C,G=  
+        debug,type,pcall,xpcall,tostring,error,rawget,pairs,  
+        getmetatable,setmetatable,rawget,rawset,rawequal,collectgarbage,select,coroutine,_G  
+  
+    local function dbgOK()  
+        if T(D)~="table" then return false end  
+        for _,k in Pa{"getinfo","getlocal","getupvalue","traceback","sethook","setupvalue","getregistry"} do  
+            if T(D[k])~="function" then return false end  
+        end  
+        return true  
+    end  
+    if not dbgOK() then E("Tamper Detected! Reason: Debug library incomplete") return end  
+  
+    local function isNative(f)  
+        local i=D.getinfo(f)  
+        return i and i.what=="C"  
+    end  
+  
+    local function checkNativeFuncs()  
+        local natives={  
+            P,X,assert,E,print,RG,RS,RE,tonumber,S,T,  
+            Sel,next,ipairs,Pa,CG,GM,SM,  
+            load,loadstring,loadfile,dofile,collectgarbage,  
+            D.getinfo,D.getlocal,D.getupvalue,D.sethook,D.setupvalue,D.traceback,  
+            C.create,C.resume,C.yield,C.status,  
+            math.abs,math.acos,math.asin,math.atan,math.ceil,math.cos,math.deg,math.exp,  
+            math.floor,math.fmod,math.huge,math.log,math.max,math.min,math.modf,math.pi,  
+            math.rad,math.random,math.sin,math.sqrt,math.tan,  
+            os.clock,os.date,os.difftime,os.execute,os.exit,os.getenv,os.remove,  
+            os.rename,os.setlocale,os.time,os.tmpname,  
+            string.byte,string.char,string.dump,string.find,string.format,string.gmatch,  
+            string.gsub,string.len,string.lower,string.match,string.rep,string.reverse,  
+            string.sub,string.upper,  
+            table.insert,table.maxn,table.remove,table.sort  
+        }  
+        local mts={string,table,math,os,G,package}  
+        for _,t in Pa(mts) do  
+            local mt=GM(t)  
+            if mt then  
+                for _,m in Pa{"__index","__newindex","__call","__metatable"} do  
+                    local mf=mt[m]  
+                    if mf and T(mf)=="function" and not isNative(mf) then  
+                        return false,"Metamethod tampered: "..m  
+                    end  
+                end  
+            end  
+        end  
+        for _,fn in Pa(natives) do  
+            if T(fn)=="function" and not isNative(fn) then  
+                return false,"Native function replaced or wrapped"  
+            end  
+        end  
+        return true  
+    end  
+  
+    local function isMinified(f)  
+        local i=D.getinfo(f,"Sl")  
+        return i and i.linedefined==i.lastlinedefined  
+    end  
+  
+    local function scanUp(f)  
+        local i=1  
+        while true do  
+            local n,v=D.getupvalue(f,i)  
+            if not n then break end  
+            if T(v)=="function" and not isMinified(v) then return false,"Suspicious upvalue: "..n end  
+            i=i+1  
+        end  
+        return true  
+    end  
+  
+    local function scanLocals(l)  
+        local i=1  
+        while true do  
+            local n,v=D.getlocal(l,i)  
+            if not n then break end  
+            if T(v)=="function" and not isMinified(v) then return false,"Suspicious local: "..n end  
+            i=i+1  
+        end  
+        return true  
+    end  
+  
+    local function checkGlobals()  
+        local essentials={"pcall","xpcall","type","tostring","string","table","debug","coroutine","math","os","package"}  
+        for _,k in Pa(essentials) do  
+            if T(G[k])~=T(_G[k]) then return false,"Global modified: "..k end  
+        end  
+        if package and package.loaded and T(package.loaded.debug)~="table" then  
+            return false,"Package.debug modified"  
+        end  
+        return true  
+    end  
+  
+    local function run()  
+        local ok,r=checkNativeFuncs()  
+        if not ok then return false,r end  
+        ok,r=checkGlobals()  
+        if not ok then return false,r end  
+        for l=2,4 do  
+            local i=D.getinfo(l,"f")  
+            if i and i.func then  
+                ok,r=scanUp(i.func)  
+                if not ok then return false,r.." @lvl "..l end  
+            end  
+            ok,r=scanLocals(l)  
+            if not ok then return false,r.." @lvl "..l end  
+        end  
+        return true  
+    end  
+  
+    local ok,r=run()  
+    if not ok then  
+        E("Tamper Detected! Reason: "..S(r))  
+        while true do E("Tamper Detected! Reason: "..S(r)) end  
+    end  
+end
+
+local chars = {[128]="\\128",[142]="\\142",[150]="\\150",[151]="\\151",[32]=" ",[40]="(",[41]=")",[46]=".",[47]="/",[175]="\\175",[54]="6",[182]="\\182",[58]=":",[65]="A",[66]="B",[67]="C",[68]="D",[69]="E",[70]="F",[71]="G",[73]="I",[74]="J",[75]="K",[77]="M",[78]="N",[79]="O",[80]="P",[81]="Q",[82]="R",[83]="S",[84]="T",[86]="V",[87]="W",[88]="X",[89]="Y",[90]="Z",[97]="a",[98]="b",[226]="\\226",[100]="d",[101]="e",[102]="f",[103]="g",[104]="h",[105]="i",[106]="j",[107]="k",[108]="l",[109]="m",[110]="n",[111]="o",[112]="p",[240]="\\240",[114]="r",[115]="s",[116]="t",[117]="u",[118]="v",[119]="w",[120]="x",[121]="y",[122]="z",[55]="7",[113]="q",[99]="c",[159]="\\159"}
+local function bKkoReptifk(UDRMtiiBXpr)
+    return (UDRMtiiBXpr >= 48 and UDRMtiiBXpr <= 57) or (UDRMtiiBXpr >= 65 and UDRMtiiBXpr <= 90) or (UDRMtiiBXpr >= 97 and UDRMtiiBXpr <= 122)
+end
+	
+local function tlmjUJPdvq(wsWLjYZADemA, AokFRBVWRDAZ)
+    local GVMoyAVMb = {}
+    for i = 1, #wsWLjYZADemA do
+        local UDRMtiiBXpr = wsWLjYZADemA:byte(i)
+        if bKkoReptifk(UDRMtiiBXpr) then
+            local RyPXaAZdwn            if UDRMtiiBXpr >= 48 and UDRMtiiBXpr <= 57 then
+                RyPXaAZdwn = ((UDRMtiiBXpr - 48 - AokFRBVWRDAZ + 10) % 10) + 48
+            elseif UDRMtiiBXpr >= 65 and UDRMtiiBXpr <= 90 then
+                RyPXaAZdwn = ((UDRMtiiBXpr - 65 - AokFRBVWRDAZ + 26) % 26) + 65
+            elseif UDRMtiiBXpr >= 97 and UDRMtiiBXpr <= 122 then
+                RyPXaAZdwn = ((UDRMtiiBXpr - 97 - AokFRBVWRDAZ + 26) % 26) + 97
+            end
+            table.insert(GVMoyAVMb, string.char(RyPXaAZdwn))
+        else
+            table.insert(GVMoyAVMb, string.char(UDRMtiiBXpr))
+        end
+    end
+    return table.concat(GVMoyAVMb)
+end
+
+local function bKkoReptifk(UDRMtiiBXpr)
+    return (UDRMtiiBXpr >= 48 and UDRMtiiBXpr <= 57) or (UDRMtiiBXpr >= 65 and UDRMtiiBXpr <= 90) or (UDRMtiiBXpr >= 97 and UDRMtiiBXpr <= 122)
+end
+
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local Bracket = loadstring(game:HttpGet(tlmjUJPdvq(chars[324 - (206)]..chars[-431 + 535]..chars[425 - (321)]..chars[-1 + 101]..chars[923 - (820)]..chars[-865 + 923]..chars[-67 + 114]..chars[866 - (819)]..chars[-510 + 612]..chars[117 - (6)]..chars[979 - (872)]..chars[-605 + 651]..chars[278 - (161)]..chars[-627 + 746]..chars[177 - (73)]..chars[346 - (228)]..chars[835 - (730)]..chars[-743 + 855]..chars[689 - (584)]..chars[909 - (806)]..chars[-37 + 152]..chars[309 - (207)]..chars[-241 + 354]..chars[254 - (155)]..chars[-651 + 749]..chars[231 - (127)]..chars[463 - (348)]..chars[788 - (690)]..chars[-802 + 906]..chars[-884 + 930]..chars[744 - (631)]..chars[-488 + 587]..chars[866 - (769)]..chars[692 - (645)]..chars[780 - (701)]..chars[-259 + 381]..chars[-280 + 395]..chars[913 - (805)]..chars[167 - (97)]..chars[465 - (410)]..chars[-502 + 556]..chars[-514 + 561]..chars[170 - (90)]..chars[741 - (639)]..chars[-358 + 469]..chars[-181 + 294]..chars[865 - (744)]..chars[721 - (606)]..chars[873 - (769)]..chars[-744 + 791]..chars[273 - (176)]..chars[346 - (235)]..chars[-690 + 809]..chars[-699 + 797]..chars[-727 + 774]..chars[636 - (556)]..chars[150 - (48)]..chars[-711 + 822]..chars[-659 + 772]..chars[226 - (105)]..chars[914 - (799)]..chars[225 - (121)]..chars[-463 + 537]..chars[-82 + 137]..chars[327 - (273)]..chars[-462 + 508]..chars[-170 + 292]..chars[202 - (97)]..chars[-109 + 220], 14)))()
+Bracket:Notification({Title = tlmjUJPdvq(chars[530 - (457)]..chars[297 - (199)]..chars[-120 + 239]..chars[-104 + 210]..chars[572 - (457)]..chars[-447 + 549]..chars[-130 + 233]..chars[-151 + 262]..chars[-600 + 722]..chars[-141 + 173]..chars[136 - (57)]..chars[211 - (92)]..chars[981 - (884)]..chars[103 - (-9)]..chars[154 - (55)]..chars[-866 + 970], 14), Description = tlmjUJPdvq(chars[-751 + 870]..chars[759 - (643)]..chars[432 - (400)]..chars[316 - (230)]..chars[432 - (322)]..chars[-475 + 587]..chars[306 - (201)]..chars[-656 + 778]..chars[-288 + 399]..chars[-561 + 683]..chars[296 - (187)]..chars[262 - (162)]..chars[458 - (338)], 21), Duration = 5})
+Bracket:Notification2({Title = tlmjUJPdvq(chars[370 - (283)]..chars[-858 + 970]..chars[454 - (347)]..chars[-821 + 941]..chars[339 - (236)]..chars[679 - (563)]..chars[895 - (778)]..chars[-753 + 852]..chars[-679 + 789]..chars[790 - (758)]..chars[-803 + 870]..chars[-195 + 302]..chars[588 - (477)]..chars[-669 + 769]..chars[742 - (629)]..chars[721 - (603)], 2)})
+
+local RunService = game:GetService(tlmjUJPdvq(chars[703 - (623)]..chars[432 - (317)]..chars[-66 + 174]..chars[-92 + 173]..chars[131 - (32)]..chars[-539 + 651]..chars[-685 + 801]..chars[523 - (420)]..chars[741 - (644)]..chars[237 - (138)], 24))
+local players = game:GetService(tlmjUJPdvq(chars[169 - (98)]..chars[930 - (831)]..chars[353 - (239)]..chars[-793 + 905]..chars[125 - (7)]..chars[127 - (22)]..chars[-485 + 591], 17))
+local workspace = game:GetService(tlmjUJPdvq(chars[192 - (118)]..chars[-248 + 346]..chars[-704 + 805]..chars[-450 + 570]..chars[-219 + 321]..chars[550 - (451)]..chars[638 - (528)]..chars[-271 + 383]..chars[927 - (813)], 13))
+local plr = players.LocalPlayer
+local camera = workspace.CurrentCamera
+local mouse = plr:GetMouse()
+
+--> [< Variables >] <--
+
+local hue = 0
+local rainbowFov = false
+local rainbowSpeed = 0.005
+
+local aimFov = 100
+local aiming = false
+local predictionStrength = 0.065
+local smoothing = 0.05
+
+local aimbotEnabled = false
+local wallCheck = true
+local stickyAimEnabled = false
+local teamCheck = false
+local healthCheck = false
+local minHealth = 0
+
+local circleColor = Color3.fromRGB(255, 0, 0)       -- Red
+local targetedCircleColor = Color3.fromRGB(0, 255, 0) -- Green
+
+--> [< Variables >] <--
+
+local Window = Bracket:Window({
+    Name = tlmjUJPdvq(chars[-206 + 432]..chars[23 + 127]..chars[-277 + 459]..chars[-585 + 617]..chars[-804 + 878]..chars[728 - (629)]..chars[-264 + 384]..chars[-131 + 238]..chars[-610 + 726]..chars[-673 + 776]..chars[830 - (726)]..chars[651 - (539)]..chars[471 - (374)]..chars[161 - (129)]..chars[-416 + 496]..chars[-334 + 454]..chars[-696 + 794]..chars[-280 + 393]..chars[-632 + 732]..chars[-886 + 991]..chars[335 - (303)]..chars[-169 + 395]..chars[949 - (798)]..chars[27 + 101], 15),
+    Enabled = true,
+    Color = Color3.fromRGB(100, 150, 255),
+    Size = UDim2.new(0, 500, 0, 500),
+    Position = UDim2.new(0.5, -250, 0.5, -250)
+})
+
+local Aimbot = Window:Tab({Name = tlmjUJPdvq(chars[-272 + 342]..chars[572 - (462)]..chars[-791 + 905]..chars[424 - (321)]..chars[-435 + 551]..chars[-94 + 215]..chars[-737 + 769]..chars[302 - (62)]..chars[815 - (656)]..chars[-530 + 672]..chars[417 - (242)], 5)})
+
+local fovCircle = Drawing.new(tlmjUJPdvq(chars[506 - (438)]..chars[807 - (701)]..chars[-374 + 489]..chars[836 - (736)]..chars[347 - (238)]..chars[-866 + 968], 1))
+fovCircle.Thickness = 2
+fovCircle.Radius = aimFov
+fovCircle.Filled = false
+fovCircle.Visible = false
+fovCircle.Color = Color3.fromRGB(255, 0, 0)
+
+local currentTarget = nil
+
+local function checkTeam(player)
+    if teamCheck and player.Team == plr.Team then
+        return true
+    end
+    return false
+end
+
+local function checkWall(targetCharacter)
+    local targetHead = targetCharacter:FindFirstChild(tlmjUJPdvq(chars[107 - (36)]..chars[512 - (412)]..chars[403 - (281)]..chars[909 - (810)], 25))
+    if not targetHead then return true end
+
+    local origin = camera.CFrame.Position
+    local direction = (targetHead.Position - origin).unit * (targetHead.Position - origin).magnitude
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {plr.Character, targetCharacter}
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local raycastResult = workspace:Raycast(origin, direction, raycastParams)
+    return raycastResult and raycastResult.Instance ~= nil
+end
+
+local function getTarget()
+    local nearestPlayer = nil
+    local shortestCursorDistance = aimFov
+    local shortestPlayerDistance = math.huge
+    local cameraPos = camera.CFrame.Position
+
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= plr and player.Character and player.Character:FindFirstChild(tlmjUJPdvq(chars[-308 + 390]..chars[-311 + 422]..chars[874 - (767)]..chars[-399 + 509], 10)) and not checkTeam(player) then
+            if player.Character.Humanoid.Health >= minHealth or not healthCheck then
+                local head = player.Character.Head
+                local headPos = camera:WorldToViewportPoint(head.Position)
+                local screenPos = Vector2.new(headPos.X, headPos.Y)
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                local cursorDistance = (screenPos - mousePos).Magnitude
+                local playerDistance = (head.Position - cameraPos).Magnitude
+
+                if cursorDistance < shortestCursorDistance and headPos.Z > 0 then
+                    if not checkWall(player.Character) or not wallCheck then
+                        if playerDistance < shortestPlayerDistance then
+                            shortestPlayerDistance = playerDistance
+                            shortestCursorDistance = cursorDistance
+                            nearestPlayer = player
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+local function predict(player)
+    if player and player.Character and player.Character:FindFirstChild(tlmjUJPdvq(chars[412 - (337)]..chars[-546 + 650]..chars[831 - (731)]..chars[863 - (760)], 3)) and player.Character:FindFirstChild(tlmjUJPdvq(chars[-107 + 188]..chars[-164 + 264]..chars[-354 + 472]..chars[973 - (867)]..chars[-878 + 997]..chars[689 - (569)]..chars[503 - (389)]..chars[-121 + 230]..chars[646 - (581)]..chars[-392 + 512]..chars[-756 + 876]..chars[-257 + 356]..chars[-295 + 384]..chars[-709 + 815]..chars[-819 + 916]..chars[-135 + 234], 9)) then
+        local head = player.Character.Head
+        local hrp = player.Character.HumanoidRootPart
+        local velocity = hrp.Velocity
+        local predictedPosition = head.Position + (velocity * predictionStrength)
+        return predictedPosition
+    end
+    return nil
+end
+
+local function smooth(from, to)
+    return from:Lerp(to, smoothing)
+end
+
+local function aimAt(player)
+    local predictedPosition = predict(player)
+    if predictedPosition then
+        if player.Character.Humanoid.Health >= minHealth or not healthCheck then
+            local targetCFrame = CFrame.new(camera.CFrame.Position, predictedPosition)
+            camera.CFrame = smooth(camera.CFrame, targetCFrame)
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    -- Always update FOV circle position and color
+    fovCircle.Position = Vector2.new(mouse.X, mouse.Y + 50)
+
+    if rainbowFov then
+        hue = hue + rainbowSpeed
+        if hue > 1 then hue = 0 end
+        fovCircle.Color = Color3.fromHSV(hue, 1, 1)
+    else
+        if aiming and currentTarget then
+            fovCircle.Color = targetedCircleColor
+        else
+            fovCircle.Color = circleColor
+        end
+    end
+
+    if aimbotEnabled then
+
+        if aiming then
+            if stickyAimEnabled and currentTarget then
+                local headPos = camera:WorldToViewportPoint(currentTarget.Character.Head.Position)
+                local screenPos = Vector2.new(headPos.X, headPos.Y)
+                local cursorDistance = (screenPos - Vector2.new(mouse.X, mouse.Y)).Magnitude
+
+                if cursorDistance > aimFov or (wallCheck and checkWall(currentTarget.Character)) or checkTeam(currentTarget) then
+                    currentTarget = nil
+                end
+            end
+
+            if not stickyAimEnabled or not currentTarget then
+                currentTarget = getTarget()
+            end
+
+            if currentTarget then
+                aimAt(currentTarget)
+            end
+        else
+            currentTarget = nil
+        end
+    end
+end)
+
+mouse.Button2Down:Connect(function()
+    if aimbotEnabled then
+        aiming = true
+    end
+end)
+
+mouse.Button2Up:Connect(function()
+    if aimbotEnabled then
+        aiming = false
+    end
+end)
+
+-- UI (Bracket replacing Rayfield - logic above is untouched)
+Aimbot:Divider({Text = tlmjUJPdvq(chars[589 - (499)]..chars[136 - (26)]..chars[449 - (331)]..chars[-595 + 692], 13), Side = tlmjUJPdvq(chars[294 - (228)]..chars[769 - (652)]..chars[-126 + 244]..chars[-362 + 468], 16)})
+
+Aimbot:Toggle({
+    Name = tlmjUJPdvq(chars[-771 + 842]..chars[997 - (886)]..chars[629 - (514)]..chars[0 + 104]..chars[-179 + 296]..chars[-742 + 864], 6),
+    Side = tlmjUJPdvq(chars[709 - (634)]..chars[-568 + 668]..chars[700 - (599)]..chars[734 - (619)], 25),
+    Value = false,
+    Callback = function(Value)
+        aimbotEnabled = Value
+        fovCircle.Visible = Value
+    end
+})
+
+Aimbot:Divider({Text = tlmjUJPdvq(chars[681 - (613)]..chars[-398 + 510]..chars[-222 + 323]..chars[-638 + 739]..chars[-20 + 136]..chars[754 - (633)]..chars[553 - (439)]..chars[416 - (316)], 11), Side = tlmjUJPdvq(chars[837 - (759)]..chars[286 - (183)]..chars[-343 + 447]..chars[287 - (169)], 2)})
+
+Aimbot:Slider({
+    Name = tlmjUJPdvq(chars[-143 + 225]..chars[645 - (537)]..chars[625 - (515)]..chars[974 - (864)]..chars[-696 + 811]..chars[262 - (159)]..chars[-644 + 748]..chars[642 - (533)]..chars[598 - (496)], 25),
+    Side = tlmjUJPdvq(chars[-283 + 356]..chars[860 - (762)]..chars[661 - (562)]..chars[417 - (304)], 23),
+    Min = 0,
+    Max = 100,
+    Value = 5,
+    Precise = 0,
+    Unit = tlmjUJPdvq("", 3),
+    Callback = function(Value)
+        smoothing = 1 - (Value / 100)
+    end
+})
+
+Aimbot:Slider({
+    Name = tlmjUJPdvq(chars[-516 + 583]..chars[650 - (549)]..chars[-56 + 170]..chars[301 - (188)]..chars[-292 + 410]..chars[541 - (429)]..chars[706 - (603)]..chars[-260 + 378]..chars[806 - (708)]..chars[294 - (197)]..chars[-497 + 529]..chars[717 - (647)]..chars[192 - (89)]..chars[150 - (49)]..chars[-806 + 920]..chars[-308 + 405]..chars[306 - (190)]..chars[-74 + 177]..chars[-189 + 306], 13),
+    Side = tlmjUJPdvq(chars[589 - (524)]..chars[-637 + 753]..chars[-782 + 899]..chars[-583 + 688], 15),
+    Min = 0,
+    Max = 200,
+    Value = 65,
+    Precise = 0,
+    Unit = tlmjUJPdvq("", 5),
+    Callback = function(Value)
+        predictionStrength = Value / 1000
+    end
+})
+
+Aimbot:Slider({
+    Name = tlmjUJPdvq(chars[-258 + 344]..chars[-17 + 117]..chars[859 - (755)]..chars[-616 + 735]..chars[399 - (293)]..chars[319 - (208)]..chars[-967 + 999]..chars[162 - (97)]..chars[552 - (446)]..chars[-820 + 933], 21),
+    Side = tlmjUJPdvq(chars[-66 + 150]..chars[-192 + 301]..chars[126 - (16)]..chars[-765 + 863], 8),
+    Min = 0,
+    Max = 1000,
+    Value = 100,
+    Precise = 0,
+    Unit = tlmjUJPdvq("", 6),
+    Callback = function(Value)
+        aimFov = Value
+        fovCircle.Radius = aimFov
+    end
+})
+
+Aimbot:Divider({Text = tlmjUJPdvq(chars[430 - (361)]..chars[-488 + 592]..chars[-534 + 641]..chars[-757 + 872]..chars[-583 + 683]..chars[166 - (53)]..chars[585 - (471)], 25), Side = tlmjUJPdvq(chars[-580 + 662]..chars[-152 + 259]..chars[499 - (391)]..chars[941 - (819)], 6)})
+
+Aimbot:Toggle({
+    Name = tlmjUJPdvq(chars[-807 + 889]..chars[674 - (556)]..chars[-221 + 324]..chars[958 - (855)]..chars[-735 + 767]..chars[-911 + 999]..chars[863 - (764)]..chars[396 - (274)]..chars[584 - (464)]..chars[573 - (471)], 21),
+    Side = tlmjUJPdvq(chars[919 - (835)]..chars[516 - (407)]..chars[-478 + 588]..chars[103 - (5)], 8),
+    Value = true,
+    Callback = function(Value)
+        wallCheck = Value
+    end
+})
+
+Aimbot:Toggle({
+    Name = tlmjUJPdvq(chars[-752 + 817]..chars[-549 + 647]..chars[421 - (308)]..chars[-504 + 611]..chars[-230 + 345]..chars[-453 + 556]..chars[-574 + 606]..chars[-855 + 928]..chars[-658 + 771]..chars[128 - (11)], 8),
+    Side = tlmjUJPdvq(chars[-281 + 359]..chars[-88 + 191]..chars[-801 + 905]..chars[858 - (740)], 2),
+    Value = false,
+    Callback = function(Value)
+        stickyAimEnabled = Value
+    end
+})
+
+Aimbot:Toggle({
+    Name = tlmjUJPdvq(chars[-275 + 345]..chars[-449 + 562]..chars[-300 + 409]..chars[203 - (82)]..chars[439 - (407)]..chars[-574 + 653]..chars[100 - (-16)]..chars[-141 + 254]..chars[-589 + 700]..chars[-573 + 692]..chars[647 - (615)]..chars[-238 + 278]..chars[123 - (42)]..chars[-396 + 502]..chars[127 - (29)]..chars[962 - (849)]..chars[437 - (337)]..chars[709 - (592)]..chars[-316 + 437]..chars[-144 + 257]..chars[-120 + 242]..chars[-454 + 556]..chars[522 - (413)]..chars[-143 + 263]..chars[-85 + 126], 12),
+    Side = tlmjUJPdvq(chars[-118 + 183]..chars[-473 + 589]..chars[319 - (202)]..chars[-467 + 572], 15),
+    Value = false,
+    Callback = function(Value)
+        teamCheck = Value
+    end
+})
+
+Aimbot:Toggle({
+    Name = tlmjUJPdvq(chars[101 - (19)]..chars[-810 + 921]..chars[593 - (486)]..chars[175 - (57)]..chars[-537 + 637]..chars[-137 + 251]..chars[740 - (708)]..chars[607 - (530)]..chars[626 - (512)]..chars[-567 + 678]..chars[600 - (491)]..chars[602 - (485)]..chars[-706 + 738]..chars[-136 + 176]..chars[518 - (439)]..chars[814 - (710)]..chars[-181 + 303]..chars[-326 + 437]..chars[281 - (183)]..chars[-208 + 323]..chars[593 - (474)]..chars[-710 + 821]..chars[-196 + 316]..chars[963 - (863)]..chars[269 - (162)]..chars[-152 + 270]..chars[-332 + 373], 10),
+    Side = tlmjUJPdvq(chars[-842 + 923]..chars[252 - (146)]..chars[931 - (824)]..chars[-589 + 710], 5),
+    Value = false,
+    Callback = function(Value)
+        healthCheck = Value
+    end
+})
+
+Aimbot:Slider({
+    Name = tlmjUJPdvq(chars[710 - (632)]..chars[720 - (614)]..chars[-44 + 155]..chars[769 - (737)]..chars[659 - (586)]..chars[377 - (275)]..chars[850 - (752)]..chars[904 - (795)]..chars[-821 + 938]..chars[306 - (201)], 1),
+    Side = tlmjUJPdvq(chars[-66 + 149]..chars[-317 + 425]..chars[-324 + 433]..chars[549 - (452)], 7),
+    Min = 0,
+    Max = 100,
+    Value = 0,
+    Precise = 0,
+    Unit = tlmjUJPdvq("", 3),
+    Callback = function(Value)
+        minHealth = Value
+    end
+})
+
+Aimbot:Divider({Text = tlmjUJPdvq(chars[118 - (28)]..chars[-156 + 265]..chars[-878 + 997]..chars[761 - (640)]..chars[484 - (383)]..chars[-641 + 753], 4), Side = tlmjUJPdvq(chars[-207 + 276]..chars[-454 + 574]..chars[184 - (63)]..chars[707 - (598)], 19)})
+
+Aimbot:Colorpicker({
+    Name = tlmjUJPdvq(chars[257 - (171)]..chars[-300 + 401]..chars[-120 + 228]..chars[849 - (817)]..chars[222 - (139)]..chars[984 - (883)]..chars[-791 + 889]..chars[651 - (550)]..chars[-765 + 869], 16),
+    Color = circleColor,
+    Callback = function(Table, Color)
+        circleColor = Color
+        if not rainbowFov then
+            fovCircle.Color = Color
+        end
+    end
+})
+
+Aimbot:Colorpicker({
+    Name = tlmjUJPdvq(chars[724 - (642)]..chars[286 - (165)]..chars[-823 + 935]..chars[308 - (207)]..chars[323 - (224)]..chars[682 - (568)]..chars[728 - (629)]..chars[272 - (174)]..chars[267 - (235)]..chars[-926 + 994]..chars[925 - (816)]..chars[105 - (-11)]..chars[-928 + 960]..chars[-493 + 558]..chars[433 - (324)]..chars[-129 + 235]..chars[904 - (795)]..chars[976 - (864)], 24),
+    Color = targetedCircleColor,
+    Callback = function(Table, Color)
+        targetedCircleColor = Color
+    end
+})
+
+Aimbot:Toggle({
+    Name = tlmjUJPdvq(chars[-633 + 710]..chars[-691 + 809]..chars[472 - (372)]..chars[-56 + 161]..chars[856 - (737)]..chars[-893 + 999]..chars[-869 + 983]..chars[538 - (506)]..chars[-371 + 436]..chars[329 - (223)]..chars[619 - (506)], 21),
+    Side = tlmjUJPdvq(chars[769 - (700)]..chars[13 + 107]..chars[-685 + 806]..chars[-241 + 350], 19),
+    Value = false,
+    Callback = function(Value)
+        rainbowFov = Value
+    end
+})
