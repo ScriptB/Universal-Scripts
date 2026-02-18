@@ -23,10 +23,10 @@ local function load(path)
 end
 
 -- Step 1: Key gate (blocks via while-loop until SCRIPT_KEY is set)
-load("Key%20System")
+load("KeySystem.lua")
 
 -- Step 2: Phantom Suite (aimbot + ESP)
-load("Phantom%20Suite")
+load("PhantomSuite.lua")
 
 -- Step 3: Phantom CMD (command bar)
-load("CMD%20Suite")
+load("PhantomCMD.lua")
