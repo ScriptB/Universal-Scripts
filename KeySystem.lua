@@ -40,8 +40,17 @@ local cfg = {
     }
 }
 
+local BASE = "https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/refs/heads/main/"
 local function tuffmainscript()
-    -- Loader.lua handles loading PhantomSuite + PhantomCMD after this returns
+    local function load(path)
+        local src = game:HttpGet(BASE .. path)
+        local fn, err = loadstring(src)
+        if not fn then error("[Phantom] " .. path .. ": " .. tostring(err), 2) end
+        local ok, err2 = pcall(fn)
+        if not ok then error("[Phantom] " .. path .. ": " .. tostring(err2), 2) end
+    end
+    load("PhantomSuite.lua")
+    load("PhantomCMD.lua")
 end
 
 local Junkie = loadstring(game:HttpGet("https://jnkie.com/sdk/library.lua"))()
@@ -49,7 +58,7 @@ Junkie.service    = cfg.junkie_service
 Junkie.identifier = cfg.junkie_identifier
 Junkie.provider   = cfg.junkie_provider
 
-if getgenv().SCRIPT_KEY then return end
+if getgenv().SCRIPT_KEY then tuffmainscript() return end
 
 local function gen_clr(c)
     local h, s, v = c:ToHSV()
