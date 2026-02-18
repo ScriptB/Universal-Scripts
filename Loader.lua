@@ -14,16 +14,24 @@
 local BASE = "https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/refs/heads/main/"
 
 local function load(path)
-	local ok, err = pcall(function()
-		loadstring(game:HttpGet(BASE .. path))()
-	end)
+	local src = game:HttpGet(BASE .. path)
+	local fn, err = loadstring(src)
+	if not fn then
+		error("[Phantom Loader] Syntax error in " .. path .. ": " .. tostring(err), 2)
+	end
+	local ok, err2 = pcall(fn)
 	if not ok then
-		warn("[Phantom Loader] Failed to load: " .. path .. "\n" .. tostring(err))
+		error("[Phantom Loader] Runtime error in " .. path .. ": " .. tostring(err2), 2)
 	end
 end
 
--- Step 1: Key gate (blocks via while-loop until SCRIPT_KEY is set)
+-- Step 1: Key gate — sets getgenv().SCRIPT_KEY, blocks until validated
 load("KeySystem.lua")
+
+-- Ensure SCRIPT_KEY is set before continuing (handles saved-key fast-return path)
+while not getgenv().SCRIPT_KEY do
+	task.wait(0.1)
+end
 
 -- Step 2: Phantom Suite (aimbot + ESP)
 load("PhantomSuite.lua")
