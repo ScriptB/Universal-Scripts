@@ -129,8 +129,12 @@ local function findPlayer(name)
 	end
 end
 
+local function trim(s)
+	return (s:match("^%s*(.-)%s*$") or s)
+end
+
 local function isAll(name)
-	return name:lower():gsub("%s","") == "all"
+	return trim(name):lower() == "all"
 end
 
 local function getOthers()
@@ -701,20 +705,23 @@ local function openInput(cmd)
 	task.delay(0.05,function() ovI:CaptureFocus() end)
 end
 
-ovOk.MouseButton1Click:Connect(function()
-	if inputCurrentCmd then
-		local result=inputCurrentCmd.run(ovI.Text)
+local function runInputCmd()
+	if not inputCurrentCmd then return end
+	local text = trim(ovI.Text)
+	if text == "" then return end
+	local cmd = inputCurrentCmd
+	inputCurrentCmd = nil
+	ov.Visible = false
+	task.spawn(function()
+		local result = cmd.run(text)
 		if result then showFeedback(tostring(result)) end
-	end
-	ov.Visible=false
-end)
-ovCx.MouseButton1Click:Connect(function() ov.Visible=false end)
+	end)
+end
+
+ovOk.MouseButton1Click:Connect(runInputCmd)
+ovCx.MouseButton1Click:Connect(function() inputCurrentCmd=nil; ov.Visible=false end)
 ovI.FocusLost:Connect(function(enter)
-	if enter and inputCurrentCmd then
-		local result=inputCurrentCmd.run(ovI.Text)
-		if result then showFeedback(tostring(result)) end
-		ov.Visible=false
-	end
+	if enter then runInputCmd() end
 end)
 
 -- ── Tab Bar + Command Rows ────────────────────────────────────
