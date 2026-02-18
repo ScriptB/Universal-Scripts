@@ -1,5 +1,5 @@
 --[[
-	Phantom Command Bar  v1.1
+	Phantom Command Bar  v1.2
 	Bottom-anchored strip, hover to rise, scroll + click to run commands.
 	No external library dependency.
 ]]
@@ -263,6 +263,32 @@ local function stopLoopKill()
 	return "Loop kill stopped"
 end
 
+local loopBringConn=nil
+local loopBringTarget=""
+local function startLoopBring(name)
+	if loopBringConn then loopBringConn:Disconnect() end
+	loopBringTarget=name
+	loopBringConn=RunService.Heartbeat:Connect(function()
+		local r=getRoot(); if not r then return end
+		if isAll(loopBringTarget) then
+			for i,p in ipairs(getOthers()) do
+				local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+				if tc then tc.CFrame=r.CFrame+Vector3.new((i-1)*4,0,0) end
+			end
+		else
+			local p=findPlayer(loopBringTarget); if not p then return end
+			local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+			if tc then tc.CFrame=r.CFrame+Vector3.new(3,0,0) end
+		end
+	end)
+	return "Loop bringing "..(isAll(name) and "everyone" or name)
+end
+local function stopLoopBring()
+	if loopBringConn then loopBringConn:Disconnect(); loopBringConn=nil end
+	loopBringTarget=""
+	return "Loop bring stopped"
+end
+
 local antiAfkConn=nil
 local function startAntiAfk()
 	if antiAfkConn then return "Already active" end
@@ -418,6 +444,10 @@ local TABS = {
 				run=startLoopKill},
 			{name="Stop LK",     icon="🛑", kind="action",
 				run=stopLoopKill},
+			{name="Loop Bring...",icon="🔁", kind="input",  hint="Player name or 'all'",
+				run=startLoopBring},
+			{name="Stop LB",     icon="⏹",  kind="action",
+				run=stopLoopBring},
 			{name="Kick...",     icon="🥾", kind="input",  hint="Player name or 'all'",
 				run=kickPlayer},
 			{name="List Players",icon="📋", kind="action",
