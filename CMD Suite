@@ -213,28 +213,43 @@ local function chatMsg(msg)
 	return ok and "Said: "..msg or "Chat unavailable"
 end
 
+local function spinFlingAt(targetRoot)
+	local r=getRoot(); if not r or not targetRoot then return end
+	local h=getHum()
+	-- TP on top of target
+	r.CFrame=targetRoot.CFrame+Vector3.new(0,3,0)
+	-- Spin our character violently
+	local bav=Instance.new("BodyAngularVelocity")
+	bav.AngularVelocity=Vector3.new(0,800,0)
+	bav.MaxTorque=Vector3.new(0,9e9,0)
+	bav.P=9e9; bav.Parent=r
+	local bv=Instance.new("BodyVelocity")
+	bv.Velocity=Vector3.new(math.random(-200,200),50,math.random(-200,200))
+	bv.MaxForce=Vector3.new(9e9,9e9,9e9)
+	bv.P=9e9; bv.Parent=r
+	if h then h.PlatformStand=true end
+	task.wait(0.3)
+	bav:Destroy(); bv:Destroy()
+	if h then h.PlatformStand=false end
+end
+
 local function flingPlayer(name)
 	if isAll(name) then
-		local count=0
-		for _,p in ipairs(getOthers()) do
-			local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-			if tc then
-				local bv=Instance.new("BodyVelocity")
-				bv.Velocity=Vector3.new(math.random(-500,500),800,math.random(-500,500))
-				bv.MaxForce=Vector3.new(9e9,9e9,9e9); bv.Parent=tc
-				game:GetService("Debris"):AddItem(bv,0.15)
-				count+=1
+		local others=getOthers()
+		if #others==0 then return "No other players" end
+		task.spawn(function()
+			for _,p in ipairs(others) do
+				local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+				if tc then spinFlingAt(tc) end
+				task.wait(2)
 			end
-		end
-		return "Flung "..count.." players"
+		end)
+		return "Flinging "..#others.." players..."
 	end
 	local p=findPlayer(name); if not p then return "Player not found" end
 	local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
 	if not tc then return "Character not loaded" end
-	local bv=Instance.new("BodyVelocity")
-	bv.Velocity=Vector3.new(math.random(-500,500),800,math.random(-500,500))
-	bv.MaxForce=Vector3.new(9e9,9e9,9e9); bv.Parent=tc
-	game:GetService("Debris"):AddItem(bv,0.15)
+	task.spawn(function() spinFlingAt(tc) end)
 	return "Flung "..p.Name
 end
 
@@ -289,37 +304,35 @@ local function stopLoopBring()
 	return "Loop bring stopped"
 end
 
-local loopFlingConn=nil
+local loopFlingActive=false
 local loopFlingTarget=""
 local function startLoopFling(name)
-	if loopFlingConn then loopFlingConn:Disconnect() end
+	if loopFlingActive then loopFlingActive=false; task.wait(0.1) end
 	loopFlingTarget=name
-	loopFlingConn=RunService.Heartbeat:Connect(function()
-		if isAll(loopFlingTarget) then
-			for _,p in ipairs(getOthers()) do
-				local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-				if tc then
-					local bv=Instance.new("BodyVelocity")
-					bv.Velocity=Vector3.new(math.random(-500,500),800,math.random(-500,500))
-					bv.MaxForce=Vector3.new(9e9,9e9,9e9); bv.Parent=tc
-					game:GetService("Debris"):AddItem(bv,0.15)
+	loopFlingActive=true
+	task.spawn(function()
+		while loopFlingActive do
+			if isAll(loopFlingTarget) then
+				for _,p in ipairs(getOthers()) do
+					if not loopFlingActive then break end
+					local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+					if tc then spinFlingAt(tc) end
+					task.wait(0.5)
 				end
-			end
-		else
-			local p=findPlayer(loopFlingTarget); if not p then return end
-			local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-			if tc then
-				local bv=Instance.new("BodyVelocity")
-				bv.Velocity=Vector3.new(math.random(-500,500),800,math.random(-500,500))
-				bv.MaxForce=Vector3.new(9e9,9e9,9e9); bv.Parent=tc
-				game:GetService("Debris"):AddItem(bv,0.15)
+			else
+				local p=findPlayer(loopFlingTarget)
+				if p then
+					local tc=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+					if tc then spinFlingAt(tc) end
+				end
+				task.wait(0.5)
 			end
 		end
 	end)
 	return "Loop flinging "..(isAll(name) and "everyone" or name)
 end
 local function stopLoopFling()
-	if loopFlingConn then loopFlingConn:Disconnect(); loopFlingConn=nil end
+	loopFlingActive=false
 	loopFlingTarget=""
 	return "Loop fling stopped"
 end
