@@ -1112,18 +1112,37 @@ local function createMainUI(lockedFeatures, safetyIssues)
 	-- Initialize NexacLib UI
 	NexacLib:Init()
 	
-	-- Create NexacLib window with custom theme
+	-- Create NexacLib window with enhanced modern features
 	local Window = NexacLib:MakeWindow({
 		Name = "⚡ Phantom Suite",
 		HidePremium = false,
 		SaveConfig = true,
 		ConfigFolder = "PhantomSuite",
 		IntroEnabled = true,
-		IntroText = "⚡ Phantom Suite - Advanced Gaming Tools",
+		IntroText = "⚡ Phantom Suite v7.7\nAdvanced Gaming Tools",
 		IntroIcon = "rbxassetid://7733658168",
 		ShowIcon = true,
 		Icon = "rbxassetid://7733658168"
 	})
+	
+	-- Apply custom Phantom theme to NexacLib
+	local PhantomTheme = {
+		Main = Color3.fromRGB(15, 15, 20),
+		Second = Color3.fromRGB(25, 25, 35),
+		Stroke = Color3.fromRGB(70, 70, 80),
+		Divider = Color3.fromRGB(50, 50, 60),
+		Text = Color3.fromRGB(240, 240, 245),
+		TextDark = Color3.fromRGB(160, 160, 170),
+		Accent = Color3.fromRGB(255, 85, 85),
+		Accent2 = Color3.fromRGB(255, 120, 85),
+		Good = Color3.fromRGB(85, 255, 85),
+		Warn = Color3.fromRGB(255, 200, 85),
+		Bad = Color3.fromRGB(255, 85, 85)
+	}
+	
+	-- Override default theme with Phantom theme
+	NexacLib.Themes.Phantom = PhantomTheme
+	NexacLib.SelectedTheme = "Phantom"
 	
 	-- Apply custom theme through Nexac's built-in methods
 	NexacLib:MakeNotification({
@@ -1133,17 +1152,17 @@ local function createMainUI(lockedFeatures, safetyIssues)
 		Image = "rbxassetid://7733658168"
 	})
 	
-	-- Create enhanced tabs with icons
-	local Status = Window:MakeTab({Name = "📊 Status", Icon = "rbxassetid://7733658168"})
-	local Aimbot = Window:MakeTab({Name = "🎯 Aimbot", Icon = "rbxassetid://7733658168"})
-	local ESP = Window:MakeTab({Name = "👁️ ESP", Icon = "rbxassetid://7733658168"})
-	local Visuals = Window:MakeTab({Name = "🎨 Visuals", Icon = "rbxassetid://7733658168"})
-	local Movement = Window:MakeTab({Name = "🏃 Movement", Icon = "rbxassetid://7733658168"})
-	local Utility = Window:MakeTab({Name = "🛠️ Utility", Icon = "rbxassetid://7733658168"})
-	local Configs = Window:MakeTab({Name = "💾 Configs", Icon = "rbxassetid://7733658168"})
-	local Keybinds = Window:MakeTab({Name = "⌨️ Keybinds", Icon = "rbxassetid://7733658168"})
-	local Settings = Window:MakeTab({Name = "⚙️ Settings", Icon = "rbxassetid://7733658168"})
-	local Info = Window:MakeTab({Name = "ℹ️ Info", Icon = "rbxassetid://7733658168"})
+	-- Create enhanced tabs with unique icons and better organization
+	local Status = Window:MakeTab({Name = "📊 Dashboard", Icon = "rbxassetid://7733658168"})
+	local Aimbot = Window:MakeTab({Name = "🎯 Aimbot", Icon = "rbxassetid://7072717855"})
+	local ESP = Window:MakeTab({Name = "👁️ ESP", Icon = "rbxassetid://7072717855"})
+	local Visuals = Window:MakeTab({Name = "🎨 Visuals", Icon = "rbxassetid://7072717855"})
+	local Movement = Window:MakeTab({Name = "🏃 Movement", Icon = "rbxassetid://7072717855"})
+	local Utility = Window:MakeTab({Name = "🛠️ Utility", Icon = "rbxassetid://7072717855"})
+	local Configs = Window:MakeTab({Name = "💾 Configs", Icon = "rbxassetid://7072717855"})
+	local Keybinds = Window:MakeTab({Name = "⌨️ Keybinds", Icon = "rbxassetid://7072717855"})
+	local Settings = Window:MakeTab({Name = "⚙️ Settings", Icon = "rbxassetid://7072717855"})
+	local Info = Window:MakeTab({Name = "ℹ️ Info", Icon = "rbxassetid://7072717855"})
 	
 	if not Status then
 		warn("Failed to create Status tab")
@@ -1183,45 +1202,56 @@ task.spawn(function()
 		
 		-- Continue with UI initialization...
 		pcall(function()
-			--> [< Status Tab Content >] <--
+			--> [< Enhanced Status Tab Content >] <--
 			
-			Status:AddSection({Name = "👤 User Information"})
+			-- User Information Section
+			Status:AddSection({Name = "👤 User Profile", Description = "Account and player information"})
 			
-			-- User Account Information
 			local playerName = plr.Name or "Unknown"
 			local userId = plr.UserId or "Unknown"
-			Status:AddSection({Name = "🔧 System Status"})
+			local displayName = plr.DisplayName or "Unknown"
 			
-			Status:AddLabel("Executor: " .. EXECUTOR_NAME)
-			Status:AddLabel("Script Version: v7.7")
-			Status:AddLabel("Game: " .. game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name)
-			Status:AddLabel("Place ID: " .. game.PlaceId)
+			Status:AddLabel("🎮 Display Name: " .. displayName)
+			Status:AddLabel("👤 Username: " .. playerName)
+			Status:AddLabel("🆔 User ID: " .. userId)
+			Status:AddLabel("🎯 Account Age: " .. math.floor((tick() - plr.AccountAge) / 86400) .. " days")
 			
-			-- Feature Status with color coding
-			Status:AddSection({Name = "Feature Compatibility"})
-			Status:AddLabel("• ESP System: " .. (EXECUTOR_COMPATIBILITY.Drawing and "✅" or "❌"))
-			Status:AddLabel("• Config System: " .. (EXECUTOR_COMPATIBILITY.FileSystem and "✅" or "❌"))
-			Status:AddLabel("• Clipboard: " .. (EXECUTOR_COMPATIBILITY.Clipboard and "✅" or "❌"))
-			Status:AddLabel("• Mouse Control: " .. (EXECUTOR_COMPATIBILITY.MouseControl and "✅" or "❌"))
+			-- System Information Section
+			Status:AddSection({Name = "🔧 System Information", Description = "Executor and environment details"})
 			
-			Status:AddSection({Name = "⚡ Active Features"})
+			Status:AddLabel("⚡ Executor: " .. EXECUTOR_NAME)
+			Status:AddLabel("📦 Script Version: v7.7")
+			Status:AddLabel("🎮 Game: " .. game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name)
+			Status:AddLabel("🌍 Place ID: " .. game.PlaceId)
+			Status:AddLabel("👥 Players Online: " .. #game:GetService("Players"):GetPlayers())
 			
-			-- Create dynamic status labels
-			local aimbotStatusLabel = Status:AddLabel("• Aimbot: " .. (aimbotEnabled and "🟢 Active" or "🔴 Inactive"))
-			local blatantStatusLabel = Status:AddLabel("• Blatant Mode: " .. (blatantEnabled and "🟢 Active" or "🔴 Inactive"))
-			local espStatusLabel = Status:AddLabel("• ESP: " .. (espEnabled and "🟢 Active" or "🔴 Inactive"))
-			local rainbowStatusLabel = Status:AddLabel("• Rainbow FOV: " .. (rainbowFov and "🟢 Active" or "🔴 Inactive"))
-			local wallStatusLabel = Status:AddLabel("• Wall Check: " .. (wallCheck and "🟢 Active" or "🔴 Inactive"))
-			local teamStatusLabel = Status:AddLabel("• Team Check: " .. (teamCheck and "🟢 Active" or "🔴 Inactive"))
+			-- Compatibility Status Section
+			Status:AddSection({Name = "🔍 Feature Compatibility", Description = "Executor feature support status"})
+			
+			Status:AddLabel("🎨 ESP System: " .. (EXECUTOR_COMPATIBILITY.Drawing and "✅ Supported" or "❌ Unsupported"))
+			Status:AddLabel("💾 Config System: " .. (EXECUTOR_COMPATIBILITY.FileSystem and "✅ Supported" or "❌ Unsupported"))
+			Status:AddLabel("📋 Clipboard: " .. (EXECUTOR_COMPATIBILITY.Clipboard and "✅ Supported" or "❌ Unsupported"))
+			Status:AddLabel("🖱️ Mouse Control: " .. (EXECUTOR_COMPATIBILITY.MouseControl and "✅ Supported" or "❌ Unsupported"))
+			Status:AddLabel("🌐 HTTP Requests: " .. (EXECUTOR_COMPATIBILITY.HTTP and "✅ Supported" or "❌ Unsupported"))
+			
+			Status:AddSection({Name = "⚡ Active Features", Description = "Currently enabled Phantom Suite features"})
+			
+			-- Create dynamic status labels with better styling
+			local aimbotStatusLabel = Status:AddLabel("🎯 Aimbot: " .. (aimbotEnabled and "🟢 Active" or "🔴 Inactive"))
+			local blatantStatusLabel = Status:AddLabel("⚡ Blatant Mode: " .. (blatantEnabled and "🟢 Active" or "🔴 Inactive"))
+			local espStatusLabel = Status:AddLabel("👁️ ESP: " .. (espEnabled and "🟢 Active" or "🔴 Inactive"))
+			local rainbowStatusLabel = Status:AddLabel("🌈 Rainbow FOV: " .. (rainbowFov and "🟢 Active" or "🔴 Inactive"))
+			local wallStatusLabel = Status:AddLabel("🧱 Wall Check: " .. (wallCheck and "🟢 Active" or "🔴 Inactive"))
+			local teamStatusLabel = Status:AddLabel("👥 Team Check: " .. (teamCheck and "🟢 Active" or "🔴 Inactive"))
 			
 			-- Function to update all status labels
 			local function updateStatusLabels()
-				if aimbotStatusLabel then aimbotStatusLabel:Set("• Aimbot: " .. (aimbotEnabled and "🟢 Active" or "🔴 Inactive")) end
-				if blatantStatusLabel then blatantStatusLabel:Set("• Blatant Mode: " .. (blatantEnabled and "🟢 Active" or "🔴 Inactive")) end
-				if espStatusLabel then espStatusLabel:Set("• ESP: " .. (espEnabled and "🟢 Active" or "🔴 Inactive")) end
-				if rainbowStatusLabel then rainbowStatusLabel:Set("• Rainbow FOV: " .. (rainbowFov and "🟢 Active" or "🔴 Inactive")) end
-				if wallStatusLabel then wallStatusLabel:Set("• Wall Check: " .. (wallCheck and "🟢 Active" or "🔴 Inactive")) end
-				if teamStatusLabel then teamStatusLabel:Set("• Team Check: " .. (teamCheck and "🟢 Active" or "🔴 Inactive")) end
+				if aimbotStatusLabel then aimbotStatusLabel:Set("🎯 Aimbot: " .. (aimbotEnabled and "🟢 Active" or "🔴 Inactive")) end
+				if blatantStatusLabel then blatantStatusLabel:Set("⚡ Blatant Mode: " .. (blatantEnabled and "🟢 Active" or "🔴 Inactive")) end
+				if espStatusLabel then espStatusLabel:Set("👁️ ESP: " .. (espEnabled and "🟢 Active" or "🔴 Inactive")) end
+				if rainbowStatusLabel then rainbowStatusLabel:Set("🌈 Rainbow FOV: " .. (rainbowFov and "🟢 Active" or "🔴 Inactive")) end
+				if wallStatusLabel then wallStatusLabel:Set("🧱 Wall Check: " .. (wallCheck and "🟢 Active" or "🔴 Inactive")) end
+				if teamStatusLabel then teamStatusLabel:Set("👥 Team Check: " .. (teamCheck and "🟢 Active" or "🔴 Inactive")) end
 			end
 			
 			-- Update status every second
@@ -1229,7 +1259,7 @@ task.spawn(function()
 				updateStatusLabels()
 			end)
 			
-			Status:AddSection({Name = "📊 Performance"})
+			Status:AddSection({Name = "📊 Performance Metrics", Description = "Real-time system performance monitoring"})
 			
 			-- Performance metrics with dynamic updates
 			local fps = 0
@@ -1239,10 +1269,10 @@ task.spawn(function()
 			local lastPingUpdate = tick()
 			local isUIVisible = true
 			
-			-- Create dynamic performance labels
-			local fpsLabel = Status:AddLabel("FPS: 0")
-			local memoryLabel = Status:AddLabel("Memory: 0 objects")
-			local pingLabel = Status:AddLabel("Ping: 0ms")
+			-- Create dynamic performance labels with better styling
+			local fpsLabel = Status:AddLabel("🖥️ FPS: 0")
+			local memoryLabel = Status:AddLabel("💾 Memory: 0 MB")
+			local pingLabel = Status:AddLabel("🌐 Ping: 0ms")
 			
 			-- Function to update performance metrics
 			local function updatePerformanceMetrics()
@@ -1254,11 +1284,11 @@ task.spawn(function()
 					fps = math.floor(frameCount / (currentTime - lastFpsUpdate) * 2) -- Multiply by 2 since we update every 0.5s
 					frameCount = 0
 					lastFpsUpdate = currentTime
-					if fpsLabel then fpsLabel:Set("FPS: " .. fps) end
+					if fpsLabel then fpsLabel:Set("🖥️ FPS: " .. fps) end
 				end
 				
-				-- Update Memory
-				if memoryLabel then memoryLabel:Set("Memory: " .. math.floor(collectgarbage("count")) .. " objects") end
+				-- Update Memory in MB
+				if memoryLabel then memoryLabel:Set("💾 Memory: " .. string.format("%.1f", collectgarbage("count") / 1024) .. " MB") end
 				
 				-- Update Ping (every 2 seconds)
 				if currentTime - lastPingUpdate >= 2 then
@@ -1298,7 +1328,7 @@ task.spawn(function()
 					
 					ping = math.floor(pingValue)
 					lastPingUpdate = currentTime
-					if pingLabel then pingLabel:Set("Ping: " .. ping .. "ms") end
+					if pingLabel then pingLabel:Set("🌐 Ping: " .. ping .. "ms") end
 				end
 			end
 			
@@ -1329,9 +1359,9 @@ task.spawn(function()
 			end)
 		end)
 		
-		-- Add Aimbot tab content
+		-- Add Enhanced Aimbot tab content
 		pcall(function()
-			Aimbot:AddSection({Name = "🎯 Aimbot Configuration", Description = "Advanced targeting system with prediction"})
+			Aimbot:AddSection({Name = "🎯 Aimbot Controls", Description = "Main aimbot activation and modes"})
 			
 			Aimbot:AddToggle({
 				Name = "🔴 Enable Aimbot",
@@ -1340,10 +1370,10 @@ task.spawn(function()
 					aimbotEnabled = value
 					if NexacLib and NexacLib.MakeNotification then
 						NexacLib:MakeNotification({
-							Name = "Aimbot Toggled",
-							Content = "Aimbot: " .. (value and "ON" or "OFF"),
-							Time = 1,
-							Image = "rbxassetid://7733658168"
+							Name = "Aimbot Status",
+							Content = "Aimbot " .. (value and "Activated" or "Deactivated"),
+							Time = 1.5,
+							Image = "rbxassetid://7072717855"
 						})
 					end
 				end
@@ -1356,41 +1386,41 @@ task.spawn(function()
 					blatantEnabled = value
 					if NexacLib and NexacLib.MakeNotification then
 						NexacLib:MakeNotification({
-							Name = "Blatant Mode Toggled",
-							Content = "Blatant: " .. (value and "ON" or "OFF"),
-							Time = 1,
-							Image = "rbxassetid://7733658168"
+							Name = "Blatant Mode",
+							Content = "Blatant mode " .. (value and "Enabled" or "Disabled"),
+							Time = 1.5,
+							Image = "rbxassetid://7072717855"
 						})
 					end
 				end
 			})
 			
-			Aimbot:AddSection({Name = "📏 Targeting Settings", Description = "Fine-tune aimbot behavior"})
+			Aimbot:AddSection({Name = "📏 Targeting Parameters", Description = "Configure aimbot precision and behavior"})
 			
 			Aimbot:AddSlider({
-				Name = "🎯 Aim FOV",
+				Name = "🎯 Aim Field of View",
 				Min = 10,
 				Max = 360,
 				Default = aimFov,
-				ValueName = "°",
+				ValueName = "degrees",
 				Callback = function(value)
 					aimFov = value
 				end
 			})
 			
 			Aimbot:AddSlider({
-				Name = "🌊 Smoothness (1=Subtle, 10=Instant)", 
+				Name = "🌊 Aim Smoothing", 
 				Min = 1, 
 				Max = 10, 
 				Default = smoothing,
-				ValueName = "",
+				ValueName = "level",
 				Callback = function(Value) 
 					smoothing = Value 
 				end
 			})
 			
 			Aimbot:AddSlider({
-				Name = "🔮 Prediction",
+				Name = "🔮 Target Prediction",
 				Min = 0,
 				Max = 0.2,
 				Default = predictionStrength,
