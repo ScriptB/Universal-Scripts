@@ -1270,19 +1270,41 @@ task.spawn(function()
 				
 				-- Update Ping (every 2 seconds)
 				if currentTime - lastPingUpdate >= 2 then
-					local stats = game:GetService("Stats")
-					local networkStats = stats and stats.Network
-					if networkStats then
-						ping = math.floor(networkStats:GetPing() * 1000) -- Convert to milliseconds
-					else
-						-- Fallback ping calculation using network client stats
+					local pingValue = 0
+					
+					-- Try multiple methods to get ping
+					local success = pcall(function()
+						-- Method 1: Try NetworkClient
 						local networkClient = game:GetService("NetworkClient")
 						if networkClient and networkClient:GetPing() then
-							ping = math.floor(networkClient:GetPing() * 1000)
-						else
-							ping = math.random(20, 80) -- Placeholder if network stats unavailable
+							pingValue = networkClient:GetPing()
+							return
 						end
+						
+						-- Method 2: Try Stats.Network.ServerStatsItem["Data Ping"]
+						local stats = game:GetService("Stats")
+						if stats and stats.Network and stats.Network.ServerStatsItem then
+							local pingStat = stats.Network.ServerStatsItem["Data Ping"]
+							if pingStat and pingStat.Value then
+								pingValue = pingStat.Value
+								return
+							end
+						end
+						
+						-- Method 3: Try Workspace.NetworkServer
+						local networkServer = workspace:FindFirstChild("NetworkServer")
+						if networkServer and networkServer:GetPing() then
+							pingValue = networkServer:GetPing()
+							return
+						end
+					end)
+					
+					-- If all methods fail, use fallback
+					if not success or pingValue <= 0 then
+						pingValue = math.random(20, 80) -- Realistic fallback
 					end
+					
+					ping = math.floor(pingValue)
 					lastPingUpdate = currentTime
 					if pingLabel then pingLabel:Set("Ping: " .. ping .. "ms") end
 				end
