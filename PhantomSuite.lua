@@ -30,18 +30,12 @@ local aiming = false
 local predictionStrength = 0.065
 local smoothing = 0.05
 
--- Trigger bot variables
-local lastTriggerTime = 0
-local triggerInterval = 0.1 -- Shoot every 0.1 seconds when locked
-local triggerTarget = nil
-
 -- ESP/Aimbot distance lock variables
 local espLockDistance = 500
 local aimbotLockDistance = 500
 
 local aimbotEnabled = false
 local blatantEnabled = false
-local triggerBotEnabled = false
 
 -- ESP variables
 local espEnabled = false
@@ -1230,7 +1224,6 @@ task.spawn(function()
 			-- Feature Status with color coding
 			Status:AddSection({Name = "Feature Compatibility"})
 			Status:AddLabel("• ESP System: " .. (EXECUTOR_COMPATIBILITY.Drawing and "✅" or "❌"))
-			Status:AddLabel("• Trigger Bot: " .. (EXECUTOR_COMPATIBILITY.MouseControl and "✅" or "❌"))
 			Status:AddLabel("• Config System: " .. (EXECUTOR_COMPATIBILITY.FileSystem and "✅" or "❌"))
 			Status:AddLabel("• Clipboard: " .. (EXECUTOR_COMPATIBILITY.Clipboard and "✅" or "❌"))
 			Status:AddLabel("• Mouse Control: " .. (EXECUTOR_COMPATIBILITY.MouseControl and "✅" or "❌"))
@@ -1244,7 +1237,6 @@ task.spawn(function()
 			
 			Status:AddLabel(getActiveStatus(aimbotEnabled, "Aimbot"))
 			Status:AddLabel(getActiveStatus(blatantEnabled, "Blatant Mode"))
-			Status:AddLabel(getActiveStatus(triggerBotEnabled, "Trigger Bot"))
 			Status:AddLabel(getActiveStatus(espEnabled, "ESP"))
 			Status:AddLabel(getActiveStatus(rainbowFov, "Rainbow FOV"))
 			Status:AddLabel(getActiveStatus(wallCheck, "Wall Check"))
@@ -1422,14 +1414,6 @@ task.spawn(function()
 		-- Add Extras tab content
 		pcall(function()
 			Extras:AddSection({Name = "⚡ Extra Features"})
-			
-			Extras:AddToggle({
-				Name = "Trigger Bot",
-				Default = triggerBotEnabled,
-				Callback = function(value)
-					triggerBotEnabled = value
-				end
-			})
 			
 			Extras:AddToggle({
 				Name = "Rainbow FOV",
@@ -1624,8 +1608,6 @@ task.spawn(function()
 	-- Core variables from working version
 	local currentTarget = nil
 	local aiming = false
-	local lastTriggerTime = 0
-	local triggerInterval = 0.1
 	
 	-- Helper functions from working version
 	local function getRootPart(character)
@@ -2058,39 +2040,6 @@ task.spawn(function()
 			-- Remove all ESP when disabled
 			for player in pairs(espObjects) do
 				removeESP(player)
-			end
-		end
-	end)
-	
-	-- Trigger Bot functionality from working version
-	UserInputService.InputBegan:Connect(function(input)
-		if not (triggerBotEnabled or blatantEnabled) then return end
-		
-		-- Block firing when interacting with UI
-		if UserInputService:GetFocusedTextBox() then return end
-		local ml = UserInputService:GetMouseLocation()
-		if #game:GetService("GuiService"):GetGuiObjectsAtPosition(ml.X, ml.Y) > 0 then return end
-
-		-- Use mouse.Target for direct hit detection
-		if mouse.Target and mouse.Target.Parent:FindFirstChild("Humanoid") and mouse.Target.Parent.Name ~= plr.Name then
-			local targetPlayer = players:GetPlayerFromCharacter(mouse.Target.Parent)
-			
-			if targetPlayer and targetPlayer.Team ~= plr.Team then
-				if tick() - lastTriggerTime >= triggerInterval then
-					-- Use appropriate mouse control for the executor
-					if syn and syn.mouse1press then
-						syn.mouse1press()
-						task.wait()
-						syn.mouse1release()
-					elseif mouse1press then
-						mouse1press()
-						task.wait()
-						mouse1release()
-					elseif plr and plr:GetMouse() then
-						plr:GetMouse():Click()
-					end
-					lastTriggerTime = tick()
-				end
 			end
 		end
 	end)
