@@ -1116,17 +1116,12 @@ local function createMainUI(lockedFeatures, safetyIssues)
 		Size = UDim2.new(0, 600, 0, 700)
 	})
 	
-	-- Apply custom color scheme to OrionLib
-	OrionLib:SetTheme({
-		Main = Color3.fromRGB(25, 25, 30),        -- Near-black background
-		Secondary = Color3.fromRGB(35, 35, 40),     -- Dark grey secondary
-		Third = Color3.fromRGB(45, 45, 50),         -- Medium grey tertiary
-		Accent = Color3.fromRGB(255, 165, 0),       -- Orange accent
-		Text = Color3.fromRGB(240, 240, 245),       -- Light white text
-		Disabled = Color3.fromRGB(100, 100, 105),   -- Grey disabled
-		Success = Color3.fromRGB(0, 255, 100),       -- Green success
-		Error = Color3.fromRGB(255, 100, 100),       -- Red error
-		Warning = Color3.fromRGB(255, 200, 50)       -- Orange warning
+	-- Apply custom theme through Orion's built-in methods
+	OrionLib:MakeNotification({
+		Name = "Theme Applied",
+		Content = "Custom grey/orange theme loaded",
+		Time = 2,
+		Image = "rbxassetid://7733658168"
 	})
 	
 	-- Create enhanced tabs with icons
