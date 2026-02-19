@@ -1595,7 +1595,7 @@ task.spawn(function()
 			
 			Keybinds:AddBind({
 				Name = "UI Toggle",
-				Default = Enum.KeyCode.RightShift,
+				Default = Enum.KeyCode.LeftControl,
 				Hold = false,
 				Callback = function()
 					-- Comprehensive Orion UI toggle logic
