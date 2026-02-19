@@ -2314,32 +2314,35 @@ task.spawn(function()
 			-- Aimbot System
 			if aimbotEnabled or blatantEnabled then
 				if blatantEnabled then
-					-- Blatant: always active, snap to closest visible enemy
-					currentTarget = getBlatantTarget()
+					-- Blatant: always active, snap to closest visible enemy (no aim key required)
+					currentTarget = getTarget()
 					if currentTarget then
 						aimAt(currentTarget)
 					end
 				elseif aiming then
-					-- Normal aimbot requires aiming key
-					if stickyAimEnabled and currentTarget then
-						local character = currentTarget.Character
-						if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
-							if not isOnSameTeam(currentTarget) then
-								if character.Humanoid.Health >= minHealth or not healthCheck then
-									if not wallCheck or not checkWall(character) then
-										aimAt(currentTarget)
+					-- Normal aimbot requires aiming key and aimbotEnabled
+					if aimbotEnabled then
+						-- Normal aimbot requires aiming key
+						if stickyAimEnabled and currentTarget then
+							local character = currentTarget.Character
+							if character and character:FindFirstChild("Humanoid") and character.Humanoid.Health > 0 then
+								if not isOnSameTeam(currentTarget) then
+									if character.Humanoid.Health >= minHealth or not healthCheck then
+										if not wallCheck or not checkWall(character) then
+											aimAt(currentTarget)
+										end
 									end
 								end
+							else
+								currentTarget = nil
 							end
-						else
-							currentTarget = nil
 						end
-					end
-					if not stickyAimEnabled or not currentTarget then
-						currentTarget = getTarget()
-					end
-					if currentTarget then 
-						aimAt(currentTarget)
+						if not stickyAimEnabled or not currentTarget then
+							currentTarget = getTarget()
+						end
+						if currentTarget then 
+							aimAt(currentTarget)
+						end
 					end
 				else
 					currentTarget = nil
