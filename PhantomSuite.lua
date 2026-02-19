@@ -1307,7 +1307,7 @@ task.spawn(function()
 			})
 			
 			Aimbot:AddSlider({
-				Name = "Smoothness (1=Strong, 10=Subtle)", 
+				Name = "Smoothness (1=Subtle, 10=Instant)", 
 				Min = 1, 
 				Max = 10, 
 				Default = smoothing,
@@ -1821,10 +1821,10 @@ task.spawn(function()
 	end
 	
 	local function smooth(from, to)
-		-- Convert 1-10 scale to 0.1-0.9 smoothing factor
-		-- 1 = very strong (0.1 smoothing, 90% movement)
-		-- 10 = barely assisted (0.9 smoothing, 10% movement)
-		local smoothingFactor = (smoothing - 1) * 0.0889 + 0.1
+		-- Convert 1-10 scale to 0.9-0.1 smoothing factor (flipped)
+		-- 1 = subtle (0.9 smoothing, 10% movement)
+		-- 10 = instant (0.1 smoothing, 90% movement)
+		local smoothingFactor = (10 - smoothing) * 0.0889 + 0.1
 		return from:Lerp(to, smoothingFactor)
 	end
 	
