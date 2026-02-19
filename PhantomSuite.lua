@@ -1092,20 +1092,28 @@ end
 
 -- Function to create main UI
 local function createMainUI(lockedFeatures, safetyIssues)
-	-- Load Orion UI from GitHub
-	local success, OrionLib = pcall(function()
-		return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Orion-Library/source.lua"))()
+	-- Load NexacLib (modern Orion rebrand)
+	local success, NexacLib = pcall(function()
+		return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Orion-Library/Nexac"))()
 	end)
-	
+
 	if not success then
-		warn("Failed to load Orion UI from GitHub: " .. tostring(OrionLib))
-		return createFallbackUI(lockedFeatures, safetyIssues)
+		warn("Failed to load NexacLib, falling back to local file")
+		local success, NexacLib = pcall(function()
+			return loadfile("Orion-Library/Nexac")()
+		end)
+		
+		if not success then
+			warn("Failed to load NexacLib from local file")
+			return
+		end
 	end
-		-- Initialize Orion UI
-	OrionLib:Init()
 	
-	-- Create Orion window with custom theme
-	local Window = OrionLib:MakeWindow({
+	-- Initialize NexacLib UI
+	NexacLib:Init()
+	
+	-- Create NexacLib window with custom theme
+	local Window = NexacLib:MakeWindow({
 		Name = "⚡ Phantom Suite",
 		SubTitle = "Advanced Gaming Tools",
 		HidePremium = false,
@@ -1116,8 +1124,8 @@ local function createMainUI(lockedFeatures, safetyIssues)
 		Size = UDim2.new(0, 600, 0, 700)
 	})
 	
-	-- Apply custom theme through Orion's built-in methods
-	OrionLib:MakeNotification({
+	-- Apply custom theme through Nexac's built-in methods
+	NexacLib:MakeNotification({
 		Name = "Theme Applied",
 		Content = "Custom grey/orange theme loaded",
 		Time = 2,
@@ -1142,7 +1150,7 @@ local function createMainUI(lockedFeatures, safetyIssues)
 	end
 	
 	uiLoaded = true
-	return Status, Aimbot, ESP, Extras, Configs, Keybinds, Info, OrionLib
+	return Status, Aimbot, ESP, Visuals, Movement, Utility, Configs, Keybinds, Settings, Info, NexacLib
 end
 
 -- Main initialization sequence
@@ -1158,14 +1166,14 @@ task.spawn(function()
 		LoadingGui:Destroy()
 		
 		-- Create main UI
-		local Status, Aimbot, ESP, Extras, Configs, Keybinds, Info, OrionLib = createMainUI(lockedFeatures, safetyIssues)
+		local Status, Aimbot, ESP, Visuals, Movement, Utility, Configs, Keybinds, Settings, Info, NexacLib = createMainUI(lockedFeatures, safetyIssues)
 		
-		if Status and OrionLib and typeof(OrionLib.MakeNotification) == "function" then
+		if Status and NexacLib and typeof(NexacLib.MakeNotification) == "function" then
 			-- Show success notification
 			pcall(function()
-				OrionLib:MakeNotification({
+				NexacLib:MakeNotification({
 					Name = "Phantom Suite Loaded",
-					Content = "✅ Successfully loaded with Orion UI!",
+					Content = "✅ Successfully loaded with Nexac UI!",
 					Image = "rbxassetid://4483345998",
 					Time = 5
 				})
@@ -1299,24 +1307,24 @@ task.spawn(function()
 				updatePerformanceMetrics()
 			end)
 			
-			-- Check UI visibility (Orion UI visibility)
+			-- Check UI visibility (Nexac UI visibility)
 			game:GetService("RunService").Heartbeat:Connect(function()
 				-- Try to detect UI visibility with multiple methods
 				local success, visible = pcall(function()
-					if OrionLib and OrionLib.UI then
+					if NexacLib and NexacLib.UI then
 						-- Method 1: Check Enabled property
-						if OrionLib.UI.Enabled ~= nil then
-							return OrionLib.UI.Enabled
+						if NexacLib.UI.Enabled ~= nil then
+							return NexacLib.UI.Enabled
 						end
 						-- Method 2: Check window visibility
-						local window = OrionLib.Windows and OrionLib.Windows[1]
+						local window = NexacLib.Windows and NexacLib.Windows[1]
 						if window then
 							return window.Visible
 						end
 					end
 					return true -- Default to visible if can't detect
 				end)
-				isUIVisible = success and visible
+				isUIVisible = success and visible or true
 			end)
 		end)
 		
@@ -1329,8 +1337,8 @@ task.spawn(function()
 				Default = aimbotEnabled,
 				Callback = function(value)
 					aimbotEnabled = value
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Aimbot Toggled",
 							Content = "Aimbot: " .. (value and "ON" or "OFF"),
 							Time = 1,
@@ -1828,16 +1836,16 @@ task.spawn(function()
 				Default = Enum.KeyCode.LeftControl,
 				Hold = false,
 				Callback = function()
-					-- Comprehensive Orion UI toggle logic
-					if OrionLib then
+					-- Comprehensive Nexac UI toggle logic
+					if NexacLib then
 						local success = false
 						local isVisible = true
 						
 						-- Method 1: Try UI.Enabled property
 						pcall(function()
-							if OrionLib.UI and OrionLib.UI.Enabled ~= nil then
-								isVisible = OrionLib.UI.Enabled
-								OrionLib.UI.Enabled = not isVisible
+							if NexacLib.UI and NexacLib.UI.Enabled ~= nil then
+								isVisible = NexacLib.UI.Enabled
+								NexacLib.UI.Enabled = not isVisible
 								success = true
 							end
 						end)
@@ -1845,7 +1853,7 @@ task.spawn(function()
 						-- Method 2: Try window.Visible property
 						if not success then
 							pcall(function()
-								local window = OrionLib.Windows and OrionLib.Windows[1]
+								local window = NexacLib.Windows and NexacLib.Windows[1]
 								if window then
 									isVisible = window.Visible
 									window.Visible = not isVisible
@@ -1873,7 +1881,7 @@ task.spawn(function()
 							pcall(function()
 								local coreGui = game:GetService("CoreGui")
 								for _, child in pairs(coreGui:GetChildren()) do
-									if child.Name:find("Orion") or child.Name:find("Phantom") then
+									if child.Name:find("Nexac") or child.Name:find("Phantom") then
 										isVisible = child.Enabled
 										child.Enabled = not isVisible
 										success = true
@@ -1883,15 +1891,15 @@ task.spawn(function()
 							end)
 						end
 						
-						if success and OrionLib.MakeNotification then
-							OrionLib:MakeNotification({
+						if success and NexacLib.MakeNotification then
+							NexacLib:MakeNotification({
 								Name = "UI Toggled",
 								Content = "UI: " .. (not isVisible and "Shown" or "Hidden"),
 								Time = 2,
 								Image = "rbxassetid://7733658168"
 							})
-						elseif OrionLib.MakeNotification then
-							OrionLib:MakeNotification({
+						elseif NexacLib.MakeNotification then
+							NexacLib:MakeNotification({
 								Name = "UI Toggle Failed",
 								Content = "Could not toggle UI visibility",
 								Time = 3,
