@@ -1230,17 +1230,28 @@ task.spawn(function()
 			
 			Status:AddSection({Name = "⚡ Active Features"})
 			
-			-- Active features status
-			local function getActiveStatus(enabled, name)
-				return "• " .. name .. ": " .. (enabled and "🟢 Active" or "🔴 Inactive")
+			-- Create dynamic status labels
+			local aimbotStatusLabel = Status:AddLabel("• Aimbot: " .. (aimbotEnabled and "🟢 Active" or "🔴 Inactive"))
+			local blatantStatusLabel = Status:AddLabel("• Blatant Mode: " .. (blatantEnabled and "🟢 Active" or "🔴 Inactive"))
+			local espStatusLabel = Status:AddLabel("• ESP: " .. (espEnabled and "🟢 Active" or "🔴 Inactive"))
+			local rainbowStatusLabel = Status:AddLabel("• Rainbow FOV: " .. (rainbowFov and "🟢 Active" or "🔴 Inactive"))
+			local wallStatusLabel = Status:AddLabel("• Wall Check: " .. (wallCheck and "🟢 Active" or "🔴 Inactive"))
+			local teamStatusLabel = Status:AddLabel("• Team Check: " .. (teamCheck and "🟢 Active" or "🔴 Inactive"))
+			
+			-- Function to update all status labels
+			local function updateStatusLabels()
+				if aimbotStatusLabel then aimbotStatusLabel:Set("• Aimbot: " .. (aimbotEnabled and "🟢 Active" or "🔴 Inactive")) end
+				if blatantStatusLabel then blatantStatusLabel:Set("• Blatant Mode: " .. (blatantEnabled and "🟢 Active" or "🔴 Inactive")) end
+				if espStatusLabel then espStatusLabel:Set("• ESP: " .. (espEnabled and "🟢 Active" or "🔴 Inactive")) end
+				if rainbowStatusLabel then rainbowStatusLabel:Set("• Rainbow FOV: " .. (rainbowFov and "🟢 Active" or "🔴 Inactive")) end
+				if wallStatusLabel then wallStatusLabel:Set("• Wall Check: " .. (wallCheck and "🟢 Active" or "🔴 Inactive")) end
+				if teamStatusLabel then teamStatusLabel:Set("• Team Check: " .. (teamCheck and "🟢 Active" or "🔴 Inactive")) end
 			end
 			
-			Status:AddLabel(getActiveStatus(aimbotEnabled, "Aimbot"))
-			Status:AddLabel(getActiveStatus(blatantEnabled, "Blatant Mode"))
-			Status:AddLabel(getActiveStatus(espEnabled, "ESP"))
-			Status:AddLabel(getActiveStatus(rainbowFov, "Rainbow FOV"))
-			Status:AddLabel(getActiveStatus(wallCheck, "Wall Check"))
-			Status:AddLabel(getActiveStatus(teamCheck, "Team Check"))
+			-- Update status every second
+			game:GetService("RunService").Heartbeat:Connect(function()
+				updateStatusLabels()
+			end)
 			
 			Status:AddSection({Name = "📊 Performance"})
 			
@@ -1295,14 +1306,12 @@ task.spawn(function()
 				end
 			})
 			
-			Aimbot:Slider({
+			Aimbot:AddSlider({
 				Name = "Smoothness (1=Strong, 10=Subtle)", 
-				Side = "Left", 
 				Min = 1, 
 				Max = 10, 
-				Value = smoothing, 
-				Precise = 0, 
-				Unit = "",
+				Default = smoothing,
+				ValueName = "",
 				Callback = function(Value) 
 					smoothing = Value 
 				end
