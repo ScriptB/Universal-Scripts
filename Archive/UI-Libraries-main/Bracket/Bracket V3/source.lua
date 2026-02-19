@@ -10,13 +10,13 @@ local function MakeDraggable(ClickObject, Object)
 	local DragInput = nil
 	local DragStart = nil
 	local StartPosition = nil
-	
+
 	ClickObject.InputBegan:Connect(function(Input)
 		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 			Dragging = true
 			DragStart = Input.Position
 			StartPosition = Object.Position
-			
+
 			Input.Changed:Connect(function()
 				if Input.UserInputState == Enum.UserInputState.End then
 					Dragging = false
@@ -24,13 +24,13 @@ local function MakeDraggable(ClickObject, Object)
 			end)
 		end
 	end)
-	
+
 	ClickObject.InputChanged:Connect(function(Input)
 		if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
 			DragInput = Input
 		end
 	end)
-	
+
 	UserInputService.InputChanged:Connect(function(Input)
 		if Input == DragInput and Dragging then
 			local Delta = Input.Position - DragStart
@@ -54,8 +54,8 @@ function Library:CreateWindow(Config, Parent)
 		syn.protect_gui(Screen)
 	end
 	]]
-	
-	Screen.Name =  HttpService:GenerateGUID(false)
+
+	Screen.Name = HttpService:GenerateGUID(false)
 	Screen.Parent = Parent
 	Topbar.WindowName.Text = Config.WindowName
 
@@ -232,7 +232,7 @@ function Library:CreateWindow(Config, Parent)
 			Section.Container.ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 				Section.Size = UDim2.new(1,0,0,Section.Container.ListLayout.AbsoluteContentSize.Y + 15)
 			end)
-			
+
 			function SectionInit:CreateLabel(Name)
 				local LabelInit = {}
 				local Label = Folder.Label:Clone()
@@ -333,7 +333,7 @@ function Library:CreateWindow(Config, Parent)
 				Toggle.Parent = Section.Container
 				Toggle.Title.Text = Name
 				Toggle.Size = UDim2.new(1,-10,0,Toggle.Title.TextBounds.Y + 5)
-				
+
 				table.insert(Library.ColorTable, Toggle.Toggle)
 				local ToggleState = false
 
@@ -441,7 +441,7 @@ function Library:CreateWindow(Config, Parent)
 				local Slider = Folder.Slider:Clone()
 				Slider.Name = Name .. " S"
 				Slider.Parent = Section.Container
-				
+
 				Slider.Title.Text = Name
 				Slider.Slider.Bar.Size = UDim2.new(Min / Max,0,1,0)
 				Slider.Slider.Bar.BackgroundColor3 = Config.Color
@@ -453,16 +453,16 @@ function Library:CreateWindow(Config, Parent)
 				local GlobalSliderValue = 0
 				local Dragging = false
 				local function Sliding(Input)
-                    local Position = UDim2.new(math.clamp((Input.Position.X - Slider.Slider.AbsolutePosition.X) / Slider.Slider.AbsoluteSize.X,0,1),0,1,0)
-                    Slider.Slider.Bar.Size = Position
+					local Position = UDim2.new(math.clamp((Input.Position.X - Slider.Slider.AbsolutePosition.X) / Slider.Slider.AbsoluteSize.X,0,1),0,1,0)
+					Slider.Slider.Bar.Size = Position
 					local SliderPrecise = ((Position.X.Scale * Max) / Max) * (Max - Min) + Min
 					local SliderNonPrecise = math.floor(((Position.X.Scale * Max) / Max) * (Max - Min) + Min)
-                    local SliderValue = Precise and SliderNonPrecise or SliderPrecise
+					local SliderValue = Precise and SliderNonPrecise or SliderPrecise
 					SliderValue = tonumber(string.format("%.2f", SliderValue))
 					GlobalSliderValue = SliderValue
-                    Slider.Value.PlaceholderText = tostring(SliderValue)
-                    Callback(GlobalSliderValue)
-                end
+					Slider.Value.PlaceholderText = tostring(SliderValue)
+					Callback(GlobalSliderValue)
+				end
 				local function SetValue(Value)
 					GlobalSliderValue = Value
 					Slider.Slider.Bar.Size = UDim2.new(Value / Max,0,1,0)
@@ -477,7 +477,7 @@ function Library:CreateWindow(Config, Parent)
 					elseif Slider.Value.Text == "" or tonumber(Slider.Value.Text) >= Max then
 						Slider.Value.Text = Max
 					end
-		
+
 					GlobalSliderValue = Slider.Value.Text
 					Slider.Slider.Bar.Size = UDim2.new(Slider.Value.Text / Max,0,1,0)
 					Slider.Value.PlaceholderText = Slider.Value.Text
@@ -486,17 +486,17 @@ function Library:CreateWindow(Config, Parent)
 				end)
 
 				Slider.InputBegan:Connect(function(Input)
-                    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        Sliding(Input)
+					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+						Sliding(Input)
 						Dragging = true
-                    end
-                end)
+					end
+				end)
 
 				Slider.InputEnded:Connect(function(Input)
-                    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
 						Dragging = false
-                    end
-                end)
+					end
+				end)
 
 				UserInputService.InputBegan:Connect(function(Input)
 					if Input.KeyCode == Enum.KeyCode.LeftControl then
@@ -689,13 +689,13 @@ function Library:CreateWindow(Config, Parent)
 
 				Pallete.GradientPallete.InputBegan:Connect(function(Input)
 					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if ColorRender then
-                            ColorRender:Disconnect()
-                        end
+						if ColorRender then
+							ColorRender:Disconnect()
+						end
 						ColorRender = RunService.RenderStepped:Connect(function()
 							local Mouse = UserInputService:GetMouseLocation()
 							local ColorX = math.clamp(Mouse.X - Pallete.GradientPallete.AbsolutePosition.X, 0, Pallete.GradientPallete.AbsoluteSize.X) / Pallete.GradientPallete.AbsoluteSize.X
-                            local ColorY = math.clamp((Mouse.Y - 37) - Pallete.GradientPallete.AbsolutePosition.Y, 0, Pallete.GradientPallete.AbsoluteSize.Y) / Pallete.GradientPallete.AbsoluteSize.Y
+							local ColorY = math.clamp((Mouse.Y - 37) - Pallete.GradientPallete.AbsolutePosition.Y, 0, Pallete.GradientPallete.AbsoluteSize.Y) / Pallete.GradientPallete.AbsoluteSize.Y
 							Pallete.GradientPallete.Dot.Position = UDim2.new(ColorX,0,ColorY,0)
 							ColorTable.Saturation = ColorX
 							ColorTable.Value = 1 - ColorY
@@ -706,32 +706,32 @@ function Library:CreateWindow(Config, Parent)
 
 				Pallete.GradientPallete.InputEnded:Connect(function(Input)
 					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if ColorRender then
-                            ColorRender:Disconnect()
-                        end
+						if ColorRender then
+							ColorRender:Disconnect()
+						end
 					end
 				end)
 
 				Pallete.ColorSlider.InputBegan:Connect(function(Input)
 					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if HueRender then
-                            HueRender:Disconnect()
-                        end
+						if HueRender then
+							HueRender:Disconnect()
+						end
 						HueRender = RunService.RenderStepped:Connect(function()
 							local Mouse = UserInputService:GetMouseLocation()
 							local HueX = math.clamp(Mouse.X - Pallete.ColorSlider.AbsolutePosition.X, 0, Pallete.ColorSlider.AbsoluteSize.X) / Pallete.ColorSlider.AbsoluteSize.X
 							ColorTable.Hue = 1 - HueX
 							UpdateColor()
 						end)
-                    end
+					end
 				end)
 
 				Pallete.ColorSlider.InputEnded:Connect(function(Input)
 					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if HueRender then
-                            HueRender:Disconnect()
-                        end
-                    end
+						if HueRender then
+							HueRender:Disconnect()
+						end
+					end
 				end)
 
 				function ColorpickerInit:UpdateColor(Color)
