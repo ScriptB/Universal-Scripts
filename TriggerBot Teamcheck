@@ -1,0 +1,32 @@
+
+
+       local player = game:GetService("Players").LocalPlayer
+      local mouse = player:GetMouse()
+     local Teams = game:GetService("Teams") -- get the teams service.
+    local lastTarget = nil
+   local canClick = true
+ local clickCooldown = 0.2 -- adjust it the delay value ( seconds) to control how fast
+
+  game:GetService("RunService").RenderStepped:Connect(function(deltaTime)
+    if mouse.Target and mouse.Target.Parent:FindFirstChild("Humanoid") and mouse.Target.Parent.Name ~= player.Name then
+        local targetPlayer = game:GetService("Players"):GetPlayerFromCharacter(mouse.Target.Parent)
+       
+	   
+	 if targetPlayer and targetPlayer.Team ~= player.Team then
+            if mouse.Target ~= lastTarget then
+                canClick = true
+                lastTarget = mouse.Target
+            end
+            if canClick then
+                mouse1press() wait() mouse1release()
+                canClick = false
+                
+                
+            end
+        else
+            lastTarget = nil -- reset lastTarget if the target is on the sae team or not a playeron the team
+        end
+    else
+        lastTarget = nil -- reset the lastTarget if the mouse is not over not target
+    end
+end)

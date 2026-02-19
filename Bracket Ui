@@ -8,6 +8,41 @@ local Window = Bracket:Window({Name = "Window",Enabled = true,Color = Color3.new
 	--Window:ChangeColor(Color3.new(1,0.5,0.25))
 	--Window:Toggle(true)
 	--Window.Background -- ImageLabel
+	local Tab = Window:Tab({Name = "Info"}) do
+		Tab:Divider({Text = "Phantom Suite Information",Side = "Left"})
+		
+		Tab:Label({Text = "Welcome to Phantom Suite!",Side = "Left"})
+		Tab:Label({Text = "",Side = "Left"})
+		
+		Tab:Divider({Text = "Important Notice",Side = "Left"})
+		Tab:Label({Text = "If features aren't working or loading,",Side = "Left"})
+		Tab:Label({Text = "this is due to your executor's limitations.",Side = "Left"})
+		Tab:Label({Text = "Some executors lack require functions",Side = "Left"})
+		Tab:Label({Text = "and other essential capabilities.",Side = "Left"})
+		Tab:Label({Text = "",Side = "Left"})
+		Tab:Label({Text = "This cannot be fixed on our end.",Side = "Left"})
+		Tab:Label({Text = "Please use a compatible executor.",Side = "Left"})
+		Tab:Label({Text = "",Side = "Left"})
+		
+		Tab:Divider({Text = "Recommended Executors",Side = "Left"})
+		Tab:Label({Text = "• Synapse X",Side = "Left"})
+		Tab:Label({Text = "• ScriptWare",Side = "Left"})
+		Tab:Label({Text = "• KRNL",Side = "Left"})
+		Tab:Label({Text = "• Fluxus",Side = "Left"})
+		Tab:Label({Text = "",Side = "Left"})
+		
+		Tab:Divider({Text = "Troubleshooting",Side = "Left"})
+		Tab:Label({Text = "• Re-execute the script",Side = "Left"})
+		Tab:Label({Text = "• Check executor updates",Side = "Left"})
+		Tab:Label({Text = "• Try a different executor",Side = "Left"})
+		Tab:Label({Text = "• Ensure game is supported",Side = "Left"})
+		Tab:Label({Text = "",Side = "Left"})
+		
+		Tab:Divider({Text = "Support",Side = "Left"})
+		Tab:Label({Text = "For support, join our Discord",Side = "Left"})
+		Tab:Label({Text = "or check the documentation.",Side = "Left"})
+	end
+	
 	local Tab = Window:Tab({Name = "Tab"}) do
 		--Tab:ChangeName("Tab")
 

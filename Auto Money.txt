@@ -1,0 +1,163 @@
+
+-- CONFIG
+local LOGO_ID = "rbxassetid://126140066167935"
+local running = false
+local farmThread = nil
+
+-- Cache services for performance
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local eventManager = replicatedStorage.Modules.EventManagerClient.ServerEvent
+
+--====================================================
+-- AUTO MONEY REAL (START / STOP THREAD)
+--====================================================
+
+local function startFarm()
+	if farmThread then return end -- evita duplicados
+
+	farmThread = task.spawn(function()
+		while running do
+			eventManager:FireServer("ClaimReward")
+			task.wait(0.0005) -- velocidad del farm (200x faster)
+		end
+	end)
+end
+
+local function stopFarm()
+	running = false
+
+	if farmThread then
+		task.cancel(farmThread)
+		farmThread = nil
+	end
+end
+
+--====================================================
+-- UI
+--====================================================
+
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 330, 0, 160)
+frame.Position = UDim2.new(0.5, -165, 0.5, -80)
+frame.BackgroundColor3 = Color3.fromRGB(10, 40, 10)
+frame.BorderSizePixel = 0
+frame.ClipsDescendants = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+-- HEADER
+local header = Instance.new("Frame", frame)
+header.Size = UDim2.new(1, 0, 0, 40)
+header.BackgroundColor3 = Color3.fromRGB(5, 25, 5)
+header.BorderSizePixel = 0
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
+
+-- MINIMIZE
+local minimize = Instance.new("TextButton", header)
+minimize.Size = UDim2.new(0, 28, 0, 28)
+minimize.Position = UDim2.new(1, -34, 0.5, -14)
+minimize.BackgroundColor3 = Color3.fromRGB(20, 60, 20)
+minimize.Text = "–"
+minimize.Font = Enum.Font.Code
+minimize.TextSize = 26
+minimize.TextColor3 = Color3.fromRGB(0, 255, 0)
+Instance.new("UICorner", minimize).CornerRadius = UDim.new(0, 6)
+
+-- LOGO
+local logo = Instance.new("ImageLabel", header)
+logo.Size = UDim2.new(0, 60, 0, 60)
+logo.Position = UDim2.new(0, 8, 0.5, -30)
+logo.BackgroundTransparency = 1
+logo.Image = LOGO_ID
+logo.ScaleType = Enum.ScaleType.Fit
+
+-- TITLE
+local title = Instance.new("TextLabel", header)
+title.Position = UDim2.new(0, 75, 0, -2)
+title.Size = UDim2.new(0, 230, 1, 0)
+title.BackgroundTransparency = 1
+title.Text = "PalaceScriptz ©"
+title.Font = Enum.Font.Code
+title.TextColor3 = Color3.fromRGB(0, 255, 0)
+title.TextSize = 26
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- TOGGLE BUTTON
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(0, 180, 0, 50)
+toggle.Position = UDim2.new(0.5, -90, 1, -60)
+toggle.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+toggle.Text = "ACTIVAR (OFF)"
+toggle.Font = Enum.Font.Code
+toggle.TextColor3 = Color3.fromRGB(0, 255, 0)
+toggle.TextSize = 22
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 10)
+
+--====================================================
+-- TOGGLE REAL (START / STOP FARM)
+--====================================================
+
+toggle.MouseButton1Click:Connect(function()
+	running = not running
+
+	if running then
+		startFarm()
+		toggle.Text = "DESACTIVAR (ON)"
+		toggle.BackgroundColor3 = Color3.fromRGB(0, 160, 0)
+	else
+		stopFarm()
+		toggle.Text = "ACTIVAR (OFF)"
+		toggle.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+	end
+end)
+
+--====================================================
+-- MINIMIZE LOGIC
+--====================================================
+
+local minimized = false
+local fullSize = frame.Size
+
+minimize.MouseButton1Click:Connect(function()
+	minimized = not minimized
+
+	if minimized then
+		toggle.Visible = false
+		frame:TweenSize(UDim2.new(0, 330, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.25, true)
+	else
+		frame:TweenSize(fullSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.25, true)
+		task.delay(0.25, function()
+			toggle.Visible = true
+		end)
+	end
+end)
+
+--====================================================
+-- DRAG SYSTEM
+--====================================================
+
+local UIS = game:GetService("UserInputService")
+local dragging, dragStart, startPos
+
+header.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = i.Position
+		startPos = frame.Position
+	end
+end)
+
+header.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+UIS.InputChanged:Connect(function(i)
+	if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = i.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
