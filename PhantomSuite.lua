@@ -58,18 +58,18 @@ local espColor = Color3.fromRGB(255, 0, 0)
 -- Check variables
 local wallCheck = true
 local teamCheck = true
-
--- UI toggle references (assigned when UI is built)
-local triggerBotToggle = nil
-local rainbowFovToggle = nil
-local espTeamCheckToggle = nil
-local espToggle = nil
 local stickyAimEnabled = false
 local healthCheck = false
 local minHealth = 0
 
 -- Targeting mode (from provided code)
 local targetMode = "Closest To Mouse" -- Options: "Closest To Mouse", "Distance"
+
+-- UI toggle references (assigned when UI is built)
+local triggerBotToggle = nil
+local rainbowFovToggle = nil
+local espTeamCheckToggle = nil
+local espToggle = nil
 
 local aimbotIncludeNPCs = false
 local espIncludeNPCs = false
@@ -1621,40 +1621,113 @@ task.spawn(function()
 	
 	-- ==================== FUNCTIONAL LOGIC ====================
 	
-	-- Aimbot functionality
-	local function getClosestPlayer()
-		local closestPlayer = nil
-		local closestDistance = aimFov
+	-- Core variables from working version
+	local currentTarget = nil
+	local aiming = false
+	local lastTriggerTime = 0
+	local triggerInterval = 0.1
+	
+	-- Helper functions from working version
+	local function getRootPart(character)
+		return character and (character:FindFirstChild("HumanoidRootPart")
+			or character:FindFirstChild("UpperTorso")
+			or character:FindFirstChild("Torso")
+			or character:FindFirstChild("LowerTorso"))
+	end
+	
+	local function getAimPart(character)
+		return character and (character:FindFirstChild("Head") or getRootPart(character))
+	end
+	
+	local function resolveCharacter(target)
+		if typeof(target) == "Instance" then
+			if target:IsA("Player") then
+				return target.Character, target
+			end
+			if target:IsA("Model") then
+				return target, players:GetPlayerFromCharacter(target)
+			end
+		end
+		if type(target) == "table" then
+			local char = target.Character
+			if typeof(char) == "Instance" and char:IsA("Model") then
+				return char, players:GetPlayerFromCharacter(char)
+			end
+		end
+		return nil, nil
+	end
+	
+	-- Team detection from working version
+	local function isOnSameTeam(targetPlayer)
+		if not targetPlayer then return false end
+		if targetPlayer == plr then return true end
 		
-		for _, player in pairs(players:GetPlayers()) do
-			if player ~= plr and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character:FindFirstChild("HumanoidRootPart") then
-				-- Team check
-				if teamCheck and player.Team == plr.Team then
-					continue
-				end
+		local myTeam = plr.Team
+		local theirTeam = targetPlayer.Team
+		
+		if not myTeam or not theirTeam then
+			if not plr.Character or not targetPlayer.Character then
+				return false
+			end
+			
+			local myTeamColor = plr.TeamColor
+			local theirTeamColor = targetPlayer.TeamColor
+			if myTeamColor and theirTeamColor then
+				return myTeamColor == theirTeamColor
+			end
+			
+			if plr.Neutral or targetPlayer.Neutral then
+				return false
+			end
+			
+			return false
+		end
+		
+		if myTeam and theirTeam then
+			return myTeam == theirTeam
+		end
+		
+		local myTeamColor = plr.TeamColor
+		local theirTeamColor = targetPlayer.TeamColor
+		if myTeamColor and theirTeamColor then
+			return myTeamColor == theirTeamColor
+		end
+		
+		if plr.Neutral or targetPlayer.Neutral then
+			return false
+		end
+		
+		if myTeam and theirTeam then
+			return myTeam.Name == theirTeam.Name
+		end
+		
+		return false
+	end
+	
+	-- Targeting functions from working version
+	local function getClosestPlayerToMouse()
+		local closestPlayer = nil
+		local closestDistance = math.huge
+		local cameraPos = camera.CFrame.Position
+		
+		for _, player in ipairs(players:GetPlayers()) do
+			if player ~= plr and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				-- Apply team check if enabled
+				if teamCheck and isOnSameTeam(player) then continue end
 				
-				-- Distance check
-				local distance = (player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-				if distance > aimbotLockDistance then
-					continue
-				end
+				local hrp = player.Character.HumanoidRootPart
+				local screenPoint = camera:WorldToViewportPoint(hrp.Position)
+				local mousePoint = Vector2.new(mouse.X, mouse.Y)
+				local distance = (mousePoint - Vector2.new(screenPoint.X, screenPoint.Y)).Magnitude
+				local _, onScreen = camera:WorldToViewportPoint(hrp.Position)
 				
-				-- Wall check
-				if wallCheck then
-					local ray = workspace:Raycast(plr.Character.HumanoidRootPart.Position, player.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position)
-					if ray and ray.Instance and ray.Instance.Parent:FindFirstChild("Humanoid") then
-						continue
-					end
-				end
+				-- Apply aimbot distance lock
+				local playerDistance = (hrp.Position - cameraPos).Magnitude
+				if playerDistance > aimbotLockDistance then continue end
 				
-				-- FOV check
-				local screenPos, onScreen = camera:WorldToScreenPoint(player.Character.HumanoidRootPart.Position)
-				if onScreen then
-					local mouseDistance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
-					if mouseDistance < closestDistance then
-						closestDistance = mouseDistance
-						closestPlayer = player
-					end
+				if onScreen and distance < closestDistance then
+					closestPlayer = player
+					closestDistance = distance
 				end
 			end
 		end
@@ -1662,31 +1735,166 @@ task.spawn(function()
 		return closestPlayer
 	end
 	
-	-- Aimbot loop
-	RunService.Heartbeat:Connect(function()
-		if not aimbotEnabled then return end
+	local function getClosestByDistance()
+		local closestPlayer = nil
+		local closestDistance = math.huge
+		local cameraPos = camera.CFrame.Position
 		
-		local target = getClosestPlayer()
-		if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-			local targetPos = target.Character.HumanoidRootPart.Position
-			
-			-- Add prediction
-			if target.Character:FindFirstChild("Humanoid") and target.Character.Humanoid.MoveDirection ~= Vector3.new(0, 0, 0) then
-				targetPos = targetPos + target.Character.Humanoid.MoveDirection * predictionStrength * 16
+		for _, player in ipairs(players:GetPlayers()) do
+			if player ~= plr and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				-- Apply team check if enabled
+				if teamCheck and isOnSameTeam(player) then continue end
+				
+				local hrp = player.Character.HumanoidRootPart
+				local distance = (hrp.Position - cameraPos).Magnitude
+				
+				-- Apply aimbot distance lock
+				if distance > aimbotLockDistance then continue end
+				
+				if distance < closestDistance then
+					closestPlayer = player
+					closestDistance = distance
+				end
 			end
-			
-			-- Calculate aim direction
-			local aimDirection = (targetPos - camera.CFrame.Position).Unit
-			
-			if blatantEnabled then
-				-- Direct aim for blatant mode
-				camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + aimDirection)
+		end
+		
+		return closestPlayer
+	end
+	
+	local function checkWall(targetCharacter)
+		if not targetCharacter then return false end
+		local targetPart = getAimPart(targetCharacter)
+		if not targetPart then return false end
+
+		local origin = camera.CFrame.Position
+		local direction = targetPart.Position - origin
+		if direction.Magnitude <= 0 then return false end
+
+		local ignore = {targetCharacter, workspace.CurrentCamera}
+		if plr.Character then table.insert(ignore, plr.Character) end
+
+		local raycastParams = RaycastParams.new()
+		raycastParams.FilterDescendantsInstances = ignore
+		raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+		raycastParams.IgnoreWater = true
+		raycastParams.RespectCanCollide = true
+
+		for _ = 1, 2 do
+			local raycastResult = workspace:Raycast(origin, direction, raycastParams)
+			if not raycastResult then
+				return false
+			end
+			local hit = raycastResult.Instance
+			if hit and hit:IsA("BasePart") and (hit.Transparency >= 0.95 or hit.CanCollide == false) then
+				table.insert(ignore, hit)
+				raycastParams.FilterDescendantsInstances = ignore
 			else
-				-- Smooth aim
-				local currentLook = camera.CFrame.LookVector
-				local newLook = currentLook:Lerp(aimDirection, smoothing)
-				camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + newLook)
+				return true
 			end
+		end
+
+		return false
+	end
+	
+	local function getTarget()
+		-- Use targeting methods based on mode
+		local nearestPlayer = nil
+		if targetMode == "Closest To Mouse" then
+			nearestPlayer = getClosestPlayerToMouse()
+		elseif targetMode == "Distance" then
+			nearestPlayer = getClosestByDistance()
+		end
+		
+		-- Apply additional checks
+		if nearestPlayer and nearestPlayer.Character then
+			local humanoid = nearestPlayer.Character:FindFirstChildOfClass("Humanoid")
+			if not humanoid or humanoid.Health <= 0 then return nil end
+			if healthCheck and humanoid.Health < minHealth then return nil end
+			if wallCheck and checkWall(nearestPlayer.Character) then return nil end
+		end
+		
+		return nearestPlayer
+	end
+	
+	local function predict(target)
+		local char = (type(target) == "table" and target.Character) or (typeof(target) == "Instance" and target:IsA("Player") and target.Character) or nil
+		if not char then return nil end
+		local aimPart = getAimPart(char)
+		local hrp = getRootPart(char)
+		if not aimPart or not hrp then return nil end
+		return aimPart.Position + (hrp.Velocity * predictionStrength)
+	end
+	
+	local function smooth(from, to)
+		return from:Lerp(to, smoothing)
+	end
+	
+	local function aimAt(target)
+		if not target then return end
+		
+		local char = (type(target) == "table" and target.Character) or (typeof(target) == "Instance" and target:IsA("Player") and target.Character) or nil
+		if not char then return end
+		
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if not humanoid or humanoid.Health <= 0 then return end
+		if healthCheck and humanoid.Health < minHealth then return end
+		
+		local aimPart = getAimPart(char)
+		if not aimPart then return end
+		
+		local targetPosition = aimPart.Position
+		if not targetPosition or (targetPosition.X == 0 and targetPosition.Y == 0 and targetPosition.Z == 0) then return end
+		
+		local distance = (targetPosition - camera.CFrame.Position).Magnitude
+		if distance > aimbotLockDistance * 2 then return end
+		
+		if blatantEnabled then
+			-- Direct snap for blatant mode
+			if not wallCheck or not checkWall(char) then
+				camera.CFrame = CFrame.new(camera.CFrame.Position, targetPosition)
+			end
+		else
+			local predictedPosition = predict(target)
+			if not predictedPosition then return end
+			local predictedDistance = (predictedPosition - camera.CFrame.Position).Magnitude
+			if predictedDistance <= aimbotLockDistance * 2 then
+				camera.CFrame = smooth(camera.CFrame, CFrame.new(camera.CFrame.Position, predictedPosition))
+			end
+		end
+	end
+	
+	-- Main aimbot loop from working version
+	RunService.Heartbeat:Connect(function()
+		if not aimbotEnabled then 
+			currentTarget = nil
+			return 
+		end
+		
+		if not aiming then
+			currentTarget = nil
+			return
+		end
+		
+		local target = getTarget()
+		if target then
+			currentTarget = target
+			aimAt(target)
+		else
+			currentTarget = nil
+		end
+	end)
+	
+	-- Mouse aiming detection
+	UserInputService.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 and aimbotEnabled then
+			aiming = true
+		end
+	end)
+	
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then
+			aiming = false
+			currentTarget = nil
 		end
 	end)
 	
@@ -1854,24 +2062,34 @@ task.spawn(function()
 		end
 	end)
 	
-	-- Trigger Bot functionality
+	-- Trigger Bot functionality from working version
 	UserInputService.InputBegan:Connect(function(input)
-		if not triggerBotEnabled then return end
+		if not (triggerBotEnabled or blatantEnabled) then return end
 		
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			local target = getClosestPlayer()
-			if target then
-				-- Use appropriate mouse control for the executor
-				if syn and syn.mouse1press then
-					syn.mouse1press()
-					task.wait()
-					syn.mouse1release()
-				elseif mouse1press then
-					mouse1press()
-					task.wait()
-					mouse1release()
-				elseif plr and plr:GetMouse() then
-					plr:GetMouse():Click()
+		-- Block firing when interacting with UI
+		if UserInputService:GetFocusedTextBox() then return end
+		local ml = UserInputService:GetMouseLocation()
+		if #game:GetService("GuiService"):GetGuiObjectsAtPosition(ml.X, ml.Y) > 0 then return end
+
+		-- Use mouse.Target for direct hit detection
+		if mouse.Target and mouse.Target.Parent:FindFirstChild("Humanoid") and mouse.Target.Parent.Name ~= plr.Name then
+			local targetPlayer = players:GetPlayerFromCharacter(mouse.Target.Parent)
+			
+			if targetPlayer and targetPlayer.Team ~= plr.Team then
+				if tick() - lastTriggerTime >= triggerInterval then
+					-- Use appropriate mouse control for the executor
+					if syn and syn.mouse1press then
+						syn.mouse1press()
+						task.wait()
+						syn.mouse1release()
+					elseif mouse1press then
+						mouse1press()
+						task.wait()
+						mouse1release()
+					elseif plr and plr:GetMouse() then
+						plr:GetMouse():Click()
+					end
+					lastTriggerTime = tick()
 				end
 			end
 		end
