@@ -701,10 +701,11 @@ local function layoutOpenBubbles()
 	table.sort(open, function(a,b) return (a.OpenTick or 0) < (b.OpenTick or 0) end)
 	if #open == 0 then return end
 
-	local spacing = 14
-	local marginTop = 40
+	local spacing = 20 -- Increased spacing for better separation
+	local marginTop = 60 -- Increased margin from top
+	local marginLeft = 40 -- Increased margin from sides
 	local dockTop = vp.Y + Dock.Position.Y.Offset - Dock.AbsoluteSize.Y
-	local availableH = dockTop - marginTop - 16
+	local availableH = dockTop - marginTop - 20
 
 	-- Try 1 row, else 2 rows
 	local function totalW(list)
@@ -716,7 +717,7 @@ local function layoutOpenBubbles()
 		return w
 	end
 
-	local maxRowW = vp.X - 32
+	local maxRowW = vp.X - (marginLeft * 2) -- Account for side margins
 	local rows = {}
 	if totalW(open) <= maxRowW or availableH < 520 then
 		rows[1] = open
@@ -736,25 +737,31 @@ local function layoutOpenBubbles()
 	end
 
 	local rowCount = #rows
-	local rowGap = 16
+	local rowGap = 20 -- Increased gap between rows
 	for r = 1, rowCount do
 		local row = rows[r]
 		local tw = totalW(row)
-		local startX = (vp.X/2) - (tw/2)
-		local y = marginTop + ((r-1) * (280 + rowGap)) + 140
+		-- Center the row with proper margins
+		local startX = marginLeft + ((vp.X - (marginLeft * 2) - tw) / 2)
+		local y = marginTop + ((r-1) * (300 + rowGap)) -- Increased bubble height
+		
 		for i, e in ipairs(row) do
 			local w = e.TargetSize.X.Offset
 			local h = e.TargetSize.Y.Offset
 			local cx = startX + (w/2)
-			local cy = y
-			cx, cy = clampBubbleCenter(cx, cy, w, h)
+			local cy = y + (h/2)
+			
+			-- Ensure bubbles stay on screen
+			cx = math.max(marginLeft + w/2, math.min(cx, vp.X - marginLeft - w/2))
+			cy = math.max(marginTop + h/2, math.min(cy, dockTop - marginTop - h/2))
+			
 			startX = startX + w + spacing
 
 			e.TargetCenter = Vector2.new(cx, cy)
-			tween(e.Card, TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			tween(e.Card, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 				Position = UDim2.new(0, cx, 0, cy),
 				Size = e.TargetSize,
-				BackgroundTransparency = 0.84,
+				BackgroundTransparency = 0.86,
 			})
 		end
 	end
@@ -774,17 +781,10 @@ local function openBubble(key)
 	card.Position = origin
 	card.Size = UDim2.new(0, 0, 0, 0)
 
-	-- Enhanced bubble positioning - center on screen with better offset
-	local vp = workspace.CurrentCamera.ViewportSize
-	local targetX = vp.X/2 -- Center horizontally
-	local targetY = vp.Y * 0.35 -- Position in upper 35% of screen
-	local targetPos = UDim2.new(0, targetX, 0, targetY)
-	local targetSize = entry.TargetSize
-
-	-- Enhanced opening animation with elastic effect
+	-- Don't set initial position here - let layoutOpenBubbles handle it
+	-- Just animate to the target size and transparency
 	tween(card, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = targetPos,
-		Size = targetSize,
+		Size = entry.TargetSize,
 		BackgroundTransparency = 0.86,
 		Rotation = 0
 	})
@@ -818,6 +818,7 @@ local function openBubble(key)
 
 	entry.Open = true
 	entry.OpenTick = tick()
+	-- Call layoutOpenBubbles to position the bubble correctly
 	layoutOpenBubbles()
 end
 
