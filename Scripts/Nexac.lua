@@ -18,7 +18,7 @@ print("🚀 Loading Bracket Library (MAIN GUI Handler)...")
 
 -- Primary Bracket Library loading with instant execution
 local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/AlexR32/Bracket/main/BracketV3.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/AlexR32/Roblox/main/BracketV3.lua"))()
 end)
 
 if success and result then
@@ -641,10 +641,12 @@ local function main()
     -- Create main interface immediately
     local Window
     local success, result = pcall(function()
-        return Bracket:CreateWindow({
+        local Config = {
             WindowName = "Nexac Suite",
-            Color = Color3.fromRGB(85, 170, 255)
-        }, game:GetService("CoreGui"))
+            Color = Color3.fromRGB(85, 170, 255),
+            Keybind = Enum.KeyCode.RightBracket
+        }
+        return Bracket:CreateWindow(Config, game:GetService("CoreGui"))
     end)
     
     if not success then
@@ -738,8 +740,8 @@ local function main()
     local AimbotTab = Window:CreateTab("Aimbot")
     local AimbotControlsSection = AimbotTab:CreateSection("Aimbot Controls")
     
-    local aimbotEnabled = AimbotControlsSection:Toggle("Enable Aimbot", function()
-        print("Aimbot toggled")
+    local aimbotEnabled = AimbotControlsSection:CreateToggle("Enable Aimbot", nil, function(State)
+        print("Aimbot:", State and "ENABLED" or "DISABLED")
     end)
     
     local AimbotSettingsSection = AimbotTab:CreateSection("Aimbot Settings")
@@ -751,8 +753,8 @@ local function main()
     local ESPTab = Window:CreateTab("ESP")
     local ESPControlsSection = ESPTab:CreateSection("ESP Controls")
     
-    local espEnabled = ESPControlsSection:Toggle("Enable ESP", function()
-        print("ESP toggled")
+    local espEnabled = ESPControlsSection:CreateToggle("Enable ESP", nil, function(State)
+        print("ESP:", State and "ENABLED" or "DISABLED")
     end)
     
     local ESPFeaturesSection = ESPTab:CreateSection("ESP Features")
@@ -764,8 +766,8 @@ local function main()
     local VisualTab = Window:CreateTab("Visual")
     local VisualControlsSection = VisualTab:CreateSection("Visual Enhancements")
     
-    VisualControlsSection:Toggle("Enable Visuals", function()
-        print("Visuals toggled")
+    VisualControlsSection:CreateToggle("Enable Visuals", nil, function(State)
+        print("Visuals:", State and "ENABLED" or "DISABLED")
     end)
     
     local VisualSettingsSection = VisualTab:CreateSection("Visual Settings")
@@ -777,8 +779,8 @@ local function main()
     local MovementTab = Window:CreateTab("Movement")
     local MovementControlsSection = MovementTab:CreateSection("Movement Tools")
     
-    local flyEnabled = MovementControlsSection:Toggle("Enable Fly", function()
-        print("Fly toggled")
+    local flyEnabled = MovementControlsSection:CreateToggle("Enable Fly", nil, function(State)
+        print("Fly:", State and "ENABLED" or "DISABLED")
     end)
     
     local MovementSettingsSection = MovementTab:CreateSection("Movement Settings")
@@ -797,7 +799,7 @@ local function main()
     ScriptSettingsSection:Label("Console Copy: Enhanced Dev Console")
     
     local ActionsSection = SettingsTab:CreateSection("Actions")
-    ActionsSection:Button("Advanced Dev Console Copy", function()
+    ActionsSection:CreateButton("Advanced Dev Console Copy", function()
         Bracket:Notification({
             Title = "Advanced Console Copy",
             Description = "[C] buttons and Copy All in Dev Console!",
@@ -805,12 +807,12 @@ local function main()
         })
     end)
     
-    ActionsSection:Button("Destroy GUI", function()
+    ActionsSection:CreateButton("Destroy GUI", function()
         Window:Destroy()
         print("GUI Destroyed")
     end)
     
-    ActionsSection:Button("Reload Script", function()
+    ActionsSection:CreateButton("Reload Script", function()
         Bracket:Notification({
             Title = "Nexac Suite",
             Description = "Script reload requested!",
