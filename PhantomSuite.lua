@@ -1598,37 +1598,72 @@ task.spawn(function()
 				Default = Enum.KeyCode.RightShift,
 				Hold = false,
 				Callback = function()
-					-- Proper Orion UI toggle logic
+					-- Comprehensive Orion UI toggle logic
 					if OrionLib then
-						-- Try multiple methods to toggle UI
-						local success = pcall(function()
-							-- Method 1: Try Hide/Show functions
+						local success = false
+						local isVisible = true
+						
+						-- Method 1: Try UI.Enabled property
+						pcall(function()
 							if OrionLib.UI and OrionLib.UI.Enabled ~= nil then
-								OrionLib.UI.Enabled = not OrionLib.UI.Enabled
-							elseif OrionLib.Hide and OrionLib.Show then
-								if OrionLib.UI and OrionLib.UI.Enabled then
-									OrionLib:Hide()
-								else
-									OrionLib:Show()
-								end
-							else
-								-- Method 2: Try direct window toggle
-								local window = OrionLib.Windows and OrionLib.Windows[1]
-								if window then
-									window.Visible = not window.Visible
-								end
+								isVisible = OrionLib.UI.Enabled
+								OrionLib.UI.Enabled = not isVisible
+								success = true
 							end
 						end)
 						
-						if success and OrionLib.MakeNotification then
-							local isVisible = false
+						-- Method 2: Try window.Visible property
+						if not success then
 							pcall(function()
-								isVisible = OrionLib.UI and OrionLib.UI.Enabled
+								local window = OrionLib.Windows and OrionLib.Windows[1]
+								if window then
+									isVisible = window.Visible
+									window.Visible = not isVisible
+									success = true
+								end
 							end)
+						end
+						
+						-- Method 3: Try to find any GUI objects
+						if not success then
+							pcall(function()
+								for _, obj in pairs(getgenv()) do
+									if type(obj) == "table" and obj.Visible ~= nil then
+										isVisible = obj.Visible
+										obj.Visible = not isVisible
+										success = true
+										break
+									end
+								end
+							end)
+						end
+						
+						-- Method 4: Try CoreGui manipulation
+						if not success then
+							pcall(function()
+								local coreGui = game:GetService("CoreGui")
+								for _, child in pairs(coreGui:GetChildren()) do
+									if child.Name:find("Orion") or child.Name:find("Phantom") then
+										isVisible = child.Enabled
+										child.Enabled = not isVisible
+										success = true
+										break
+									end
+								end
+							end)
+						end
+						
+						if success and OrionLib.MakeNotification then
 							OrionLib:MakeNotification({
 								Name = "UI Toggled",
-								Content = "UI: " .. (isVisible and "Shown" or "Hidden"),
+								Content = "UI: " .. (not isVisible and "Shown" or "Hidden"),
 								Time = 2
+							})
+						elseif OrionLib.MakeNotification then
+							OrionLib:MakeNotification({
+								Name = "UI Toggle Failed",
+								Content = "Could not toggle UI visibility",
+								Time = 3
 							})
 						end
 					end
