@@ -1968,6 +1968,42 @@ task.spawn(function()
 		return nearestPlayer
 	end
 	
+	local function getBlatantTarget()
+		-- Special targeting for blatant mode - no on-screen requirement
+		local closestPlayer = nil
+		local closestDistance = math.huge
+		local cameraPos = camera.CFrame.Position
+		
+		for _, player in ipairs(players:GetPlayers()) do
+			if player ~= plr and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				-- Apply team check if enabled
+				if teamCheck and isOnSameTeam(player) then continue end
+				
+				local hrp = player.Character.HumanoidRootPart
+				local distance = (hrp.Position - cameraPos).Magnitude
+				
+				-- Apply aimbot distance lock
+				if distance > aimbotLockDistance then continue end
+				
+				-- No on-screen check for blatant mode - can target behind you
+				if distance < closestDistance then
+					closestPlayer = player
+					closestDistance = distance
+				end
+			end
+		end
+		
+		-- Apply additional checks
+		if closestPlayer and closestPlayer.Character then
+			local humanoid = closestPlayer.Character:FindFirstChildOfClass("Humanoid")
+			if not humanoid or humanoid.Health <= 0 then return nil end
+			if healthCheck and humanoid.Health < minHealth then return nil end
+			if wallCheck and checkWall(closestPlayer.Character) then return nil end
+		end
+		
+		return closestPlayer
+	end
+	
 	local function predict(target)
 		local char = (type(target) == "table" and target.Character) or (typeof(target) == "Instance" and target:IsA("Player") and target.Character) or nil
 		if not char then return nil end
@@ -2314,10 +2350,10 @@ task.spawn(function()
 			-- Aimbot System
 			if aimbotEnabled or blatantEnabled then
 				if blatantEnabled then
-					-- Blatant: lock onto closest visible enemy and stick until dead
+					-- Blatant: lock onto closest enemy and stick until dead (no on-screen requirement)
 					if not currentTarget then
 						-- Find new target only if we don't have one
-						currentTarget = getTarget()
+						currentTarget = getBlatantTarget()
 					end
 					
 					if currentTarget then
@@ -2327,12 +2363,12 @@ task.spawn(function()
 						
 						if not humanoid or humanoid.Health <= 0 then
 							-- Target is dead, find new one
-							currentTarget = getTarget()
+							currentTarget = getBlatantTarget()
 						else
 							-- Check if target is still visible and not behind wall
 							if wallCheck and checkWall(character) then
 								-- Target behind wall, find new visible target
-								currentTarget = getTarget()
+								currentTarget = getBlatantTarget()
 							else
 								-- Target is valid, aim at them
 								aimAt(currentTarget)
