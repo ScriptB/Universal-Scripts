@@ -1,4 +1,12 @@
 -- ===================================
+-- NEXAC SUITE - ADVANCED AIMBOT & ESP SYSTEM
+-- ===================================
+-- Powered by Bracket Library - Clean, Modern GUI
+-- Enhanced Console Copy System
+-- UNC & Executor Detection
+-- Self-Contained - No External Dependencies
+
+-- ===================================
 -- PRIORITY LOAD: BRACKET LIB (MAIN GUI HANDLER)
 -- ===================================
 
@@ -613,187 +621,8 @@ local Pluto = Pluto or nil
 local CheatHub = CheatHub or nil
 
 -- Roblox function globals (expected to be undefined in IDE)
-local httpget = httpget or game.HttpGet
-
--- Roblox type globals (expected to be undefined in IDE)
-local UDIm2 = UDIm2 or UDim2
-
--- ===================================
--- EXECUTOR DETECTION SYSTEM
--- ===================================
-
-local EXECUTOR_DATA = {
-    ["Ronix"] = {unc = 100, level = "Level 8", source = "WeAreDevs"},
-    ["JJSploit"] = {unc = 98, level = "Level 7", source = "YouTube Testing"},
-    ["Solara"] = {unc = 66, level = "Level 6", source = "Official Website"},
-    ["Delta"] = {unc = 100, level = "Level 8", source = "Official Website"},
-    ["Xeno"] = {unc = 90, level = "Level 7", source = "Official Website"},
-    ["Punk X"] = {unc = 100, level = "Level 8", source = "Official Website"},
-    ["Velocity"] = {unc = 98, level = "Level 7", source = "Official Website"},
-    ["Drift"] = {unc = 85, level = "Level 7", source = "WeAreDevs"},
-    ["LX63"] = {unc = 100, level = "Level 8", source = "WeAreDevs"},
-    ["Valex"] = {unc = 75, level = "Level 6", source = "WeAreDevs"},
-    ["Pluto"] = {unc = 70, level = "Level 6", source = "WeAreDevs"},
-    ["CheatHub"] = {unc = 60, level = "Level 6", source = "WeAreDevs"},
-    ["Generic Executor"] = {unc = 30, level = "Unknown", source = "Estimated"},
-    ["Mobile Executor"] = {unc = 35, level = "Unknown", source = "Estimated"}
-}
-
-local function detectExecutor()
-    local executor = "Unknown"
-    local executorSpecific = false
-    
-    -- Debug information
-    print("🔍 Debugging executor detection...")
-    if getgenv then
-        print("📋 getgenv exists:", true)
-        if getgenv().executor then
-            print("📋 getgenv().executor:", tostring(getgenv().executor))
-        else
-            print("📋 getgenv().executor: nil")
-        end
-    else
-        print("📋 getgenv: nil")
-    end
-    
-    print("📋 JJSploit:", JJSploit and "exists" or "nil")
-    print("📋 syn:", syn and "exists" or "nil")
-    print("📋 gethui:", gethui and "exists" or "nil")
-    
-    -- Current Working Executors (2026) - CHECK IN CORRECT ORDER
-    -- Most specific checks first
-    if getgenv and getgenv().executor and (getgenv().executor:find("Ronix") or getgenv().executor:find("RonixExploit")) then
-        executor = "Ronix"
-        executorSpecific = true
-        print("✅ Detected Ronix via getgenv().executor")
-    elseif JJSploit then
-        executor = "JJSploit"
-        executorSpecific = true
-        print("✅ Detected JJSploit")
-    elseif Solara then
-        executor = "Solara"
-        executorSpecific = true
-        print("✅ Detected Solara")
-    elseif Delta then
-        executor = "Delta"
-        executorSpecific = true
-        print("✅ Detected Delta")
-    elseif Xeno then
-        executor = "Xeno"
-        executorSpecific = true
-        print("✅ Detected Xeno")
-    elseif PunkX then
-        executor = "Punk X"
-        executorSpecific = true
-        print("✅ Detected Punk X")
-    elseif Velocity then
-        executor = "Velocity"
-        executorSpecific = true
-        print("✅ Detected Velocity")
-    elseif Drift then
-        executor = "Drift"
-        executorSpecific = true
-        print("✅ Detected Drift")
-    elseif LX63 then
-        executor = "LX63"
-        executorSpecific = true
-        print("✅ Detected LX63")
-    elseif Valex then
-        executor = "Valex"
-        executorSpecific = true
-        print("✅ Detected Valex")
-    elseif Pluto then
-        executor = "Pluto"
-        executorSpecific = true
-        print("✅ Detected Pluto")
-    elseif CheatHub then
-        executor = "CheatHub"
-        executorSpecific = true
-        print("✅ Detected CheatHub")
-    -- Mobile Detection - ONLY if no other executor detected AND gethui exists but syn doesn't
-    elseif gethui and not syn and not getgenv().executor then
-        executor = "Mobile Executor"
-        executorSpecific = false
-        print("⚠️ Detected Mobile Executor (gethui exists, syn doesn't, no getgenv().executor)")
-    -- Fallback Detection - check getgenv().executor last
-    elseif getgenv and getgenv().executor then
-        local executorName = getgenv().executor
-        print("🔍 Checking getgenv().executor fallback:", executorName)
-        if executorName:find("Ronix") or executorName:find("RonixExploit") then
-            executor = "Ronix"
-            print("✅ Detected Ronix via fallback")
-        elseif executorName:find("Velocity") then
-            executor = "Velocity"
-        elseif executorName:find("JJSploit") then
-            executor = "JJSploit"
-        elseif executorName:find("Solara") then
-            executor = "Solara"
-        elseif executorName:find("Delta") then
-            executor = "Delta"
-        elseif executorName:find("Xeno") then
-            executor = "Xeno"
-        elseif executorName:find("Punk") then
-            executor = "Punk X"
-        elseif executorName:find("Drift") then
-            executor = "Drift"
-        elseif executorName:find("LX63") then
-            executor = "LX63"
-        elseif executorName:find("Valex") then
-            executor = "Valex"
-        elseif executorName:find("Pluto") then
-            executor = "Pluto"
-        elseif executorName:find("CheatHub") then
-            executor = "CheatHub"
-        else
-            executor = executorName
-            print("🔍 Using unknown executor name:", executorName)
-        end
-        executorSpecific = true
-    else
-        executor = "Generic Executor"
-        executorSpecific = false
-        print("⚠️ No specific executor detected, using Generic")
-    end
-    
-    print("🎯 Final executor detection:", executor, "Specific:", executorSpecific)
-    print("=" .. string.rep("=", 50))
-    
-    -- Get UNC data
-    local uncData = EXECUTOR_DATA[executor] or EXECUTOR_DATA["Generic Executor"]
-    local uncPercentage = uncData.unc
-    local uncLevel = uncData.level
-    local uncCompatible = uncPercentage >= 80
-    
-    -- Test essential functions
-    local essentialFunctions = {"httpget", "require", "loadstring"}
-    local workingEssential = {}
-    
-    for _, feature in ipairs(essentialFunctions) do
-        local success = pcall(function()
-            if feature == "httpget" and (httpget or game.HttpGet) then
-                table.insert(workingEssential, feature)
-            elseif feature == "require" and require then
-                local success = pcall(require, game:GetService("Workspace"))
-                if success then table.insert(workingEssential, feature) end
-            elseif feature == "loadstring" and loadstring then
-                loadstring("print('test')")
-                table.insert(workingEssential, feature)
-            end
-        end)
-    end
-    
-    return {
-        Name = executor,
-        Features = workingEssential,
-        Compatible = #workingEssential >= 2,
-        UNCCompatible = uncCompatible,
-        UNCPercentage = uncPercentage,
-        UNCLevel = uncLevel,
-        UNCSource = uncData.source,
-        ExecutorSpecific = executorSpecific,
-        FeatureCount = #workingEssential
-    }
-end
+local httpget = httpget or nil
+local UDIm2 = UDIm2 or nil
 
 -- ===================================
 -- MAIN INITIALIZATION (PRIORITY: GUI FIRST)
@@ -868,7 +697,7 @@ local function main()
     
     print("🔧 Executor:", executorInfo.Name)
     print("🎨 MAIN GUI System:", BracketLibLoaded and "Bracket Library" or "NONE")
-    print("� Background Detection: Running")
+    print("🔄 Background Detection: Running")
     
     -- PRIORITY 4: Build GUI tabs immediately (don't wait for detection)
     print("🎨 Building GUI tabs...")
@@ -878,7 +707,7 @@ local function main()
     local InfoSection = InfoTab:CreateSection("Nexac Suite Information")
     
     InfoSection:Label("Welcome to Nexac Suite!")
-    InfoSection:Label("Version: 3.0 (Instant GUI Edition)")
+    InfoSection:Label("Version: 3.0 (Clean Edition)")
     InfoSection:Label("UI System: " .. (BracketLibLoaded and "Bracket Library" or "NONE"))
     InfoSection:Label("")
     
@@ -917,6 +746,7 @@ local function main()
     AimbotSettingsSection:Label("FOV Settings")
     AimbotSettingsSection:Label("Target Selection")
     AimbotSettingsSection:Label("Smoothness")
+    
     -- ESP Tab
     local ESPTab = Window:CreateTab("ESP")
     local ESPControlsSection = ESPTab:CreateSection("ESP Controls")
@@ -962,8 +792,9 @@ local function main()
     
     ScriptSettingsSection:Label("Nexac Suite Settings")
     ScriptSettingsSection:Label("Version: 3.0")
-    ScriptSettingsSection:Label("Architecture: Loadstring")
+    ScriptSettingsSection:Label("Architecture: Self-Contained")
     ScriptSettingsSection:Label("UI Library: Bracket Library")
+    ScriptSettingsSection:Label("Console Copy: Enhanced Dev Console")
     
     local ActionsSection = SettingsTab:CreateSection("Actions")
     ActionsSection:Button("Advanced Dev Console Copy", function()
@@ -1023,8 +854,6 @@ end
 -- Export for external use
 return {
     main = main,
-    detectExecutor = detectExecutor,
+    runSilentDetection = runSilentDetection,
     Bracket = Bracket
 }
-        
-    
