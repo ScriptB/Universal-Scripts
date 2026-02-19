@@ -240,23 +240,23 @@ mkStroke(DockInner, 1, 0.55, Theme.Stroke)
 local DockTitle = Instance.new("TextLabel")
 DockTitle.Name = "Title"
 DockTitle.BackgroundTransparency = 1
-DockTitle.Size = UDim2.new(0, 240, 1, 0) -- Increased for better text fit
-DockTitle.Position = UDim2.new(0, 16, 0, 0) -- Consistent left margin
+DockTitle.Size = UDim2.new(0, 200, 1, 0) -- REDUCED to prevent overlap
+DockTitle.Position = UDim2.new(0, 16, 0, 0)
 DockTitle.Font = Enum.Font.GothamBold
-DockTitle.TextSize = 18 -- Increased for better readability
+DockTitle.TextSize = 18
 DockTitle.TextXAlignment = Enum.TextXAlignment.Left
 DockTitle.TextColor3 = Theme.Text
-DockTitle.Text = "🫧 Phantom Suite"
+DockTitle.Text = "🫧 Phantom"
 DockTitle.ZIndex = 12
 DockTitle.Parent = DockInner
 
 local DockHint = Instance.new("TextLabel")
 DockHint.Name = "Hint"
 DockHint.BackgroundTransparency = 1
-DockHint.Size = UDim2.new(0, 200, 1, 0) -- Optimized size
-DockHint.Position = UDim2.new(1, -216, 0, 0) -- Consistent right margin
+DockHint.Size = UDim2.new(0, 180, 1, 0) -- REDUCED to prevent overlap
+DockHint.Position = UDim2.new(1, -196, 0, 0) -- ADJUSTED for better spacing
 DockHint.Font = Enum.Font.GothamMedium
-DockHint.TextSize = 13 -- Increased for readability
+DockHint.TextSize = 13
 DockHint.TextXAlignment = Enum.TextXAlignment.Right
 DockHint.TextColor3 = Theme.Text2
 DockHint.Text = "RightCtrl • bubbles"
@@ -346,8 +346,8 @@ local BubbleConfig = {
 local DockTabs = Instance.new("Frame")
 DockTabs.Name = "Tabs"
 DockTabs.BackgroundTransparency = 1
-DockTabs.Size = UDim2.new(0, 300, 1, 0) -- Increased for better button spacing
-DockTabs.Position = UDim2.new(0.5, -90, 0, 0) -- Centered properly
+DockTabs.Size = UDim2.new(0, 260, 1, 0) -- REDUCED to prevent overlap
+DockTabs.Position = UDim2.new(0.5, -78, 0, 0) -- CENTERED properly
 DockTabs.ZIndex = 12
 DockTabs.Parent = DockInner
 
@@ -356,7 +356,7 @@ tabsLayout.FillDirection = Enum.FillDirection.Horizontal
 tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 tabsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tabsLayout.Padding = UDim.new(0, 12) -- Increased padding for better spacing
+tabsLayout.Padding = UDim.new(0, 8) -- REDUCED to fit better
 tabsLayout.Parent = DockTabs
 
 local function mkDockBubbleButton(cfg)
@@ -575,8 +575,10 @@ end
 local function bubbleOriginPosition()
 	local vp = workspace.CurrentCamera.ViewportSize
 	local base = Dock.Position
-	-- convert dock position to pixels for bubble anchoring using offsets
-	return UDim2.new(0, base.X.Offset, 1, base.Y.Offset)
+	-- FIXED: Calculate actual dock center position in pixels
+	local dockCenterX = base.X.Scale == 0.5 and (vp.X/2 + base.X.Offset) or base.X.Offset
+	local dockCenterY = vp.Y + base.Y.Offset -- Dock is anchored to bottom
+	return UDim2.new(0, dockCenterX, 0, dockCenterY)
 end
 
 local function openBubble(key)
@@ -593,8 +595,11 @@ local function openBubble(key)
 	card.Position = origin
 	card.Size = UDim2.new(0, 0, 0, 0)
 
-	-- “pop” + float
-	local targetPos = UDim2.new(0, origin.X.Offset, 1, origin.Y.Offset - 120)
+	-- FIXED: Better bubble positioning - center on screen with proper offset
+	local vp = workspace.CurrentCamera.ViewportSize
+	local targetX = vp.X/2 -- Center horizontally
+	local targetY = vp.Y * 0.4 -- Position in upper 40% of screen
+	local targetPos = UDim2.new(0, targetX, 0, targetY)
 	local targetSize = entry.TargetSize
 
 	tween(card, TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
