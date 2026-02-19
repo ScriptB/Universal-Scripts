@@ -775,17 +775,22 @@ local function setUI(on)
 		})
 		tween(Blur, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 14})
 
-		Dock.Position = UDim2.new(Dock.Position.X.Scale, Dock.Position.X.Offset, 1, 26)
-		tween(Dock, TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Position = UDim2.new(Dock.Position.X.Scale, Dock.Position.X.Offset, 1, -22)
-		})
+		-- Don't touch dock position - preserve user's placement
+		-- Just animate the dock appearance if needed
+		if not UIVisible then
+			-- Only animate if UI was previously hidden
+			tween(Dock, TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				BackgroundTransparency = 0.82
+			})
+		end
 	else
 		for k, b in pairs(Bubbles) do if b.Open then closeBubble(k) end end
 
 		tween(Dim, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
 		tween(Blur, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0})
+		-- Don't move dock - just fade out
 		tween(Dock, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {
-			Position = UDim2.new(Dock.Position.X.Scale, Dock.Position.X.Offset, 1, 26)
+			BackgroundTransparency = 1
 		})
 
 		task.delay(0.22, function()
