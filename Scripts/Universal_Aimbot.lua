@@ -265,33 +265,12 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aim
 -- ===================================
 
 local function main()
-    -- Create loading UI
-    local LoadingWindow, statusLabel, progressLabel, resultsLabel = createLoadingUI()
-    
-    -- Update loading UI
-    statusLabel:UpdateText("Status: Running UNC Verification...")
-    progressLabel:UpdateText("Progress: 25%")
-    
-    -- Run UNC verification
+    -- Run UNC verification in background
     local compatibility = runUNCVerification()
     
     if not compatibility or compatibility.Overall < 50 then
         warn("⚠️ Low compatibility detected. Some features may not work properly.")
     end
-    
-    -- Update loading UI with results
-    statusLabel:UpdateText("Status: " .. loadingState.stage)
-    progressLabel:UpdateText("Progress: " .. loadingState.progress .. "%")
-    
-    local resultsText = "UNC Results:\n"
-    for _, result in ipairs(compatibility.Results) do
-        resultsText = resultsText .. result .. "\n"
-    end
-    resultsLabel:UpdateText(resultsText)
-    
-    -- Wait a moment then destroy loading UI
-    task.wait(2)
-    LoadingWindow:Toggle(false)
     
     -- Create main UI with professional design
     local Window = Bracket:CreateWindow({
