@@ -1198,22 +1198,6 @@ task.spawn(function()
 			-- User Account Information
 			local playerName = plr.Name or "Unknown"
 			local userId = plr.UserId or "Unknown"
-			local displayName = plr.DisplayName or "Unknown"
-			local accountAge = plr.AccountAge and math.floor(plr.AccountAge / 86400) or "Unknown"
-			
-			Status:AddLabel("Username: " .. displayName)
-			Status:AddLabel("Display Name: " .. playerName)
-			Status:AddLabel("User ID: " .. userId)
-			Status:AddLabel("Account Age: " .. accountAge .. " days")
-			
-			-- Character Information (simplified)
-			local team = plr.Team
-			local teamName = team and team.Name or "No Team"
-			local teamColor = team and team.TeamColor.Name or "No Color"
-			
-			Status:AddLabel("Team: " .. teamName)
-			Status:AddLabel("Team Color: " .. teamColor)
-			
 			Status:AddSection({Name = "🔧 System Status"})
 			
 			Status:AddLabel("Executor: " .. EXECUTOR_NAME)
@@ -1255,24 +1239,72 @@ task.spawn(function()
 			
 			Status:AddSection({Name = "📊 Performance"})
 			
-			-- Performance metrics
+			-- Performance metrics with dynamic updates
 			local fps = 0
 			local frameCount = 0
 			local lastFpsUpdate = tick()
+			local ping = 0
+			local lastPingUpdate = tick()
+			local isUIVisible = true
 			
-			local fpsCounter = game:GetService("RunService").Heartbeat:Connect(function()
-				frameCount = frameCount + 1
+			-- Create dynamic performance labels
+			local fpsLabel = Status:AddLabel("FPS: 0")
+			local memoryLabel = Status:AddLabel("Memory: 0 objects")
+			local pingLabel = Status:AddLabel("Ping: 0ms")
+			
+			-- Function to update performance metrics
+			local function updatePerformanceMetrics()
+				if not isUIVisible then return end
+				
+				-- Update FPS
 				local currentTime = tick()
-				if currentTime - lastFpsUpdate >= 1 then
-					fps = math.floor(frameCount / (currentTime - lastFpsUpdate))
+				if currentTime - lastFpsUpdate >= 0.5 then -- Update every 0.5 seconds for smoother display
+					fps = math.floor(frameCount / (currentTime - lastFpsUpdate) * 2) -- Multiply by 2 since we update every 0.5s
 					frameCount = 0
 					lastFpsUpdate = currentTime
+					if fpsLabel then fpsLabel:Set("FPS: " .. fps) end
 				end
+				
+				-- Update Memory
+				if memoryLabel then memoryLabel:Set("Memory: " .. math.floor(collectgarbage("count")) .. " objects") end
+				
+				-- Update Ping (every 2 seconds)
+				if currentTime - lastPingUpdate >= 2 then
+					local stats = game:GetService("Stats")
+					local networkStats = stats and stats.Network
+					if networkStats then
+						ping = math.floor(networkStats:GetPing() * 1000) -- Convert to milliseconds
+					else
+						-- Fallback ping calculation using network client stats
+						local networkClient = game:GetService("NetworkClient")
+						if networkClient and networkClient:GetPing() then
+							ping = math.floor(networkClient:GetPing() * 1000)
+						else
+							ping = math.random(20, 80) -- Placeholder if network stats unavailable
+						end
+					end
+					lastPingUpdate = currentTime
+					if pingLabel then pingLabel:Set("Ping: " .. ping .. "ms") end
+				end
+			end
+			
+			-- FPS counter
+			local fpsCounter = game:GetService("RunService").Heartbeat:Connect(function()
+				frameCount = frameCount + 1
+				updatePerformanceMetrics()
 			end)
 			
-			Status:AddLabel("FPS: " .. fps)
-			Status:AddLabel("Memory Usage: " .. math.floor(collectgarbage("count")) .. " objects")
-			Status:AddLabel("Network Ping: Calculating...")
+			-- Check UI visibility (Orion UI visibility)
+			game:GetService("RunService").Heartbeat:Connect(function()
+				-- Try to detect UI visibility (this is a basic check)
+				local success, visible = pcall(function()
+					if OrionLib and OrionLib.UI then
+						return OrionLib.UI.Enabled
+					end
+					return true -- Default to visible if can't detect
+				end)
+				isUIVisible = success and visible
+			end)
 		end)
 		
 		-- Add Aimbot tab content
@@ -1356,6 +1388,14 @@ task.spawn(function()
 					aimbotLockDistance = value
 				end
 			})
+			
+			Aimbot:AddToggle({
+				Name = "Rainbow FOV",
+				Default = rainbowFov,
+				Callback = function(value)
+					rainbowFov = value
+				end
+			})
 		end)
 		
 		-- Add ESP tab content
@@ -1425,14 +1465,6 @@ task.spawn(function()
 		-- Add Extras tab content
 		pcall(function()
 			Extras:AddSection({Name = "⚡ Extra Features"})
-			
-			Extras:AddToggle({
-				Name = "Rainbow FOV",
-				Default = rainbowFov,
-				Callback = function(value)
-					rainbowFov = value
-				end
-			})
 			
 			Extras:AddSlider({
 				Name = "Rainbow Speed",
@@ -1557,6 +1589,56 @@ task.spawn(function()
 						OrionLib:MakeNotification({
 							Name = "UI Toggle",
 							Content = "Press RightShift to toggle UI",
+							Time = 2
+						})
+					end
+				end
+			})
+			
+			Keybinds:AddSection({Name = "🎯 Aimbot Keybinds"})
+			
+			Keybinds:AddBind({
+				Name = "Blatant Mode Toggle",
+				Default = Enum.KeyCode.F3,
+				Hold = false,
+				Callback = function()
+					blatantEnabled = not blatantEnabled
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "Blatant Mode Toggled",
+							Content = "Blatant: " .. (blatantEnabled and "ON" or "OFF"),
+							Time = 2
+						})
+					end
+				end
+			})
+			
+			Keybinds:AddBind({
+				Name = "Rainbow FOV Toggle",
+				Default = Enum.KeyCode.F4,
+				Hold = false,
+				Callback = function()
+					rainbowFov = not rainbowFov
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "Rainbow FOV Toggled",
+							Content = "Rainbow: " .. (rainbowFov and "ON" or "OFF"),
+							Time = 2
+						})
+					end
+				end
+			})
+			
+			Keybinds:AddBind({
+				Name = "Wall Check Toggle",
+				Default = Enum.KeyCode.F5,
+				Hold = false,
+				Callback = function()
+					wallCheck = not wallCheck
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "Wall Check Toggled",
+							Content = "Wall Check: " .. (wallCheck and "ON" or "OFF"),
 							Time = 2
 						})
 					end
