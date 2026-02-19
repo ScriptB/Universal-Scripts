@@ -10,7 +10,7 @@
 	  - Full real-time Bracket UI controls
 ]]
 
-local Bracket = loadstring(game:HttpGet("https://raw.githubusercontent.com/AlexR32/Bracket/main/BracketV32.lua"))()
+local Bracket = loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/refs/heads/main/Bracket%20Ui"))()
 Bracket:Notification({Title = "Phantom Suite", Description = "Precision aimbot and ESP  —  by Asuneteric", Duration = 5})
 Bracket:Notification2({Title = "Phantom Suite"})
 
