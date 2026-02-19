@@ -1159,7 +1159,7 @@ local function createMainUI(lockedFeatures, safetyIssues)
 		Title.Size = UDim2.new(1, 0, 0, 40)
 		Title.Position = UDim2.new(0, 0, 0, 10)
 		Title.BackgroundTransparency = 1
-		Title.Text = config.Name or "Phantom Suite v7.5"
+		Title.Text = config.Name or "Phantom Suite v7.6"
 		Title.TextColor3 = Color3.fromRGB(255, 165, 0)
 		Title.TextScaled = true
 		Title.Font = Enum.Font.SourceSansBold
@@ -1388,12 +1388,12 @@ local function createMainUI(lockedFeatures, safetyIssues)
 	
 	-- Create embedded Orion window
 	local Window = OrionLib:MakeWindow({
-		Name = "Phantom Suite v7.5 - Embedded UI",
+		Name = "Phantom Suite v7.6 - Embedded UI",
 		HidePremium = false,
 		SaveConfig = true,
 		ConfigFolder = "PhantomSuite",
 		IntroEnabled = false,
-		IntroText = "Phantom Suite v7.5 - Embedded UI",
+		IntroText = "Phantom Suite v7.6 - Embedded UI",
 		Icon = "rbxassetid://4483345998"
 	})
 	
