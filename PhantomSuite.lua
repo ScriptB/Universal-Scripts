@@ -1100,7 +1100,7 @@ local function createMainUI(lockedFeatures, safetyIssues)
 	if not success then
 		warn("Failed to load NexacLib, falling back to local file")
 		local success, NexacLib = pcall(function()
-			return loadfile("Orion-Library/Nexac")()
+			return loadfile("Orion-Library/NexacLib.lua")()
 		end)
 		
 		if not success then
