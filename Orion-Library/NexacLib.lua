@@ -358,6 +358,200 @@ local UI = {
 	ShadowOffset = 2,
 }
 
+
+-- FX / Animation settings
+NexacLib.FX = NexacLib.FX or {
+    Blur = true,
+    BlurSize = 10,
+    DimBackground = true,
+    DimTransparency = 0.35,
+    WindowIntro = true,
+    MicroInteractions = true,
+    TabTransition = true,
+    ElementIntro = true,
+    Particles = false,
+    ParticleCount = 18,
+    ParticleSpeed = 18,
+}
+
+local function Tween(obj, info, props)
+    local t = TweenService:Create(obj, info, props)
+    t:Play()
+    return t
+end
+
+local function EnsureUIScale(guiObj)
+    local s = guiObj:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+    s.Scale = s.Scale == 0 and 1 or s.Scale
+    s.Parent = guiObj
+    return s
+end
+
+local function GetOrCreateOverlay()
+    local ov = Nexac:FindFirstChild("NexacOverlay")
+    if ov then return ov end
+    ov = Instance.new("Frame")
+    ov.Name = "NexacOverlay"
+    ov.BackgroundColor3 = Color3.fromRGB(0,0,0)
+    ov.BackgroundTransparency = 1
+    ov.BorderSizePixel = 0
+    ov.Size = UDim2.fromScale(1,1)
+    ov.ZIndex = 1
+    ov.Parent = Nexac
+    return ov
+end
+
+local function GetOrCreateBlur()
+    local cam = workspace.CurrentCamera
+    if not cam then return nil end
+    local blur = cam:FindFirstChild("NexacBlur")
+    if blur and blur:IsA("BlurEffect") then return blur end
+    blur = Instance.new("BlurEffect")
+    blur.Name = "NexacBlur"
+    blur.Size = 0
+    blur.Enabled = false
+    blur.Parent = cam
+    return blur
+end
+
+local function FX_ShowBackdrop(show, zIndex)
+    local ov = GetOrCreateOverlay()
+    ov.ZIndex = zIndex or 1
+
+    if NexacLib.FX.DimBackground then
+        ov.Visible = true
+        if show then
+            ov.BackgroundTransparency = 1
+            Tween(ov, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = NexacLib.FX.DimTransparency
+            })
+        else
+            Tween(ov, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+            task.delay(0.21, function()
+                if ov and ov.Parent and ov.BackgroundTransparency >= 0.99 then ov.Visible = false end
+            end)
+        end
+    end
+
+    if NexacLib.FX.Blur then
+        local blur = GetOrCreateBlur()
+        if blur then
+            blur.Enabled = true
+            if show then
+                blur.Size = 0
+                Tween(blur, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = NexacLib.FX.BlurSize})
+            else
+                Tween(blur, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 0})
+                task.delay(0.21, function()
+                    if blur and blur.Parent and blur.Size <= 0.05 then blur.Enabled = false end
+                end)
+            end
+        end
+    end
+end
+
+
+local function CaptureAndSetTransparent(root)
+    local list = {}
+    for _, obj in ipairs(root:GetDescendants()) do
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            table.insert(list, {obj=obj, prop="TextTransparency", val=obj.TextTransparency})
+            obj.TextTransparency = 1
+        elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+            table.insert(list, {obj=obj, prop="ImageTransparency", val=obj.ImageTransparency})
+            obj.ImageTransparency = 1
+        elseif obj:IsA("Frame") or obj:IsA("ScrollingFrame") then
+            table.insert(list, {obj=obj, prop="BackgroundTransparency", val=obj.BackgroundTransparency})
+            obj.BackgroundTransparency = 1
+        elseif obj:IsA("UIStroke") then
+            table.insert(list, {obj=obj, prop="Transparency", val=obj.Transparency})
+            obj.Transparency = 1
+        end
+    end
+    return list
+end
+
+local function TweenRestore(list, duration)
+    local info = TweenInfo.new(duration or 0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    for _, item in ipairs(list) do
+        local o, p, v = item.obj, item.prop, item.val
+        if o and o.Parent then
+            pcall(function()
+                Tween(o, info, {[p]=v})
+            end)
+        end
+    end
+
+local function SpawnParticles(parent, z)
+    if not (NexacLib.FX and NexacLib.FX.Particles) then return nil end
+    local holder = Instance.new("Frame")
+    holder.Name = "NexacParticles"
+    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.fromScale(1,1)
+    holder.ZIndex = z or (parent.ZIndex + 1)
+    holder.ClipsDescendants = true
+    holder.Parent = parent
+
+    local rng = Random.new()
+    local count = math.clamp(tonumber(NexacLib.FX.ParticleCount) or 18, 6, 60)
+    local speed = math.clamp(tonumber(NexacLib.FX.ParticleSpeed) or 18, 6, 80)
+
+    local parts = {}
+    for i=1,count do
+        local p = Instance.new("Frame")
+        p.Name = "P"..i
+        p.BorderSizePixel = 0
+        p.BackgroundTransparency = 0.92
+        p.BackgroundColor3 = Color3.fromRGB(255,255,255)
+        p.Size = UDim2.new(0, rng:NextInteger(2,4), 0, rng:NextInteger(2,4))
+        p.Position = UDim2.fromScale(rng:NextNumber(0,1), rng:NextNumber(0,1))
+        p.ZIndex = holder.ZIndex
+        EnsureCorner(p, 99)
+        local g = Instance.new("UIGradient")
+        g.Rotation = rng:NextInteger(0,360)
+        g.Transparency = NumberSequence.new{
+            NumberSequenceKeypoint.new(0, 0.1),
+            NumberSequenceKeypoint.new(1, 0.6),
+        }
+        g.Parent = p
+        p.Parent = holder
+        parts[i] = {obj=p, vx=rng:NextNumber(-1,1), vy=rng:NextNumber(-1,1)}
+    end
+
+    local con
+    con = AddConnection(RunService.RenderStepped, function(dt)
+        if not holder or not holder.Parent then
+            if con then con:Disconnect() end
+            return
+        end
+        for _, it in ipairs(parts) do
+            local o = it.obj
+            if o and o.Parent then
+                local pos = o.Position
+                local nx = pos.X.Scale + (it.vx * dt * speed / 100)
+                local ny = pos.Y.Scale + (it.vy * dt * speed / 100)
+                if nx < -0.05 then nx = 1.05 elseif nx > 1.05 then nx = -0.05 end
+                if ny < -0.05 then ny = 1.05 elseif ny > 1.05 then ny = -0.05 end
+                o.Position = UDim2.fromScale(nx, ny)
+            end
+        end
+    end)
+
+    return holder
+end
+
+end
+
+function NexacLib:SetFX(cfg)
+    if type(cfg) ~= "table" then return end
+    for k, v in pairs(cfg) do
+        if NexacLib.FX[k] ~= nil then
+            NexacLib.FX[k] = v
+        end
+    end
+end
+
+
 local function EnsureCorner(frame, radius)
 	local c = frame:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
 	c.CornerRadius = UDim.new(0, radius or UI.Corner)
@@ -750,6 +944,33 @@ function NexacLib:MakeWindow(cfg)
 	table.insert(NexacLib.Windows, MainWindow)
 	SetZIndexRecursive(MainWindow, 10)
 
+
+-- FX: intro animation + backdrop
+local _introVisuals
+local _basePos = MainWindow.Position
+if NexacLib.FX and NexacLib.FX.WindowIntro then
+	FX_ShowBackdrop(true, 2)
+	local sc = EnsureUIScale(MainWindow)
+	sc.Scale = 0.965
+	MainWindow.Position = _basePos + UDim2.new(0, 0, 0, 14)
+	_introVisuals = CaptureAndSetTransparent(MainWindow)
+	MainWindow.BackgroundTransparency = 1
+	Tween(MainWindow, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+		Position = _basePos,
+		BackgroundTransparency = 0
+	})
+	task.delay(0.02, function()
+		if sc and sc.Parent then
+			Tween(sc, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Scale = 1})
+		end
+		if _introVisuals then TweenRestore(_introVisuals, 0.30) end
+	end)
+else
+	FX_ShowBackdrop(true, 2)
+end
+
+	local _particles = SpawnParticles(MainWindow, 9)
+
 	-- TopBar / drag point
 	local DragPoint = SetProps(MakeElement("TFrame"), {
 		Size = UDim2.new(1, 0, 0, 56),
@@ -909,9 +1130,20 @@ function NexacLib:MakeWindow(cfg)
 
 	-- Hide/Show
 	AddConnection(CloseBtn.MouseButton1Up, function()
-		MainWindow.Visible = false
+		if UIHidden then return end
 		UIHidden = true
 		NexacLib.UI.Enabled = false
+		pcall(function()
+			local sc = EnsureUIScale(MainWindow)
+			Tween(sc, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.985})
+			Tween(MainWindow, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+		end)
+		task.delay(0.19, function()
+			if MainWindow and MainWindow.Parent then
+				MainWindow.Visible = false
+			end
+			FX_ShowBackdrop(false, 2)
+		end)
 		NexacLib:MakeNotification({
 			Name = "Interface Hidden",
 			Content = "Press RightShift to reopen the interface",
@@ -922,9 +1154,19 @@ function NexacLib:MakeWindow(cfg)
 
 	AddConnection(UserInputService.InputBegan, function(input)
 		if input.KeyCode == Enum.KeyCode.RightShift and UIHidden then
-			MainWindow.Visible = true
 			UIHidden = false
 			NexacLib.UI.Enabled = true
+			if MainWindow and MainWindow.Parent then
+				MainWindow.Visible = true
+				FX_ShowBackdrop(true, 2)
+				pcall(function()
+					local sc = EnsureUIScale(MainWindow)
+					sc.Scale = 0.985
+					MainWindow.BackgroundTransparency = 1
+					Tween(sc, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Scale = 1})
+					Tween(MainWindow, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+				end)
+			end
 		end
 	end)
 
@@ -1063,7 +1305,13 @@ function NexacLib:MakeWindow(cfg)
 			Ico.ImageTransparency = 0
 			Txt.TextTransparency = 0
 			Txt.Font = Enum.Font.GothamBold
-			Container.Visible = true
+			if NexacLib.FX and NexacLib.FX.TabTransition then
+				Container.Position = UDim2.new(0, 18, 0, 0)
+				Container.Visible = true
+				Tween(Container, TweenInfo.new(0.20, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
+			else
+				Container.Visible = true
+			end
 			EnsureStroke(TabCard, t.Accent, 1.6, 0.15)
 		end
 
@@ -1088,7 +1336,18 @@ function NexacLib:MakeWindow(cfg)
 
 			for _, c in next, ContentHost:GetChildren() do
 				if c.Name == "ItemContainer" then
-					c.Visible = false
+					if NexacLib.FX and NexacLib.FX.TabTransition and c.Visible then
+						local base = c.Position
+						Tween(c, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = base + UDim2.new(0, -18, 0, 0)})
+						task.delay(0.17, function()
+							if c and c.Parent then
+								c.Visible = false
+								c.Position = base
+							end
+						end)
+					else
+						c.Visible = false
+					end
 				end
 			end
 
@@ -1116,6 +1375,20 @@ function NexacLib:MakeWindow(cfg)
 				f.BackgroundTransparency = 0.10
 				ApplyCard(f, { shadow = false, transparency = 0.10, gradient = true })
 				EnsureStroke(f, t2.Stroke, 1, 0.55)
+				if NexacLib.FX and NexacLib.FX.ElementIntro then
+					local sc = EnsureUIScale(f)
+					local bt = f.BackgroundTransparency
+					sc.Scale = 0.985
+					f.BackgroundTransparency = 1
+					Tween(sc, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Scale = 1})
+					Tween(f, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = bt})
+					local stroke = f:FindFirstChildOfClass("UIStroke")
+					if stroke then
+						local st = stroke.Transparency
+						stroke.Transparency = 1
+						Tween(stroke, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = st})
+					end
+				end
 				return f
 			end
 
@@ -2014,14 +2287,14 @@ function NexacLib:MakeWindow(cfg)
 
 				local sel = Instance.new("ImageLabel")
 				sel.BackgroundTransparency = 1
-				sel.Image = "http://www.roblox.com/asset/?id=4805639000"
+				sel.Image = "rbxassetid://4805639000"
 				sel.Size = UDim2.new(0, 16, 0, 16)
 				sel.AnchorPoint = Vector2.new(0.5, 0.5)
 				sel.Parent = colorSquare
 
 				local hueSel = Instance.new("ImageLabel")
 				hueSel.BackgroundTransparency = 1
-				hueSel.Image = "http://www.roblox.com/asset/?id=4805639000"
+				hueSel.Image = "rbxassetid://4805639000"
 				hueSel.Size = UDim2.new(0, 16, 0, 16)
 				hueSel.AnchorPoint = Vector2.new(0.5, 0.5)
 				hueSel.Parent = hueBar
