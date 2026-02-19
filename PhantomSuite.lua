@@ -1094,7 +1094,7 @@ end
 local function createMainUI(lockedFeatures, safetyIssues)
 	-- Load NexacLib (modern Orion rebrand)
 	local success, NexacLib = pcall(function()
-		return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Orion-Library/Nexac"))()
+		return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/refs/heads/main/Orion-Library/Nexac"))()
 	end)
 
 	if not success then
@@ -1353,8 +1353,8 @@ task.spawn(function()
 				Default = blatantEnabled,
 				Callback = function(value)
 					blatantEnabled = value
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Blatant Mode Toggled",
 							Content = "Blatant: " .. (value and "ON" or "OFF"),
 							Time = 1,
@@ -1399,7 +1399,7 @@ task.spawn(function()
 				end
 			})
 			
-			Aimbot:AddSection({Name = "�️ Safety Settings", Description = "Configure targeting restrictions"})
+			Aimbot:AddSection({Name = "🛡️ Safety Settings", Description = "Configure targeting restrictions"})
 			
 			Aimbot:AddToggle({
 				Name = "🧱 Wall Check",
@@ -1446,8 +1446,8 @@ task.spawn(function()
 				Default = espEnabled,
 				Callback = function(value)
 					espEnabled = value
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "ESP Toggled",
 							Content = "ESP: " .. (value and "ON" or "OFF"),
 							Time = 1,
@@ -1568,7 +1568,7 @@ task.spawn(function()
 		
 		-- Add Movement tab content
 		pcall(function()
-			Movement:AddSection({Name = "� Movement Controls", Description = "Enhanced movement abilities"})
+			Movement:AddSection({Name = "🏃 Movement Controls", Description = "Enhanced movement abilities"})
 			
 			Movement:AddToggle({
 				Name = "🚀 Speed Boost",
@@ -1638,8 +1638,8 @@ task.spawn(function()
 						players = players .. player.Name .. "\n"
 					end
 					setclipboard(players)
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Player List Copied",
 							Content = "Player list copied to clipboard!",
 							Time = 2
@@ -1680,8 +1680,8 @@ task.spawn(function()
 				Name = "🔄 Reset All Settings",
 				Callback = function()
 					-- Reset all settings to default
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Settings Reset",
 							Content = "All settings reset to defaults!",
 							Time = 3
@@ -1699,8 +1699,8 @@ task.spawn(function()
 				Name = "Save Config",
 				Callback = function()
 					-- Save configuration logic here
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Config Saved",
 							Content = "Configuration saved successfully!",
 							Time = 3
@@ -1713,8 +1713,8 @@ task.spawn(function()
 				Name = "Load Config",
 				Callback = function()
 					-- Load configuration logic here
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Config Loaded",
 							Content = "Configuration loaded successfully!",
 							Time = 3
@@ -1727,8 +1727,8 @@ task.spawn(function()
 				Name = "Reset Config",
 				Callback = function()
 					-- Reset configuration logic here
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Config Reset",
 							Content = "Configuration reset to defaults!",
 							Time = 3
@@ -1748,8 +1748,8 @@ task.spawn(function()
 				Hold = false,
 				Callback = function()
 					aimbotEnabled = not aimbotEnabled
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Aimbot Toggled",
 							Content = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF"),
 							Time = 2,
@@ -1765,8 +1765,8 @@ task.spawn(function()
 				Hold = false,
 				Callback = function()
 					espEnabled = not espEnabled
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "ESP Toggled",
 							Content = "ESP: " .. (espEnabled and "ON" or "OFF"),
 							Time = 2,
@@ -1784,8 +1784,8 @@ task.spawn(function()
 				Hold = false,
 				Callback = function()
 					blatantEnabled = not blatantEnabled
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Blatant Mode Toggled",
 							Content = "Blatant: " .. (blatantEnabled and "ON" or "OFF"),
 							Time = 2,
@@ -1801,8 +1801,8 @@ task.spawn(function()
 				Hold = false,
 				Callback = function()
 					rainbowFov = not rainbowFov
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Rainbow FOV Toggled",
 							Content = "Rainbow: " .. (rainbowFov and "ON" or "OFF"),
 							Time = 2,
@@ -1818,8 +1818,8 @@ task.spawn(function()
 				Hold = false,
 				Callback = function()
 					wallCheck = not wallCheck
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Wall Check Toggled",
 							Content = "Wall Check: " .. (wallCheck and "ON" or "OFF"),
 							Time = 2,
@@ -1929,14 +1929,14 @@ task.spawn(function()
 			Info:AddLabel("🛠️ Utility Tools")
 			Info:AddLabel("⚙️ Configuration System")
 			
-			Info:AddSection({Name = "� Links", Description = "External resources"})
+			Info:AddSection({Name = "🔗 Links", Description = "External resources"})
 			
 			Info:AddButton({
 				Name = "🌐 GitHub Repository",
 				Callback = function()
 					setclipboard("https://github.com/ScriptB/Universal-Aimassist")
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
+					if NexacLib and NexacLib.MakeNotification then
+						NexacLib:MakeNotification({
 							Name = "Link Copied",
 							Content = "GitHub link copied to clipboard!",
 							Time = 2,
