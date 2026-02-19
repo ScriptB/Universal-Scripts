@@ -258,27 +258,15 @@ tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabsLayout.Padding = UDim.new(0, 8)
 tabsLayout.Parent = DockTabs
 
--- Dock snap logic (left/center/right) - SMOOTH SLIDING
-local DockSnap = "Center"
-local function snapDock(mode, smooth)
-	DockSnap = mode
+-- Start hidden + initial positioning
+Root.Enabled = false
+task.defer(function()
+	-- Position dock at center initially
 	local vp = workspace.CurrentCamera.ViewportSize
-	local yOff = -22
-	local targetX
-	if mode == "Left" then
-		targetX = UDim2.new(0, 20 + Dock.AbsoluteSize.X/2, 1, yOff)
-	elseif mode == "Right" then
-		targetX = UDim2.new(0, vp.X - 20 - Dock.AbsoluteSize.X/2, 1, yOff)
-	else
-		targetX = UDim2.new(0.5, 0, 1, yOff)
-	end
-	
-	-- Always use smooth tweening
-	local duration = smooth and 0.6 or 0.28
-	tween(Dock, TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = targetX})
-end
+	Dock.Position = UDim2.new(0.5, 0, 1, -22)
+end)
 
--- Drag along bottom (snap on release)
+-- Drag along bottom (smooth sliding, no snapping)
 do
 	local dragging = false
 	local startX, startPos
@@ -288,25 +276,6 @@ do
 		dragging = true
 		startX = input.Position.X
 		startPos = Dock.Position
-		input.Changed:Connect(function()
-			if input.UserInputState ~= Enum.UserInputState.End then return end
-			dragging = false
-			local vp = workspace.CurrentCamera.ViewportSize
-			local x = Dock.Position.X.Offset
-			local leftX = 20 + Dock.AbsoluteSize.X/2
-			local rightX = vp.X - 20 - Dock.AbsoluteSize.X/2
-			local centerX = vp.X/2
-			local dl, dc, dr = math.abs(x-leftX), math.abs(x-centerX), math.abs(x-rightX)
-			
-			-- SMOOTH sliding to nearest position
-			if dl < dc and dl < dr then 
-				snapDock("Left", true) -- true for smooth sliding
-			elseif dr < dc and dr < dl then 
-				snapDock("Right", true) -- true for smooth sliding
-			else 
-				snapDock("Center", true) -- true for smooth sliding
-			end
-		end)
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
@@ -315,13 +284,42 @@ do
 		local vp = workspace.CurrentCamera.ViewportSize
 		local dx = input.Position.X - startX
 		local newX = startPos.X.Offset + dx
-		local minX = 20 + Dock.AbsoluteSize.X/2
-		local maxX = vp.X - 20 - Dock.AbsoluteSize.X/2
-		Dock.Position = UDim2.new(0, clamp(newX, minX, maxX), 1, -22)
+		
+		-- Edge collision detection - prevent off-screen clipping
+		local dockWidth = Dock.AbsoluteSize.X
+		local minX = dockWidth/2  -- Left edge collision
+		local maxX = vp.X - dockWidth/2  -- Right edge collision
+		
+		-- Clamp to screen bounds with smooth sliding
+		local clampedX = clamp(newX, minX, maxX)
+		Dock.Position = UDim2.new(0, clampedX, 1, -22)
 	end)
 
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+		dragging = false
+		-- No snapping - just stop where user placed it
+	end)
+
+	-- Keep dock on screen when viewport changes
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-		task.defer(function() snapDock(DockSnap, false) end) -- false for normal speed on resize
+		if not dragging then
+			task.defer(function()
+				local vp = workspace.CurrentCamera.ViewportSize
+				local dockWidth = Dock.AbsoluteSize.X
+				local currentX = Dock.Position.X.Offset
+				local minX = dockWidth/2
+				local maxX = vp.X - dockWidth/2
+				local clampedX = clamp(currentX, minX, maxX)
+				
+				-- Smooth slide back on screen if needed
+				if currentX ~= clampedX then
+					tween(Dock, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+						Position = UDim2.new(0, clampedX, 1, -22)
+					})
+				end
+			end)
+		end
 	end)
 end
 
@@ -806,10 +804,6 @@ end)
 Dock:GetPropertyChangedSignal("Position"):Connect(function()
 	task.defer(function() layoutOpenBubbles() end)
 end)
-
--- Start hidden + initial snap
-Root.Enabled = false
-task.defer(function() snapDock("Center", false) end) -- false for normal initial speed
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
