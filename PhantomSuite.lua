@@ -1606,13 +1606,16 @@ task.spawn(function()
 				Default = Enum.KeyCode.RightShift,
 				Hold = false,
 				Callback = function()
-					-- UI toggle logic handled by Orion
-					if OrionLib and OrionLib.MakeNotification then
-						OrionLib:MakeNotification({
-							Name = "UI Toggle",
-							Content = "Press RightShift to toggle UI",
-							Time = 2
-						})
+					-- Actual UI toggle logic
+					if OrionLib and OrionLib.UI then
+						OrionLib.UI.Enabled = not OrionLib.UI.Enabled
+						if OrionLib.MakeNotification then
+							OrionLib:MakeNotification({
+								Name = "UI Toggled",
+								Content = "UI: " .. (OrionLib.UI.Enabled and "Shown" or "Hidden"),
+								Time = 2
+							})
+						end
 					end
 				end
 			})
