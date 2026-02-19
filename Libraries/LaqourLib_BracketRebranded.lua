@@ -3,6 +3,17 @@
 -- Rebranded for Universal Aimassist Suite
 -- Maintains full functionality with Laqour branding
 
+-- ===================================
+-- LOADSTRING ACCESS FOR MAIN SCRIPTS
+-- ===================================
+
+-- Main scripts can load LaqourLib using:
+-- local Laqour = loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Libraries/LaqourLib_BracketRebranded.lua"))()
+
+-- ===================================
+-- LIBRARY IMPLEMENTATION
+-- ===================================
+
 local Laqour = {Toggle = true, FirstTab = nil, TabCount = 0, ColorTable = {}}
 
 local RunService = game:GetService("RunService")

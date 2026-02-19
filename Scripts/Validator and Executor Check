@@ -1,0 +1,572 @@
+--[[
+    Improved Executor Vulnerability Check
+    Enhanced version with better structure, error handling, and features
+    
+    Features:
+    - Clean, organized code structure
+    - Better error handling and logging
+    - Progress indicators
+    - Detailed reporting
+    - Export functionality
+    - Performance improvements
+    - Better mobile compatibility
+]]
+
+-- ===================================
+-- CONFIGURATION AND UTILITIES
+-- ===================================
+
+local ExecutorTest = {
+    Version = "2.0",
+    Author = "ScriptB",
+    StartTime = tick(),
+    
+    -- Test configuration
+    Config = {
+        ShowProgress = true,
+        DetailedLogging = true,
+        ExportResults = true,
+        TestTimeout = 5,
+        ParallelTesting = true
+    },
+    
+    -- Results tracking
+    Results = {
+        Pass = 0,
+        Fail = 0,
+        Unknown = 0,
+        Total = 0,
+        Details = {},
+        StartTime = tick()
+    },
+    
+    -- Blocked functions tracking
+    BlockedFunctions = {},
+    
+    -- Service categories for organization
+    Categories = {
+        "HttpRbxApiService",
+        "ScriptContext", 
+        "BrowserService",
+        "MarketplaceService",
+        "HttpService",
+        "GuiService",
+        "OpenCloudService",
+        "CoreGui",
+        "MessageBusService",
+        "DataModel",
+        "OmniRecommendationsService",
+        "Players",
+        "CustomHTTP",
+        "EnvironmentBypass"
+    }
+}
+
+-- Utility functions
+local function printHeader(title)
+    local line = string.rep("=", 60)
+    print(line)
+    print("  " .. title)
+    print(line)
+end
+
+local function printCategory(category)
+    print("\n📂 " .. category)
+    print(string.rep("-", 50))
+end
+
+local function updateProgress()
+    if ExecutorTest.Config.ShowProgress then
+        local total = ExecutorTest.Results.Total
+        local tested = ExecutorTest.Results.Pass + ExecutorTest.Results.Fail + ExecutorTest.Results.Unknown
+        local progress = math.floor((tested / total) * 100)
+        
+        local bar = string.rep("█", math.floor(progress / 5)) .. string.rep("░", 20 - math.floor(progress / 5))
+        print(string.format("\r🔄 Progress: [%s] %d%% (%d/%d)", bar, progress, tested, total))
+    end
+end
+
+local function addBlockedFunction(func)
+    table.insert(ExecutorTest.BlockedFunctions, func)
+end
+
+local function recordResult(testName, status, details, category)
+    local result = {
+        Test = testName,
+        Status = status, -- "Pass", "Fail", "Unknown"
+        Details = details or "",
+        Category = category or "Unknown",
+        Timestamp = tick()
+    }
+    
+    table.insert(ExecutorTest.Results.Details, result)
+    
+    -- Update counters
+    if status == "Pass" then
+        ExecutorTest.Results.Pass = ExecutorTest.Results.Pass + 1
+        print("  ✅ " .. testName)
+    elseif status == "Fail" then
+        ExecutorTest.Results.Fail = ExecutorTest.Results.Fail + 1
+        print("  ⛔ " .. testName .. (details and (" | " .. details) or ""))
+    else
+        ExecutorTest.Results.Unknown = ExecutorTest.Results.Unknown + 1
+        print("  ⏺️ " .. testName .. (details and (" | " .. details) or ""))
+    end
+    
+    updateProgress()
+end
+
+-- ===================================
+-- CORE TESTING FUNCTIONS
+-- ===================================
+
+local function testServiceFunction(serviceName, functionName, expectedError, category)
+    local testName = serviceName .. ":" .. functionName
+    
+    local success, result = pcall(function()
+        return game:GetService(serviceName)[functionName]()
+    end)
+    
+    if not success and result == expectedError then
+        recordResult(testName, "Pass", nil, category)
+        if serviceName == "HttpRbxApiService" or serviceName == "BrowserService" then
+            addBlockedFunction('game:GetService("' .. serviceName .. '"):' .. functionName .. '()')
+        end
+    elseif success then
+        recordResult(testName, "Fail", "Unexpected success", category)
+    else
+        recordResult(testName, "Pass", "Function blocked: " .. tostring(result), category)
+        if serviceName == "HttpRbxApiService" or serviceName == "BrowserService" then
+            addBlockedFunction('game:GetService("' .. serviceName .. '"):' .. functionName .. '()')
+        end
+    end
+end
+
+local function testCustomHTTP(functionName, testCall, category)
+    local testName = "Custom HTTP: " .. functionName
+    
+    -- Set timeout
+    local startTime = tick()
+    local completed = false
+    
+    task.spawn(function()
+        local success, result = pcall(testCall)
+        completed = true
+        
+        if not success and result:find("attempt to call a nil value") then
+            recordResult(testName, "Unknown", "Function not supported", category)
+        elseif not success then
+            recordResult(testName, "Pass", "Function blocked: " .. tostring(result), category)
+        else
+            -- Check if result contains sensitive data
+            local resultStr = tostring(result.Body or result)
+            if resultStr:find('{"robux":') then
+                recordResult(testName, "Fail", "Robux data exposed: " .. resultStr:sub(1, 100), category)
+            else
+                recordResult(testName, "Pass", "Safe response", category)
+            end
+        end
+    end)
+    
+    -- Wait for completion or timeout
+    while not completed and (tick() - startTime) < ExecutorTest.Config.TestTimeout do
+        task.wait(0.1)
+    end
+    
+    if not completed then
+        recordResult(testName, "Unknown", "Test timed out", category)
+    end
+end
+
+-- ===================================
+-- TEST EXECUTION
+-- ===================================
+
+local function runTests()
+    printHeader("Executor Vulnerability Check v" .. ExecutorTest.Version)
+    print("Executor: " .. (identifyexecutor and identifyexecutor() or "Unknown"))
+    print("UNC Compatibility Test - Enhanced Version")
+    print("✅ = Secured | ⛔ = Vulnerable | ⏺️ = Unknown")
+    print("Started at: " .. os.date("%H:%M:%S"))
+    
+    -- Calculate total tests for progress tracking
+    local totalTests = 0
+    
+    -- HttpRbxApiService tests
+    totalTests = totalTests + 5
+    printCategory("HttpRbxApiService")
+    print("HTTP API service - Can lead to cookie logging and robux draining")
+    
+    task.spawn(function() testServiceFunction("HttpRbxApiService", "PostAsync", "Argument 1 missing or nil", "HttpRbxApiService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("HttpRbxApiService", "PostAsyncFullUrl", "Argument 1 missing or nil", "HttpRbxApiService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("HttpRbxApiService", "GetAsync", "Argument 1 missing or nil", "HttpRbxApiService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("HttpRbxApiService", "GetAsyncFullUrl", "Argument 1 missing or nil", "HttpRbxApiService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("HttpRbxApiService", "RequestAsync", "Argument 1 missing or nil", "HttpRbxApiService") end)
+    task.wait()
+    
+    -- ScriptContext tests
+    totalTests = totalTests + 1
+    printCategory("ScriptContext")
+    print("CoreScript creation - Can bypass executor security")
+    
+    task.spawn(function() testServiceFunction("ScriptContext", "AddCoreScriptLocal", "Argument 1 missing or nil", "ScriptContext") end)
+    task.wait()
+    
+    -- BrowserService tests
+    totalTests = totalTests + 6
+    printCategory("BrowserService")
+    print("Browser automation - Can download malicious files")
+    
+    task.spawn(function() testServiceFunction("BrowserService", "EmitHybridEvent", "Argument 1 missing or nil", "BrowserService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("BrowserService", "ExecuteJavaScript", "Argument 1 missing or nil", "BrowserService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("BrowserService", "OpenBrowserWindow", "Argument 1 missing or nil", "BrowserService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("BrowserService", "OpenNativeOverlay", "Argument 1 missing or nil", "BrowserService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("BrowserService", "ReturnToJavaScript", "Argument 1 missing or nil", "BrowserService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("BrowserService", "SendCommand", "Argument 1 missing or nil", "BrowserService") end)
+    task.wait()
+    
+    -- MarketplaceService tests
+    totalTests = totalTests + 9
+    printCategory("MarketplaceService")
+    print("Purchase functions - Can lead to robux draining")
+    
+    task.spawn(function() 
+        local success, result = pcall(function() return game:GetService("MarketplaceService"):GetRobuxBalance() end)
+        if success then
+            recordResult("MarketplaceService:GetRobuxBalance", "Fail", "Balance exposed: " .. tostring(result), "MarketplaceService")
+        else
+            recordResult("MarketplaceService:GetRobuxBalance", "Pass", "Function blocked", "MarketplaceService")
+        end
+    end)
+    task.wait()
+    
+    task.spawn(function() testServiceFunction("MarketplaceService", "PerformPurchase", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("MarketplaceService", "PerformPurchaseV2", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("MarketplaceService", "PromptBundlePurchase", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("MarketplaceService", "PromptGamePassPurchase", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("MarketplaceService", "PromptProductPurchase", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("MarketplaceService", "PromptPurchase", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("MarketplaceService", "PromptRobloxPurchase", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("MarketplaceService", "PromptThirdPartyPurchase", "Argument 1 missing or nil", "MarketplaceService") end)
+    task.wait()
+    
+    -- HttpService tests
+    totalTests = totalTests + 1
+    printCategory("HttpService")
+    print("HTTP requests - Can send authenticated requests")
+    
+    task.spawn(function() testServiceFunction("HttpService", "RequestInternal", "Argument 1 missing or nil", "HttpService") end)
+    task.wait()
+    
+    -- GuiService tests
+    totalTests = totalTests + 2
+    printCategory("GuiService")
+    print("GUI browser functions - Same vulnerabilities as BrowserService")
+    
+    task.spawn(function() testServiceFunction("GuiService", "OpenBrowserWindow", "Argument 1 missing or nil", "GuiService") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("GuiService", "OpenNativeOverlay", "Argument 1 missing or nil", "GuiService") end)
+    task.wait()
+    
+    -- OpenCloudService tests
+    totalTests = totalTests + 1
+    printCategory("OpenCloudService")
+    print("Cloud API - Can send authenticated requests")
+    
+    task.spawn(function() testServiceFunction("OpenCloudService", "HttpRequestAsync", "Argument 1 missing or nil", "OpenCloudService") end)
+    task.wait()
+    
+    -- CoreGui tests
+    totalTests = totalTests + 2
+    printCategory("CoreGui")
+    print("Screenshot functions - Can spam storage")
+    
+    task.spawn(function() 
+        local success, result = pcall(function() game:GetService("CoreGui"):TakeScreenshot() end)
+        if success then
+            recordResult("CoreGui:TakeScreenshot", "Fail", "Screenshot allowed", "CoreGui")
+        else
+            recordResult("CoreGui:TakeScreenshot", "Pass", "Function blocked", "CoreGui")
+        end
+    end)
+    task.wait()
+    
+    task.spawn(function() 
+        local success, result = pcall(function() game:GetService("CoreGui"):ToggleRecording() end)
+        if success then
+            recordResult("CoreGui:ToggleRecording", "Fail", "Recording allowed", "CoreGui")
+        else
+            recordResult("CoreGui:ToggleRecording", "Pass", "Function blocked", "CoreGui")
+        end
+    end)
+    task.wait()
+    
+    -- MessageBusService tests
+    totalTests = totalTests + 11
+    printCategory("MessageBusService")
+    print("Message bus - Can lead to RCE vulnerabilities")
+    
+    local messageBusFunctions = {
+        "Call", "GetLast", "GetMessageId", "GetProtocolMethodRequestMessageId",
+        "GetProtocolMethodResponseMessageId", "MakeRequest", "Publish",
+        "PublishProtocolMethodRequest", "PublishProtocolMethodResponse",
+        "Subscribe", "SubscribeToProtocolMethodRequest", "SubscribeToProtocolMethodResponse"
+    }
+    
+    for _, func in ipairs(messageBusFunctions) do
+        task.spawn(function() testServiceFunction("MessageBusService", func, "Argument 1 missing or nil", "MessageBusService") end)
+        task.wait()
+    end
+    
+    -- DataModel tests
+    totalTests = totalTests + 3
+    printCategory("DataModel")
+    print("Game functions - Minor vulnerabilities")
+    
+    task.spawn(function() testServiceFunction("DataModel", "Load", "Argument 1 missing or nil", "DataModel") end)
+    task.wait()
+    
+    task.spawn(function() 
+        local success, result = pcall(function() game:OpenScreenshotsFolder() end)
+        if success then
+            recordResult("DataModel:OpenScreenshotsFolder", "Fail", "Folder opened", "DataModel")
+        else
+            recordResult("DataModel:OpenScreenshotsFolder", "Pass", "Function blocked", "DataModel")
+        end
+    end)
+    task.wait()
+    
+    task.spawn(function() 
+        local success, result = pcall(function() game:GetService("CoreGui"):OpenVideosFolder() end)
+        if success then
+            recordResult("DataModel:OpenVideosFolder", "Fail", "Folder opened", "DataModel")
+        else
+            recordResult("DataModel:OpenVideosFolder", "Pass", "Function blocked", "DataModel")
+        end
+    end)
+    task.wait()
+    
+    -- OmniRecommendationsService tests
+    totalTests = totalTests + 1
+    printCategory("OmniRecommendationsService")
+    print("Recommendations API - Can send HTTP requests")
+    
+    task.spawn(function() testServiceFunction("OmniRecommendationsService", "MakeRequest", "Argument 1 missing or nil", "OmniRecommendationsService") end)
+    task.wait()
+    
+    -- Players tests
+    totalTests = totalTests + 2
+    printCategory("Players")
+    print("Player functions - Can report local player")
+    
+    task.spawn(function() testServiceFunction("Players", "ReportAbuse", "Argument 1 missing or nil", "Players") end)
+    task.wait()
+    task.spawn(function() testServiceFunction("Players", "ReportAbuseV3", "Argument 1 missing or nil", "Players") end)
+    task.wait()
+    
+    -- Custom HTTP tests
+    totalTests = totalTests + 3
+    printCategory("Custom HTTP Functions")
+    print("Executor HTTP functions - Check for authenticated requests")
+    
+    task.spawn(function()
+        testCustomHTTP("request", function()
+            getgenv().REQUEST_RESULT = request({ 
+                Url = "https://economy.roblox.com/v1/user/currency", 
+                Method = "GET" 
+            })
+        end, "CustomHTTP")
+    end)
+    task.wait(0.3)
+    
+    task.spawn(function()
+        testCustomHTTP("game:HttpGet", function()
+            getgenv().GAME_HTTPGET_RESULT = game:HttpGet("https://economy.roblox.com/v1/user/currency")
+        end, "CustomHTTP")
+    end)
+    task.wait(0.3)
+    
+    task.spawn(function()
+        testCustomHTTP("game:HttpPost", function()
+            getgenv().GAME_HTTPPOST_RESULT = game:HttpPost(
+                "https://economy.roblox.com/v1/purchases/products/41762", 
+                '{"expectedCurrency":1,"expectedPrice":0,"expectedSellerId":116444}'
+            )
+        end, "CustomHTTP")
+    end)
+    
+    -- Environment bypass tests
+    totalTests = totalTests + 1
+    printCategory("Environment Bypass")
+    print("Security bypass tests - Advanced vulnerability checks")
+    
+    task.spawn(function()
+        -- Test blocked function protection
+        local blockedFunc = nil
+        for i, v in pairs(getgenv().BLOCKED_FUNCTION and getgenv().BLOCKED_FUNCTION:GetMetadata() or {}) do
+            blockedFunc = tostring(v)
+            break
+        end
+        
+        if not blockedFunc then
+            recordResult("Blocked Function Protection", "Unknown", "No blocked functions found", "EnvironmentBypass")
+        else
+            local success, result = pcall(function() loadstring(blockedFunc)() end)
+            
+            -- Try environment escape
+            local escapeSuccess, escapeResult = pcall(function()
+                getrenv().loadstring = getgenv().loadstring
+                getrenv().getgenv = getgenv().getgenv
+                if clonefunction and setthreadidentity then
+                    getrenv()._set = clonefunction(setthreadidentity)
+                    local old = hookmetamethod(game, "__index", function(a, b) 
+                        task.spawn(function() 
+                            getrenv()._set(7) 
+                            task.wait(0.1)
+                            getgenv().s1, e1 = pcall(function() loadstring(blockedFunc)() end)
+                        end) 
+                        hookmetamethod(game, "__index", old) 
+                        return old(a, b) 
+                    end)
+                end
+            end)
+            
+            if escapeSuccess and getgenv().e1 == result then
+                recordResult("Environment Escape", "Pass", "Environment escape prevented", "EnvironmentBypass")
+            else
+                recordResult("Environment Escape", "Fail", "Environment escape possible", "EnvironmentBypass")
+            end
+        end
+    end)
+    
+    -- Set total for progress tracking
+    ExecutorTest.Results.Total = totalTests
+    
+    -- Wait for all tests to complete
+    print("\n⏳ Waiting for all tests to complete...")
+    task.wait(2)
+    
+    -- Generate final report
+    generateReport()
+end
+
+-- ===================================
+-- REPORT GENERATION
+-- ===================================
+
+local function generateReport()
+    printHeader("Vulnerability Test Results")
+    
+    local total = ExecutorTest.Results.Pass + ExecutorTest.Results.Fail + ExecutorTest.Results.Unknown
+    local securityRate = total > 0 and math.round((ExecutorTest.Results.Pass / total) * 100) or 0
+    local duration = math.floor((tick() - ExecutorTest.Results.StartTime) * 100) / 100
+    
+    print(string.format("📊 Security Score: %d%% (%d/%d tests passed)", securityRate, ExecutorTest.Results.Pass, total))
+    print(string.format("⏱️  Test Duration: %.2f seconds", duration))
+    print(string.format("✅ Secured: %d | ⛔ Vulnerable: %d | ⏺️ Unknown: %d", 
+        ExecutorTest.Results.Pass, ExecutorTest.Results.Fail, ExecutorTest.Results.Unknown))
+    
+    -- Category breakdown
+    print("\n📋 Category Breakdown:")
+    local categoryStats = {}
+    
+    for _, result in pairs(ExecutorTest.Results.Details) do
+        if not categoryStats[result.Category] then
+            categoryStats[result.Category] = {Pass = 0, Fail = 0, Unknown = 0}
+        end
+        categoryStats[result.Category][result.Status] = categoryStats[result.Category][result.Status] + 1
+    end
+    
+    for category, stats in pairs(categoryStats) do
+        local catTotal = stats.Pass + stats.Fail + stats.Unknown
+        local catRate = catTotal > 0 and math.round((stats.Pass / catTotal) * 100) or 0
+        print(string.format("  %s: %d%% (%d/%d)", category, catRate, stats.Pass, catTotal))
+    end
+    
+    -- Security assessment
+    print("\n🔒 Security Assessment:")
+    if securityRate >= 90 then
+        print("  🛡️  EXCELLENT - Very well protected executor")
+    elseif securityRate >= 75 then
+        print("  🔒 GOOD - Well protected with minor issues")
+    elseif securityRate >= 50 then
+        print("  ⚠️  FAIR - Some vulnerabilities present")
+    else
+        print("  🚨 POOR - Multiple vulnerabilities detected")
+    end
+    
+    -- Recommendations
+    print("\n💡 Recommendations:")
+    if ExecutorTest.Results.Fail > 0 then
+        print("  • Review and patch vulnerable functions")
+        print("  • Consider using a more secure executor")
+        print("  • Enable additional security features")
+    end
+    if ExecutorTest.Results.Unknown > 0 then
+        print("  • Some tests couldn't be completed")
+        print("  • Check executor compatibility")
+    end
+    if securityRate >= 90 then
+        print("  • Excellent security posture maintained")
+        print("  • Regular security audits recommended")
+    end
+    
+    -- Export results if enabled
+    if ExecutorTest.Config.ExportResults then
+        exportResults()
+    end
+    
+    printHeader("Test Complete")
+    print("Thank you for using the Executor Vulnerability Check!")
+end
+
+local function exportResults()
+    local exportData = {
+        Version = ExecutorTest.Version,
+        Executor = identifyexecutor and identifyexecutor() or "Unknown",
+        Timestamp = os.date("%Y-%m-%d %H:%M:%S"),
+        Duration = tick() - ExecutorTest.Results.StartTime,
+        Results = ExecutorTest.Results,
+        BlockedFunctions = ExecutorTest.BlockedFunctions
+    }
+    
+    -- Create JSON string (simple implementation)
+    local json = "{\n"
+    json = json .. '  "Version": "' .. exportData.Version .. '",\n'
+    json = json .. '  "Executor": "' .. exportData.Executor .. '",\n'
+    json = json .. '  "Timestamp": "' .. exportData.Timestamp .. '",\n'
+    json = json .. '  "Duration": ' .. string.format("%.2f", exportData.Duration) .. ',\n'
+    json = json .. '  "Results": {\n'
+    json = json .. '    "Pass": ' .. exportData.Results.Pass .. ',\n'
+    json = json .. '    "Fail": ' .. exportData.Results.Fail .. ',\n'
+    json = json .. '    "Unknown": ' .. exportData.Results.Unknown .. '\n'
+    json = json .. '  }\n'
+    json = json .. "}"
+    
+    print("\n📄 Export Data:")
+    print(json)
+    print("\n💾 Copy this data to save your test results")
+end
+
+-- ===================================
+-- EXECUTION
+-- ===================================
+
+-- Run the tests
+runTests()
