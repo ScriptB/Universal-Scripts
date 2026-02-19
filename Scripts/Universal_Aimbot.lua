@@ -210,13 +210,7 @@ end
 -- DEVELOPER CONSOLE COPIER
 -- ===================================
 
-local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Scripts/Libraries/DevConsoleCopier.lua"))()
-end)
-
-if not success then
-    warn("⚠️ Failed to load DevConsoleCopier:", result)
-end
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Useful/DevCopy"))()
 
 -- ===================================
 -- MAIN INITIALIZATION
