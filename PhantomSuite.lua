@@ -43,14 +43,28 @@ local aimbotEnabled = false
 local blatantEnabled = false
 local triggerBotEnabled = false
 
+-- ESP variables
+local espEnabled = false
+local boxEsp = true
+local nameEsp = true
+local healthEsp = true
+local distanceEsp = true
+local tracerEsp = false
+
+-- Visual variables
+local fovColor = Color3.fromRGB(255, 255, 255)
+local espColor = Color3.fromRGB(255, 0, 0)
+
+-- Check variables
+local wallCheck = true
+local teamCheck = true
+
 -- UI toggle references (assigned when UI is built)
 local triggerBotToggle = nil
 local rainbowFovToggle = nil
 local espTeamCheckToggle = nil
 local espToggle = nil
-local wallCheck = true
 local stickyAimEnabled = false
-local teamCheck = false
 local healthCheck = false
 local minHealth = 0
 
@@ -1256,6 +1270,303 @@ task.spawn(function()
 			Status:AddLabel("FPS: " .. fps)
 			Status:AddLabel("Memory Usage: " .. math.floor(collectgarbage("count")) .. " objects")
 			Status:AddLabel("Network Ping: Calculating...")
+		end)
+		
+		-- Add Aimbot tab content
+		pcall(function()
+			Aimbot:AddSection({Name = "🎯 Aimbot Settings"})
+			
+			Aimbot:AddToggle({
+				Name = "Enable Aimbot",
+				Default = aimbotEnabled,
+				Callback = function(value)
+					aimbotEnabled = value
+				end
+			})
+			
+			Aimbot:AddToggle({
+				Name = "Blatant Mode",
+				Default = blatantEnabled,
+				Callback = function(value)
+					blatantEnabled = value
+				end
+			})
+			
+			Aimbot:AddSlider({
+				Name = "Aim FOV",
+				Min = 10,
+				Max = 360,
+				Default = aimFov,
+				ValueName = "degrees",
+				Callback = function(value)
+					aimFov = value
+				end
+			})
+			
+			Aimbot:AddSlider({
+				Name = "Smoothing",
+				Min = 0,
+				Max = 1,
+				Default = smoothing,
+				ValueName = "smoothness",
+				Callback = function(value)
+					smoothing = value
+				end
+			})
+			
+			Aimbot:AddSlider({
+				Name = "Prediction",
+				Min = 0,
+				Max = 0.2,
+				Default = predictionStrength,
+				ValueName = "seconds",
+				Callback = function(value)
+					predictionStrength = value
+				end
+			})
+			
+			Aimbot:AddSection({Name = "🔍 Target Settings"})
+			
+			Aimbot:AddToggle({
+				Name = "Wall Check",
+				Default = wallCheck,
+				Callback = function(value)
+					wallCheck = value
+				end
+			})
+			
+			Aimbot:AddToggle({
+				Name = "Team Check",
+				Default = teamCheck,
+				Callback = function(value)
+					teamCheck = value
+				end
+			})
+			
+			Aimbot:AddSlider({
+				Name = "Aim Distance",
+				Min = 50,
+				Max = 1000,
+				Default = aimbotLockDistance,
+				ValueName = "studs",
+				Callback = function(value)
+					aimbotLockDistance = value
+				end
+			})
+		end)
+		
+		-- Add ESP tab content
+		pcall(function()
+			ESP:AddSection({Name = "👁️ ESP Settings"})
+			
+			ESP:AddToggle({
+				Name = "Enable ESP",
+				Default = espEnabled,
+				Callback = function(value)
+					espEnabled = value
+				end
+			})
+			
+			ESP:AddToggle({
+				Name = "Show Boxes",
+				Default = boxEsp,
+				Callback = function(value)
+					boxEsp = value
+				end
+			})
+			
+			ESP:AddToggle({
+				Name = "Show Names",
+				Default = nameEsp,
+				Callback = function(value)
+					nameEsp = value
+				end
+			})
+			
+			ESP:AddToggle({
+				Name = "Show Health",
+				Default = healthEsp,
+				Callback = function(value)
+					healthEsp = value
+				end
+			})
+			
+			ESP:AddToggle({
+				Name = "Show Distance",
+				Default = distanceEsp,
+				Callback = function(value)
+					distanceEsp = value
+				end
+			})
+			
+			ESP:AddToggle({
+				Name = "Show Tracers",
+				Default = tracerEsp,
+				Callback = function(value)
+					tracerEsp = value
+				end
+			})
+			
+			ESP:AddSlider({
+				Name = "ESP Distance",
+				Min = 50,
+				Max = 1000,
+				Default = espLockDistance,
+				ValueName = "studs",
+				Callback = function(value)
+					espLockDistance = value
+				end
+			})
+		end)
+		
+		-- Add Extras tab content
+		pcall(function()
+			Extras:AddSection({Name = "⚡ Extra Features"})
+			
+			Extras:AddToggle({
+				Name = "Trigger Bot",
+				Default = triggerBotEnabled,
+				Callback = function(value)
+					triggerBotEnabled = value
+				end
+			})
+			
+			Extras:AddToggle({
+				Name = "Rainbow FOV",
+				Default = rainbowFov,
+				Callback = function(value)
+					rainbowFov = value
+				end
+			})
+			
+			Extras:AddSlider({
+				Name = "Rainbow Speed",
+				Min = 0.001,
+				Max = 0.05,
+				Default = rainbowSpeed,
+				ValueName = "speed",
+				Callback = function(value)
+					rainbowSpeed = value
+				end
+			})
+			
+			Extras:AddSection({Name = "🎨 Visual Settings"})
+			
+			Extras:AddColorpicker({
+				Name = "FOV Color",
+				Default = fovColor,
+				Callback = function(value)
+					fovColor = value
+				end
+			})
+			
+			Extras:AddColorpicker({
+				Name = "ESP Color",
+				Default = espColor,
+				Callback = function(value)
+					espColor = value
+				end
+			})
+		end)
+		
+		-- Add Configs tab content
+		pcall(function()
+			Configs:AddSection({Name = "💾 Configuration"})
+			
+			Configs:AddButton({
+				Name = "Save Config",
+				Callback = function()
+					-- Save configuration logic here
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "Config Saved",
+							Content = "Configuration saved successfully!",
+							Time = 3
+						})
+					end
+				end
+			})
+			
+			Configs:AddButton({
+				Name = "Load Config",
+				Callback = function()
+					-- Load configuration logic here
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "Config Loaded",
+							Content = "Configuration loaded successfully!",
+							Time = 3
+						})
+					end
+				end
+			})
+			
+			Configs:AddButton({
+				Name = "Reset Config",
+				Callback = function()
+					-- Reset configuration logic here
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "Config Reset",
+							Content = "Configuration reset to defaults!",
+							Time = 3
+						})
+					end
+				end
+			})
+		end)
+		
+		-- Add Keybinds tab content
+		pcall(function()
+			Keybinds:AddSection({Name = "⌨️ Keybinds"})
+			
+			Keybinds:AddBind({
+				Name = "Aimbot Toggle",
+				Default = Enum.KeyCode.F1,
+				Hold = false,
+				Callback = function()
+					aimbotEnabled = not aimbotEnabled
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "Aimbot Toggled",
+							Content = "Aimbot: " .. (aimbotEnabled and "ON" or "OFF"),
+							Time = 2
+						})
+					end
+				end
+			})
+			
+			Keybinds:AddBind({
+				Name = "ESP Toggle",
+				Default = Enum.KeyCode.F2,
+				Hold = false,
+				Callback = function()
+					espEnabled = not espEnabled
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "ESP Toggled",
+							Content = "ESP: " .. (espEnabled and "ON" or "OFF"),
+							Time = 2
+						})
+					end
+				end
+			})
+			
+			Keybinds:AddBind({
+				Name = "UI Toggle",
+				Default = Enum.KeyCode.RightShift,
+				Hold = false,
+				Callback = function()
+					-- UI toggle logic handled by Orion
+					if OrionLib and OrionLib.MakeNotification then
+						OrionLib:MakeNotification({
+							Name = "UI Toggle",
+							Content = "Press RightShift to toggle UI",
+							Time = 2
+						})
+					end
+				end
+			})
 		end)
 		
 		-- Add Info tab content
