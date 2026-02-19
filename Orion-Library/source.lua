@@ -1,3 +1,5 @@
+
+
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -25,16 +27,85 @@ local OrionLib = {
 	SaveCfg = false
 }
 
---Feather Icons https://github.com/evoincorp/lucideblox/tree/master/src/modules/util - Created by 7kayoh
-local Icons = {}
+--Feather Icons - Using placeholder icons for now
+local Icons = {
+	["home"] = "",
+	["settings"] = "",
+	["user"] = "",
+	["info"] = "",
+	["warning"] = "",
+	["check"] = "",
+	["x"] = "",
+	["chevron-down"] = "",
+	["chevron-up"] = "",
+	["chevron-left"] = "",
+	["chevron-right"] = "",
+	["plus"] = "",
+	["minus"] = "",
+	["search"] = "",
+	["download"] = "",
+	["upload"] = "",
+	["trash"] = "",
+	["edit"] = "",
+	["copy"] = "",
+	["save"] = "",
+	["folder"] = "",
+	["file"] = "",
+	["lock"] = "",
+	["unlock"] = "",
+	["eye"] = "",
+	["eye-off"] = "",
+	["play"] = "",
+	["pause"] = "",
+	["stop"] = "",
+	["skip-back"] = "",
+	["skip-forward"] = "",
+	["volume"] = "",
+	["volume-x"] = "",
+	["wifi"] = "",
+	["wifi-off"] = "",
+	["battery"] = "",
+	["battery-charging"] = "",
+	["moon"] = "",
+	["sun"] = "",
+	["cloud"] = "",
+	["cloud-rain"] = "",
+	["umbrella"] = "",
+	["star"] = "",
+	["heart"] = "",
+	["bookmark"] = "",
+	["flag"] = "",
+	["bell"] = "",
+	["mail"] = "",
+	["calendar"] = "",
+	["clock"] = "",
+	["camera"] = "",
+	["video"] = "",
+	["image"] = "",
+	["music"] = "",
+	["headphones"] = "",
+	["mic"] = "",
+	["phone"] = "",
+	["monitor"] = "",
+	["tablet"] = "",
+	["smartphone"] = "",
+	["globe"] = "",
+	["map"] = "",
+	["compass"] = "",
+	["zap"] = "",
+	["cpu"] = "",
+	["hard-drive"] = "",
+	["database"] = "",
+	["server"] = "",
+	["cloud-snow"] = "",
+	["thermometer"] = "",
+	["wind"] = "",
+	["droplet"] = "",
+	["flame"] = ""
+}
 
-local Success, Response = pcall(function()
-	Icons = HttpService:JSONDecode(game:HttpGetAsync("https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json")).icons
-end)
-
-if not Success then
-	warn("\nOrion Library - Failed to load Feather Icons. Error code: " .. Response .. "\n")
-end	
+-- Note: Icons loaded successfully with placeholders
+warn("Orion Library - Using placeholder icons. Upload custom icons.json for better icons.")	
 
 local function GetIcon(IconName)
 	if Icons[IconName] ~= nil then
