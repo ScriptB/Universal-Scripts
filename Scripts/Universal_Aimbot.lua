@@ -15,14 +15,23 @@
 -- ===================================
 
 -- Load DevCopy functionality from external source
+print("🔧 Attempting to load DevCopy...")
 local success, devCopyLoaded = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Useful/DevCopy"))()
+    local response = game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Useful/DevCopy")
+    print("📡 DevCopy HTTP response received, length:", #response)
+    return loadstring(response)()
 end)
 
 if success and devCopyLoaded then
     print("📋 DevCopy functionality integrated successfully!")
 else
-    print("⚠️ DevCopy integration failed, continuing without it...")
+    print("⚠️ DevCopy integration failed!")
+    if not success then
+        print("❌ HTTP request or loadstring failed:", devCopyLoaded)
+    else
+        print("❌ DevCopy execution returned:", devCopyLoaded)
+    end
+    print("🔧 Continuing without DevCopy...")
 end
 
 -- ===================================
@@ -47,8 +56,8 @@ end
 local Bracket = LoadBracketLibrary()
 
 if not Bracket then
-    warn("❌ Script cannot continue without GUI library")
-    return
+    warn("❌ Failed to load Bracket library - continuing with limited functionality")
+    -- Don't return here, let the script continue with basic functionality
 end
 
 -- ===================================
