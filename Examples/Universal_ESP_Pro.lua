@@ -479,6 +479,11 @@ local function updateBoxESP(player, box)
 		color = getRainbowColor(localTick(), ESPConfig.Effects.RainbowSpeed)
 	end
 	
+	-- Ensure color is always a valid Color3
+	if type(color) ~= "userdata" then
+		color = Color3.fromRGB(255, 255, 255) -- Default to white if invalid
+	end
+	
 	-- Auto-thickness
 	local thickness = ESPConfig.Box.Thickness
 	if ESPConfig.Box.AutoScale then
@@ -585,6 +590,11 @@ local function updateNameESP(player, nameText)
 	local color = ESPConfig.Name.Color
 	if ESPConfig.Effects.Rainbow then
 		color = getRainbowColor(localTick(), ESPConfig.Effects.RainbowSpeed)
+	end
+	
+	-- Ensure color is always a valid Color3
+	if type(color) ~= "userdata" then
+		color = Color3.fromRGB(255, 255, 255) -- Default to white if invalid
 	end
 	
 	-- Auto-scale
@@ -871,6 +881,11 @@ local function updateSkeletonESP(player, skeleton)
 	local color = ESPConfig.Skeleton.Color
 	if ESPConfig.Skeleton.Rainbow or ESPConfig.Effects.Rainbow then
 		color = getRainbowColor(localTick(), ESPConfig.Effects.RainbowSpeed)
+	end
+	
+	-- Ensure color is always a valid Color3
+	if type(color) ~= "userdata" then
+		color = Color3.fromRGB(255, 255, 255) -- Default to white if invalid
 	end
 	
 	-- Auto-thickness
