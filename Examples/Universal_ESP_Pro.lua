@@ -1355,9 +1355,32 @@ if Bracket then
             task.spawn(function()
                 while true do
                     local stats = getPerformanceStats()
-                    fpsLabel:UpdateLabel({Text = "🎯 FPS: " .. stats.FPS})
-                    playersLabel:UpdateLabel({Text = "👥 Players: " .. stats.Players})
-                    memoryLabel:UpdateLabel({Text = "💾 Memory: " .. math.floor(stats.Memory) .. " MB"})
+                    -- Use Set method instead of UpdateLabel for Bracket UI
+                    pcall(function()
+                        if fpsLabel.Set then
+                            fpsLabel:Set("🎯 FPS: " .. stats.FPS)
+                        elseif fpsLabel.UpdateLabel then
+                            fpsLabel:UpdateLabel({Text = "🎯 FPS: " .. stats.FPS})
+                        else
+                            fpsLabel.Text = "🎯 FPS: " .. stats.FPS
+                        end
+                        
+                        if playersLabel.Set then
+                            playersLabel:Set("👥 Players: " .. stats.Players)
+                        elseif playersLabel.UpdateLabel then
+                            playersLabel:UpdateLabel({Text = "👥 Players: " .. stats.Players})
+                        else
+                            playersLabel.Text = "👥 Players: " .. stats.Players
+                        end
+                        
+                        if memoryLabel.Set then
+                            memoryLabel:Set("💾 Memory: " .. math.floor(stats.Memory) .. " MB")
+                        elseif memoryLabel.UpdateLabel then
+                            memoryLabel:UpdateLabel({Text = "💾 Memory: " .. math.floor(stats.Memory) .. " MB"})
+                        else
+                            memoryLabel.Text = "💾 Memory: " .. math.floor(stats.Memory) .. " MB"
+                        end
+                    end)
                     task.wait(1)
                 end
             end)
