@@ -185,6 +185,35 @@ end
 detectExecutor()
 
 -- ===================================
+-- FOV CIRCLE FUNCTIONS
+-- ===================================
+
+local function createFOVCircle()
+    if not drawingAvailable then return end
+    
+    if fovCircle then
+        fovCircle:Remove()
+    end
+    
+    fovCircle = Drawing.new("Circle")
+    fovCircle.Radius = aimFov
+    fovCircle.Thickness = 1
+    fovCircle.Color = fovColor
+    fovCircle.Transparency = 1
+    fovCircle.Visible = aimbotEnabled
+    fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+end
+
+local function updateFOVCircle()
+    if not fovCircle or not drawingAvailable then return end
+    
+    fovCircle.Radius = aimFov
+    fovCircle.Color = fovColor
+    fovCircle.Visible = aimbotEnabled
+    fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+end
+
+-- ===================================
 -- UI CREATION
 -- ===================================
 
@@ -518,35 +547,6 @@ local function createMainUI()
     InfoTab:Label({Text = "• Modern UI"})
     
     return Window
-end
-
--- ===================================
--- FOV CIRCLE FUNCTIONS
--- ===================================
-
-local function createFOVCircle()
-    if not drawingAvailable then return end
-    
-    if fovCircle then
-        fovCircle:Remove()
-    end
-    
-    fovCircle = Drawing.new("Circle")
-    fovCircle.Radius = aimFov
-    fovCircle.Thickness = 1
-    fovCircle.Color = fovColor
-    fovCircle.Transparency = 1
-    fovCircle.Visible = aimbotEnabled
-    fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-end
-
-local function updateFOVCircle()
-    if not fovCircle or not drawingAvailable then return end
-    
-    fovCircle.Radius = aimFov
-    fovCircle.Color = fovColor
-    fovCircle.Visible = aimbotEnabled
-    fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 end
 
 -- ===================================
