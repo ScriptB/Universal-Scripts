@@ -414,60 +414,79 @@ local function updateArrowESP(player, arrow)
 	
 	-- Only show arrow when player is off-screen
 	if not onScreen then
-		-- Get player position relative to camera
+		-- Get player position in camera space
 		local playerPos = rootPart.Position
-		local cameraPos = Camera.CFrame.Position
-		local cameraLook = Camera.CFrame.LookVector
+		local cameraCFrame = Camera.CFrame
 		
-		-- Calculate direction vector from camera to player
-		local direction = (playerPos - cameraPos).Unit
+		-- Transform player position to camera space
+		local relativePos = cameraCFrame:PointToObjectSpace(playerPos)
 		
-		-- Transform direction to camera space
-		local cameraRight = Camera.CFrame.RightVector
-		local cameraUp = Camera.CFrame.UpVector
-		
-		-- Project direction onto camera's right and up vectors
-		local rightDot = direction:Dot(cameraRight)
-		local upDot = direction:Dot(cameraUp)
-		
-		-- Calculate angle for arrow rotation
-		local angle = math.atan2(upDot, rightDot)
-		
-		-- Calculate arrow position on screen edge
-		local screenCenter = Camera.ViewportSize / 2
-		local distance = ESPConfig.Arrow.Distance
-		
-		-- Find intersection with screen edge
-		local maxDist = math.min(screenCenter.X, screenCenter.Y) - 20
-		local arrowX = screenCenter.X + math.cos(angle) * math.min(distance, maxDist)
-		local arrowY = screenCenter.Y + math.sin(angle) * math.min(distance, maxDist)
-		
-		-- Clamp to screen bounds
-		arrowX = math.max(20, math.min(Camera.ViewportSize.X - 20, arrowX))
-		arrowY = math.max(20, math.min(Camera.ViewportSize.Y - 20, arrowY))
-		
-		-- Create rotated triangle points
-		local size = ESPConfig.Arrow.Size
-		local cosAngle = math.cos(angle)
-		local sinAngle = math.sin(angle)
-		
-		-- Triangle points relative to arrow center (pointing toward player)
-		local tip = Vector2.new(size, 0)
-		local left = Vector2.new(-size/2, size/2)
-		local right = Vector2.new(-size/2, -size/2)
-		
-		-- Rotate points to point in correct direction
-		local rotatePoint = function(point)
-			return Vector2.new(
-				point.x * cosAngle - point.y * sinAngle + arrowX,
-				point.x * sinAngle + point.y * cosAngle + arrowY
-			)
+		-- Only show if player is in front of camera
+		if relativePos.Z > 0 then
+			-- Project to screen space manually for accuracy
+			local screenCenter = Camera.ViewportSize / 2
+			local fov = Camera.FieldOfView * math.pi / 180
+			local aspectRatio = screenCenter.X / screenCenter.Y
+			
+			-- Calculate screen coordinates
+			local screenX = screenCenter.X + (relativePos.X / relativePos.Z) * (screenCenter.Y / math.tan(fov/2))
+			local screenY = screenCenter.Y - (relativePos.Y / relativePos.Z) * (screenCenter.Y / math.tan(fov/2))
+			
+			-- Check if this is actually off-screen
+			local offScreen = screenX < 0 or screenX > Camera.ViewportSize.X or 
+							 screenY < 0 or screenY > Camera.ViewportSize.Y
+			
+			if offScreen then
+				-- Calculate direction from screen center to projected position
+				local dirX = screenX - screenCenter.X
+				local dirY = screenY - screenCenter.Y
+				local angle = math.atan2(dirY, dirX)
+				
+				-- Find intersection with screen edge
+				local distance = ESPConfig.Arrow.Distance
+				local maxDist = math.min(screenCenter.X, screenCenter.Y) - 30
+				
+				-- Calculate edge intersection
+				local edgeX, edgeY
+				local absCos = math.abs(math.cos(angle))
+				local absSin = math.abs(math.sin(angle))
+				
+				if absCos > absSin then
+					-- Intersect with left or right edge
+					edgeX = math.cos(angle) > 0 and (Camera.ViewportSize.X - 30) or 30
+					edgeY = screenCenter.Y + (edgeX - screenCenter.X) * math.tan(angle)
+				else
+					-- Intersect with top or bottom edge
+					edgeY = math.sin(angle) > 0 and 30 or (Camera.ViewportSize.Y - 30)
+					edgeX = screenCenter.X + (edgeY - screenCenter.Y) / math.tan(angle)
+				end
+				
+				-- Clamp to screen bounds
+				edgeX = math.max(30, math.min(Camera.ViewportSize.X - 30, edgeX))
+				edgeY = math.max(30, math.min(Camera.ViewportSize.Y - 30, edgeY))
+				
+				-- Create rotated triangle pointing toward player
+				local size = ESPConfig.Arrow.Size
+				local cosAngle = math.cos(angle)
+				local sinAngle = math.sin(angle)
+				
+				-- Triangle points (arrow pointing toward player)
+				local tip = Vector2.new(size * cosAngle + edgeX, size * sinAngle + edgeY)
+				local baseLeft = Vector2.new(-size/2 * cosAngle - size/2 * sinAngle + edgeX, 
+											   -size/2 * sinAngle + size/2 * cosAngle + edgeY)
+				local baseRight = Vector2.new(-size/2 * cosAngle + size/2 * sinAngle + edgeX, 
+												-size/2 * sinAngle - size/2 * cosAngle + edgeY)
+				
+				arrow.PointA = tip
+				arrow.PointB = baseLeft
+				arrow.PointC = baseRight
+				arrow.Visible = true
+			else
+				arrow.Visible = false
+			end
+		else
+			arrow.Visible = false
 		end
-		
-		arrow.PointA = rotatePoint(tip)
-		arrow.PointB = rotatePoint(left)
-		arrow.PointC = rotatePoint(right)
-		arrow.Visible = true
 	else
 		arrow.Visible = false
 	end
