@@ -1,21 +1,92 @@
 --[[
-	Dev Copier - Universal Script Copying Tool
-	Designed for easy script distribution and sharing
+	Dev Copier - Universal Script & Console Copying Tool
+	Designed for easy script distribution and developer console copying
 	
 	Features:
 	- Custom chat command copying
+	- Developer console log copying
 	- Automatic clipboard copying
 	- Loadstring generation
 	- Manual copy fallback
 	- Error handling
 	
-	Chat Command: -datcopy
+	Chat Commands: -datcopy, -copylog
 ]]
 
 print("🔧 Loading Dev Copier...")
 
 -- ===================================
--- DEV COPIER FUNCTIONS
+-- SERVICES
+-- ===================================
+
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- ===================================
+-- CONSOLE LOG FUNCTIONS
+-- ===================================
+
+-- Utility: safe wait for DevConsole
+local function getClientLog()
+    local master = CoreGui:FindFirstChild("DevConsoleMaster")
+    if not master then return end
+
+    local window = master:FindFirstChild("DevConsoleWindow")
+    if not window then return end
+
+    local ui = window:FindFirstChild("DevConsoleUI")
+    if not ui then return end
+
+    local main = ui:FindFirstChild("MainView")
+    if not main then return end
+
+    return main:FindFirstChild("ClientLog")
+end
+
+-- Copy entire console log
+local function copyConsoleLog()
+    local clientLog = getClientLog()
+    if not clientLog then
+        warn("⚠️ Developer console not found!")
+        return
+    end
+
+    local buffer = {}
+
+    -- Collect all text from console
+    for _, obj in ipairs(clientLog:GetDescendants()) do
+        if obj:IsA("TextLabel") and obj.Text and obj.Text ~= "" then
+            table.insert(buffer, obj.Text)
+        end
+    end
+
+    if #buffer == 0 then
+        warn("⚠️ No console log entries found!")
+        return
+    end
+
+    local logContent = table.concat(buffer, "\n")
+    
+    -- Copy to clipboard
+    if setclipboard then
+        setclipboard(logContent)
+        print("📋 Developer console log copied to clipboard!")
+    else
+        warn("⚠️ setclipboard function not available!")
+    end
+    
+    -- Also print to console for manual copying
+    print("📄 Console log content ready for manual copying:")
+    print(logContent)
+    
+    print("✅ Copied", #buffer, "console entries!")
+end
+
+-- ===================================
+-- SCRIPT COPY FUNCTIONS
 -- ===================================
 
 local function devCopy()
@@ -77,13 +148,13 @@ end
 -- CHAT COMMAND SYSTEM
 -- ===================================
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
 -- Chat command handler
 local function onChatMessage(message)
-	if message == "-datcopy" then
+	local msg = message:lower()
+	if msg == "-datcopy" then
 		devCopy()
+	elseif msg == "-copylog" then
+		copyConsoleLog()
 	end
 end
 
@@ -94,8 +165,11 @@ local function setupChatListener()
 		-- Try to connect to chat service
 		local success, result = pcall(function()
 			return game:GetService("TextChatService").MessageReceived:Connect(function(message)
-				if message.TextInput == "-datcopy" and message.FromUserId == LocalPlayer.UserId then
+				local msg = message.TextInput:lower()
+				if msg == "-datcopy" and message.FromUserId == LocalPlayer.UserId then
 					devCopy()
+				elseif msg == "-copylog" and message.FromUserId == LocalPlayer.UserId then
+					copyConsoleLog()
 				end
 			end)
 		end)
@@ -110,8 +184,11 @@ local function setupChatListener()
 		-- Additional fallback: Direct chat monitoring
 		pcall(function()
 			game.Players.LocalPlayer.Chatted:Connect(function(msg)
-				if msg:lower() == "-datcopy" then
+				local lowerMsg = msg:lower()
+				if lowerMsg == "-datcopy" then
 					devCopy()
+				elseif lowerMsg == "-copylog" then
+					copyConsoleLog()
 				end
 			end)
 		end)
@@ -125,6 +202,10 @@ end
 -- Export dev copier function
 getgenv().devCopy = devCopy
 print("🔧 Dev copier functions exported to getgenv().devCopy")
+
+-- Export console log copier function
+getgenv().copyConsoleLog = copyConsoleLog
+print("📋 Console log copier exported to getgenv().copyConsoleLog")
 
 -- Additional utility functions
 getgenv().getScriptUrl = function()
@@ -150,7 +231,9 @@ setupChatListener()
 
 print("✅ Dev Copier loaded successfully!")
 print("📋 Available commands:")
-print("  - Chat: -datcopy (Copy loadstring version)")
-print("  - Function: getgenv().devCopy() - Copy loadstring version")
+print("  - Chat: -datcopy (Copy script loadstring)")
+print("  - Chat: -copylog (Copy entire developer console)")
+print("  - Function: getgenv().devCopy() - Copy script")
+print("  - Function: getgenv().copyConsoleLog() - Copy console log")
 print("  - Function: getgenv().getScriptUrl() - Get script URL")
 print("  - Function: getgenv().copyScriptUrl() - Copy script URL")
