@@ -1552,10 +1552,10 @@ if bracketSuccess and Bracket then
         Window.Enabled = not Window.Enabled
     end
     
-    -- F9 to toggle UI
+    -- Left Ctrl to toggle UI
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed then
-            if input.KeyCode == Enum.KeyCode.F9 then
+            if input.KeyCode == Enum.KeyCode.LeftControl then
                 toggleUI()
             elseif input.KeyCode == Enum.KeyCode.Delete then
                 Window.Enabled = false
@@ -1565,7 +1565,7 @@ if bracketSuccess and Bracket then
     
     -- Final notifications
     print("✅ Universal ESP Pro Advanced UI loaded successfully!")
-    print("⌨️ Press F9 to toggle UI")
+    print("⌨️ Press Left Ctrl to toggle UI")
 else
     print("⚠️ Bracket UI not available, running in headless mode")
 end
@@ -1647,5 +1647,5 @@ else
 end
 
 print("✅ Universal ESP Pro Advanced loaded successfully!")
-print("🎮 Use F9 to toggle UI visibility")
+print("🎮 Use Left Ctrl to toggle UI visibility")
 
