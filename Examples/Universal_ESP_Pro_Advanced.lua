@@ -1203,17 +1203,40 @@ if bracketSuccess and Bracket then
         end
     })
     
-    BoxEnableSection:Dropdown({
+    -- Replace dropdown with radio buttons
+    BoxEnableSection:Label({
         Title = "Box Style",
         Description = "Choose box visualization style",
-        Default = "Corner",
-        Icon = "layout",
-        List = {"Corner", "Full", "ThreeD"},
-        Multi = false,
-        Callback = function(option)
-            if type(option) == "string" then
-                Settings.BoxStyle = option
-            end
+        Icon = "layout"
+    })
+    
+    BoxEnableSection:Toggle({
+        Title = "Corner Box",
+        Description = "Show corner-style boxes",
+        Default = Settings.BoxStyle == "Corner",
+        Icon = "square",
+        Callback = function(state)
+            if state then Settings.BoxStyle = "Corner" end
+        end
+    })
+    
+    BoxEnableSection:Toggle({
+        Title = "Full Box",
+        Description = "Show full outline boxes",
+        Default = Settings.BoxStyle == "Full",
+        Icon = "square",
+        Callback = function(state)
+            if state then Settings.BoxStyle = "Full" end
+        end
+    })
+    
+    BoxEnableSection:Toggle({
+        Title = "3D Box",
+        Description = "Show three-dimensional boxes",
+        Default = Settings.BoxStyle == "ThreeD",
+        Icon = "cube",
+        Callback = function(state)
+            if state then Settings.BoxStyle = "ThreeD" end
         end
     })
     
@@ -1358,31 +1381,87 @@ if bracketSuccess and Bracket then
         end
     })
     
-    TracerEnableSection:Dropdown({
+    -- Replace dropdown with radio buttons
+    TracerEnableSection:Label({
         Title = "Tracer Origin",
         Description = "Where tracers start from",
-        Default = "Bottom",
-        Icon = "navigation",
-        List = {"Bottom", "Top", "Mouse", "Center"},
-        Multi = false,
-        Callback = function(option)
-            if type(option) == "string" then
-                Settings.TracerOrigin = option
-            end
+        Icon = "navigation"
+    })
+    
+    TracerEnableSection:Toggle({
+        Title = "Bottom Origin",
+        Description = "Start tracers from screen bottom",
+        Default = Settings.TracerOrigin == "Bottom",
+        Icon = "arrow-down",
+        Callback = function(state)
+            if state then Settings.TracerOrigin = "Bottom" end
         end
     })
     
-    TracerEnableSection:Dropdown({
+    TracerEnableSection:Toggle({
+        Title = "Top Origin",
+        Description = "Start tracers from screen top",
+        Default = Settings.TracerOrigin == "Top",
+        Icon = "arrow-up",
+        Callback = function(state)
+            if state then Settings.TracerOrigin = "Top" end
+        end
+    })
+    
+    TracerEnableSection:Toggle({
+        Title = "Mouse Origin",
+        Description = "Start tracers from mouse position",
+        Default = Settings.TracerOrigin == "Mouse",
+        Icon = "mouse-pointer",
+        Callback = function(state)
+            if state then Settings.TracerOrigin = "Mouse" end
+        end
+    })
+    
+    TracerEnableSection:Toggle({
+        Title = "Center Origin",
+        Description = "Start tracers from screen center",
+        Default = Settings.TracerOrigin == "Center",
+        Icon = "target",
+        Callback = function(state)
+            if state then Settings.TracerOrigin = "Center" end
+        end
+    })
+    
+    -- Replace dropdown with radio buttons
+    TracerEnableSection:Label({
         Title = "Tracer Style",
         Description = "Visual style of tracer lines",
-        Default = "Line",
+        Icon = "minus"
+    })
+    
+    TracerEnableSection:Toggle({
+        Title = "Solid Line",
+        Description = "Show solid tracer lines",
+        Default = Settings.TracerStyle == "Line" or not Settings.TracerStyle,
         Icon = "minus",
-        List = {"Line", "Dashed", "Dotted"},
-        Multi = false,
-        Callback = function(option)
-            if type(option) == "string" then
-                Settings.TracerStyle = option
-            end
+        Callback = function(state)
+            if state then Settings.TracerStyle = "Line" end
+        end
+    })
+    
+    TracerEnableSection:Toggle({
+        Title = "Dashed Line",
+        Description = "Show dashed tracer lines",
+        Default = Settings.TracerStyle == "Dashed",
+        Icon = "more-horizontal",
+        Callback = function(state)
+            if state then Settings.TracerStyle = "Dashed" end
+        end
+    })
+    
+    TracerEnableSection:Toggle({
+        Title = "Dotted Line",
+        Description = "Show dotted tracer lines",
+        Default = Settings.TracerStyle == "Dotted",
+        Icon = "more-horizontal",
+        Callback = function(state)
+            if state then Settings.TracerStyle = "Dotted" end
         end
     })
     
@@ -1480,17 +1559,40 @@ if bracketSuccess and Bracket then
         end
     })
     
-    SnaplineSection:Dropdown({
+    -- Replace dropdown with radio buttons
+    SnaplineSection:Label({
         Title = "Snapline Style",
         Description = "Visual style of snaplines",
-        Default = "Straight",
+        Icon = "minus"
+    })
+    
+    SnaplineSection:Toggle({
+        Title = "Straight Lines",
+        Description = "Show straight snaplines",
+        Default = Settings.SnaplineStyle == "Straight" or not Settings.SnaplineStyle,
         Icon = "minus",
-        List = {"Straight", "Dashed", "Dotted"},
-        Multi = false,
-        Callback = function(option)
-            if type(option) == "string" then
-                Settings.SnaplineStyle = option
-            end
+        Callback = function(state)
+            if state then Settings.SnaplineStyle = "Straight" end
+        end
+    })
+    
+    SnaplineSection:Toggle({
+        Title = "Dashed Lines",
+        Description = "Show dashed snaplines",
+        Default = Settings.SnaplineStyle == "Dashed",
+        Icon = "more-horizontal",
+        Callback = function(state)
+            if state then Settings.SnaplineStyle = "Dashed" end
+        end
+    })
+    
+    SnaplineSection:Toggle({
+        Title = "Dotted Lines",
+        Description = "Show dotted snaplines",
+        Default = Settings.SnaplineStyle == "Dotted",
+        Icon = "more-horizontal",
+        Callback = function(state)
+            if state then Settings.SnaplineStyle = "Dotted" end
         end
     })
     
@@ -1757,18 +1859,43 @@ if bracketSuccess and Bracket then
         end
     })
     
-    ChamsAppearanceSection:Dropdown({
+    -- Replace dropdown with radio buttons
+    ChamsAppearanceSection:Label({
         Title = "Chams Mode",
         Description = "Visual style for chams",
-        Default = "AlwaysOnTop",
+        Icon = "layers"
+    })
+    
+    ChamsAppearanceSection:Toggle({
+        Title = "Always On Top",
+        Description = "Show chams on top of everything",
+        Default = Settings.Chams and Settings.Chams.Mode == "AlwaysOnTop" or not (Settings.Chams and Settings.Chams.Mode),
         Icon = "layers",
-        List = {"AlwaysOnTop", "Occluded", "Both"},
-        Multi = false,
-        Callback = function(option)
+        Callback = function(state)
             if not Settings.Chams then Settings.Chams = {} end
-            if type(option) == "string" then
-                Settings.Chams.Mode = option
-            end
+            if state then Settings.Chams.Mode = "AlwaysOnTop" end
+        end
+    })
+    
+    ChamsAppearanceSection:Toggle({
+        Title = "Occluded Only",
+        Description = "Only show chams for occluded parts",
+        Default = Settings.Chams and Settings.Chams.Mode == "Occluded",
+        Icon = "eye-off",
+        Callback = function(state)
+            if not Settings.Chams then Settings.Chams = {} end
+            if state then Settings.Chams.Mode = "Occluded" end
+        end
+    })
+    
+    ChamsAppearanceSection:Toggle({
+        Title = "Both Modes",
+        Description = "Show different chams for visible and occluded parts",
+        Default = Settings.Chams and Settings.Chams.Mode == "Both",
+        Icon = "layers",
+        Callback = function(state)
+            if not Settings.Chams then Settings.Chams = {} end
+            if state then Settings.Chams.Mode = "Both" end
         end
     })
     
@@ -1846,43 +1973,77 @@ if bracketSuccess and Bracket then
         end
     })
     
-    TextSection:Dropdown({
+    -- Replace dropdown with radio buttons
+    TextSection:Label({
         Title = "Text Font",
         Description = "Font for ESP text elements",
-        Default = "SourceSans",
+        Icon = "type"
+    })
+    
+    TextSection:Toggle({
+        Title = "SourceSans",
+        Description = "Use SourceSans font",
+        Default = Settings.TextFont == 0 or not Settings.TextFont,
         Icon = "type",
-        List = {"SourceSans", "SourceSansBold", "Gotham", "GothamBold", "Arial", "ArialBold"},
-        Multi = false,
-        Callback = function(option)
-            if type(option) == "string" then
-                if option == "SourceSans" then
-                    Settings.TextFont = 0
-                elseif option == "SourceSansBold" then
-                    Settings.TextFont = 1
-                elseif option == "Gotham" then
-                    Settings.TextFont = 2
-                elseif option == "GothamBold" then
-                    Settings.TextFont = 3
-                elseif option == "Arial" then
-                    Settings.TextFont = 4
-                elseif option == "ArialBold" then
-                    Settings.TextFont = 5
-                end
-            end
+        Callback = function(state)
+            if state then Settings.TextFont = 0 end
         end
     })
     
-    TextSection:Dropdown({
+    TextSection:Toggle({
+        Title = "SourceSans Bold",
+        Description = "Use SourceSans Bold font",
+        Default = Settings.TextFont == 1,
+        Icon = "type",
+        Callback = function(state)
+            if state then Settings.TextFont = 1 end
+        end
+    })
+    
+    TextSection:Toggle({
+        Title = "Gotham",
+        Description = "Use Gotham font",
+        Default = Settings.TextFont == 2,
+        Icon = "type",
+        Callback = function(state)
+            if state then Settings.TextFont = 2 end
+        end
+    })
+    
+    -- Replace dropdown with radio buttons
+    TextSection:Label({
         Title = "Health Text Format",
         Description = "Format of health display",
-        Default = "Number",
-        Icon = "heart",
-        List = {"Number", "Percentage", "Both"},
-        Multi = false,
-        Callback = function(option)
-            if type(option) == "string" then
-                Settings.HealthTextFormat = option
-            end
+        Icon = "heart"
+    })
+    
+    TextSection:Toggle({
+        Title = "Number Format",
+        Description = "Show health as a number",
+        Default = Settings.HealthTextFormat == "Number" or not Settings.HealthTextFormat,
+        Icon = "hash",
+        Callback = function(state)
+            if state then Settings.HealthTextFormat = "Number" end
+        end
+    })
+    
+    TextSection:Toggle({
+        Title = "Percentage Format",
+        Description = "Show health as a percentage",
+        Default = Settings.HealthTextFormat == "Percentage",
+        Icon = "percent",
+        Callback = function(state)
+            if state then Settings.HealthTextFormat = "Percentage" end
+        end
+    })
+    
+    TextSection:Toggle({
+        Title = "Both Formats",
+        Description = "Show health as number and percentage",
+        Default = Settings.HealthTextFormat == "Both",
+        Icon = "list",
+        Callback = function(state)
+            if state then Settings.HealthTextFormat = "Both" end
         end
     })
     
@@ -1913,17 +2074,40 @@ if bracketSuccess and Bracket then
         end
     })
     
-    DistanceSection:Dropdown({
+    -- Replace dropdown with radio buttons
+    DistanceSection:Label({
         Title = "Distance Unit",
         Description = "Unit for distance measurements",
-        Default = "studs",
+        Icon = "ruler"
+    })
+    
+    DistanceSection:Toggle({
+        Title = "Studs",
+        Description = "Show distance in Roblox studs",
+        Default = Settings.DistanceUnit == "studs" or not Settings.DistanceUnit,
+        Icon = "box",
+        Callback = function(state)
+            if state then Settings.DistanceUnit = "studs" end
+        end
+    })
+    
+    DistanceSection:Toggle({
+        Title = "Meters",
+        Description = "Show distance in meters",
+        Default = Settings.DistanceUnit == "m",
         Icon = "ruler",
-        List = {"studs", "m", "ft"},
-        Multi = false,
-        Callback = function(option)
-            if type(option) == "string" then
-                Settings.DistanceUnit = option
-            end
+        Callback = function(state)
+            if state then Settings.DistanceUnit = "m" end
+        end
+    })
+    
+    DistanceSection:Toggle({
+        Title = "Feet",
+        Description = "Show distance in feet",
+        Default = Settings.DistanceUnit == "ft",
+        Icon = "ruler",
+        Callback = function(state)
+            if state then Settings.DistanceUnit = "ft" end
         end
     })
     
