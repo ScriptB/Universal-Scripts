@@ -36,7 +36,6 @@ local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 
--- Aimbot Configuration
 local Aimbot = {
     enabled = false,
     blatant = false,
@@ -51,7 +50,6 @@ local Aimbot = {
     targetMode = "Closest To Mouse"
 }
 
--- Visual Configuration
 local Visual = {
     fovColor = Color3.fromRGB(255, 255, 255),
     espColor = Color3.fromRGB(255, 0, 0),
@@ -59,7 +57,6 @@ local Visual = {
     rainbowSpeed = 0.005
 }
 
--- ESP Configuration
 local ESP = {
     enabled = false,
     box = true,
@@ -70,7 +67,6 @@ local ESP = {
     lockDistance = 500
 }
 
--- Movement Configuration
 local Movement = {
     fly = false,
     noclip = false,
@@ -80,7 +76,6 @@ local Movement = {
     jumpPower = 50
 }
 
--- State Management
 local State = {
     aiming = false,
     target = nil,
@@ -90,7 +85,6 @@ local State = {
     Drawing = nil
 }
 
--- Executor Detection
 local Executor = {
     name = "Unknown",
     compatibility = {
@@ -896,5 +890,4 @@ local function main()
     end)
 end
 
--- Start the script
 main()
