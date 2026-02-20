@@ -1209,8 +1209,11 @@ if bracketSuccess and Bracket then
         Default = "Corner",
         Icon = "layout",
         List = {"Corner", "Full", "ThreeD"},
+        Multi = false,
         Callback = function(option)
-            Settings.BoxStyle = option
+            if type(option) == "string" then
+                Settings.BoxStyle = option
+            end
         end
     })
     
@@ -1361,19 +1364,25 @@ if bracketSuccess and Bracket then
         Default = "Bottom",
         Icon = "navigation",
         List = {"Bottom", "Top", "Mouse", "Center"},
+        Multi = false,
         Callback = function(option)
-            Settings.TracerOrigin = option
+            if type(option) == "string" then
+                Settings.TracerOrigin = option
+            end
         end
     })
     
     TracerEnableSection:Dropdown({
         Title = "Tracer Style",
         Description = "Visual style of tracer lines",
-        Default = Settings.TracerStyle or "Line",
+        Default = "Line",
         Icon = "minus",
         List = {"Line", "Dashed", "Dotted"},
+        Multi = false,
         Callback = function(option)
-            Settings.TracerStyle = option
+            if type(option) == "string" then
+                Settings.TracerStyle = option
+            end
         end
     })
     
@@ -1474,11 +1483,14 @@ if bracketSuccess and Bracket then
     SnaplineSection:Dropdown({
         Title = "Snapline Style",
         Description = "Visual style of snaplines",
-        Default = Settings.SnaplineStyle or "Straight",
+        Default = "Straight",
         Icon = "minus",
         List = {"Straight", "Dashed", "Dotted"},
+        Multi = false,
         Callback = function(option)
-            Settings.SnaplineStyle = option
+            if type(option) == "string" then
+                Settings.SnaplineStyle = option
+            end
         end
     })
     
@@ -1748,12 +1760,15 @@ if bracketSuccess and Bracket then
     ChamsAppearanceSection:Dropdown({
         Title = "Chams Mode",
         Description = "Visual style for chams",
-        Default = Settings.Chams.Mode or "AlwaysOnTop",
+        Default = "AlwaysOnTop",
         Icon = "layers",
         List = {"AlwaysOnTop", "Occluded", "Both"},
+        Multi = false,
         Callback = function(option)
             if not Settings.Chams then Settings.Chams = {} end
-            Settings.Chams.Mode = option
+            if type(option) == "string" then
+                Settings.Chams.Mode = option
+            end
         end
     })
     
@@ -1837,19 +1852,22 @@ if bracketSuccess and Bracket then
         Default = "SourceSans",
         Icon = "type",
         List = {"SourceSans", "SourceSansBold", "Gotham", "GothamBold", "Arial", "ArialBold"},
+        Multi = false,
         Callback = function(option)
-            if option == "SourceSans" then
-                Settings.TextFont = 0
-            elseif option == "SourceSansBold" then
-                Settings.TextFont = 1
-            elseif option == "Gotham" then
-                Settings.TextFont = 2
-            elseif option == "GothamBold" then
-                Settings.TextFont = 3
-            elseif option == "Arial" then
-                Settings.TextFont = 4
-            elseif option == "ArialBold" then
-                Settings.TextFont = 5
+            if type(option) == "string" then
+                if option == "SourceSans" then
+                    Settings.TextFont = 0
+                elseif option == "SourceSansBold" then
+                    Settings.TextFont = 1
+                elseif option == "Gotham" then
+                    Settings.TextFont = 2
+                elseif option == "GothamBold" then
+                    Settings.TextFont = 3
+                elseif option == "Arial" then
+                    Settings.TextFont = 4
+                elseif option == "ArialBold" then
+                    Settings.TextFont = 5
+                end
             end
         end
     })
@@ -1860,8 +1878,9 @@ if bracketSuccess and Bracket then
         Default = "Number",
         Icon = "heart",
         List = {"Number", "Percentage", "Both"},
+        Multi = false,
         Callback = function(option)
-            if option then
+            if type(option) == "string" then
                 Settings.HealthTextFormat = option
             end
         end
@@ -1897,11 +1916,14 @@ if bracketSuccess and Bracket then
     DistanceSection:Dropdown({
         Title = "Distance Unit",
         Description = "Unit for distance measurements",
-        Default = Settings.DistanceUnit or "studs",
+        Default = "studs",
         Icon = "ruler",
         List = {"studs", "m", "ft"},
+        Multi = false,
         Callback = function(option)
-            Settings.DistanceUnit = option
+            if type(option) == "string" then
+                Settings.DistanceUnit = option
+            end
         end
     })
     
