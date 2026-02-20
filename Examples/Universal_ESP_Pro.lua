@@ -216,7 +216,11 @@ end
 
 local function getPlayerColor(player)
 	if ESPConfig.TeamCheck and player.Team and LocalPlayer.Team then
-		return player.TeamColor == LocalPlayer.TeamColor and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+		if player.TeamColor == LocalPlayer.TeamColor then
+			return Color3.fromRGB(0, 255, 0) -- Green for same team
+		else
+			return Color3.fromRGB(255, 0, 0) -- Red for enemy team
+		end
 	end
 	return ESPConfig.Box.Color
 end
