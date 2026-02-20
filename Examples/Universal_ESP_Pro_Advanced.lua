@@ -1057,7 +1057,7 @@ if bracketSuccess and Bracket then
     ESPTab:Dropdown({
         Title = "Box Style",
         Description = "Style of the ESP box",
-        Default = Settings.BoxStyle,
+        Default = "Corner",
         Side = "Left",
         List = {"Corner", "Full", "ThreeD"},
         Callback = function(option)
@@ -1088,7 +1088,7 @@ if bracketSuccess and Bracket then
     ESPTab:Dropdown({
         Title = "Tracer Origin",
         Description = "Where tracers start from",
-        Default = Settings.TracerOrigin,
+        Default = "Bottom",
         Side = "Left",
         List = {"Bottom", "Top", "Mouse", "Center"},
         Callback = function(option)
@@ -1109,7 +1109,7 @@ if bracketSuccess and Bracket then
     ESPTab:Dropdown({
         Title = "Health Style",
         Description = "Style of health display",
-        Default = Settings.HealthStyle,
+        Default = "Bar",
         Side = "Right",
         List = {"Bar", "Text", "Both"},
         Callback = function(option)
@@ -1400,7 +1400,9 @@ if bracketSuccess and Bracket then
         Side = "Right",
         List = {"Number", "Percentage", "Both"},
         Callback = function(option)
-            Settings.HealthTextFormat = option
+            if option then
+                Settings.HealthTextFormat = option
+            end
         end
     })
     
