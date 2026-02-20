@@ -36,7 +36,7 @@ detectExecutor()
 
 -- Load NexacLib Modern
 local success, NexacLib = pcall(function()
-	return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/refs/heads/main/Orion-Library/NexacLib.lua"))()
+	return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Libraries/NexacLib.lua"))()
 end)
 
 if not success then

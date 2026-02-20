@@ -5,7 +5,7 @@ A comprehensive collection of Roblox scripts featuring aimbot functionality, sec
 ## 📁 Repository Structure
 
 ```
-ScriptB-Universal-Scripts/
+Universal-Scripts/
 ├── Core/                    # Main scripts
 │   ├── Universal_Aimbot.lua # Primary aimbot with advanced features
 │   ├── Loader.lua           # Centralized script loader
@@ -31,24 +31,24 @@ ScriptB-Universal-Scripts/
 
 ### Method 1: Universal Loader (Recommended)
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Core/Loader.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Core/Loader.lua"))()
 ```
 
 ### Method 2: Direct Universal Aimbot
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Core/Universal_Aimbot.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Core/Universal_Aimbot.lua"))()
 ```
 
 ### Method 3: Individual Scripts
 ```lua
 -- UNC Compatibility Test
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Tools/UNC_Compatibility_Test.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/UNC_Compatibility_Test.lua"))()
 
 -- UNC Security Check
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Tools/UNC_Security_Check.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/UNC_Security_Check.lua"))()
 
 -- Dev Console Copier
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
 ```
 
 ## ✨ Features
@@ -153,4 +153,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **⚠️ Disclaimer**: This software is for educational purposes only. Users are responsible for complying with Roblox Terms of Service and applicable laws.
 
-**🔗 Repository**: [ScriptB-Universal-Scripts](https://github.com/ScriptB/ScriptB-Universal-Scripts)
+**🔗 Repository**: [Universal-Scripts](https://github.com/ScriptB/Universal-Scripts)

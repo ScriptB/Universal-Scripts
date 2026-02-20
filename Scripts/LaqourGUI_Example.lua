@@ -38,7 +38,7 @@ local LaqourLibLoaded = false
 
 -- Load LaqourLib using loadstring method
 local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Libraries/LaqourLib_BracketRebranded.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Libraries/LaqourLib_BracketRebranded.lua"))()
 end)
 
 if success then
@@ -51,7 +51,7 @@ else
     
     -- Try alternative source
     local success2, result2 = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Aimassist/main/Libraries/LaqourLib_Rebranded.lua"))()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Libraries/LaqourLib_Rebranded.lua"))()
     end)
     
     if success2 then

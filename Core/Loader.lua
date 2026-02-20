@@ -8,10 +8,10 @@
 	  3. Phantom CMD  — command bar
 
 	Usage (paste into executor):
-	  loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Core/Loader.lua"))()
+	  loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Core/Loader.lua"))()
 ]]
 
-local BASE = "https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/"
+local BASE = "https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/"
 
 local function load(path)
 	local src = game:HttpGet(BASE .. path)

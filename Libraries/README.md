@@ -20,7 +20,7 @@ Modern UI library for creating professional interfaces:
 
 ### BracketLib Example
 ```lua
-local Bracket = loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Libraries/BracketLib.lua"))()
+local Bracket = loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Libraries/BracketLib.lua"))()
 
 local Window = Bracket:CreateWindow({
     Name = "My Script",

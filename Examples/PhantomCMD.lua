@@ -448,7 +448,7 @@ local TABS = {
 			{name="Phantom Suite",icon="👑", kind="action",
 				run=function()
 					task.spawn(function()
-						loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Core/Universal_Aimbot.lua"))()
+						loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Core/Universal_Aimbot.lua"))()
 					end)
 					return "Loading Phantom Suite..."
 				end},

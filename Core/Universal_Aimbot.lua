@@ -17,7 +17,7 @@
 local function LoadBracketLibrary()
     -- Load the new Bracket library from Libraries folder
     local success, result = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Libraries/BracketLib.lua"))()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Libraries/BracketLib.lua"))()
     end)
     
     if success and result then
@@ -215,7 +215,7 @@ end
 
 -- Try to load Dev Console Copier with fallback
 local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
 end)
 
 if not success then

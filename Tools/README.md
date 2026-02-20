@@ -36,17 +36,17 @@ Authentication and key validation system:
 
 ### UNC Compatibility Test
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Tools/UNC_Compatibility_Test.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/UNC_Compatibility_Test.lua"))()
 ```
 
 ### UNC Security Check
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Tools/UNC_Security_Check.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/UNC_Security_Check.lua"))()
 ```
 
 ### Dev Console Copier
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
 ```
 
 ## Features

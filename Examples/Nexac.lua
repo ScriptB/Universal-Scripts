@@ -18,7 +18,7 @@ print("🚀 Loading Bracket Library (MAIN GUI Handler)...")
 
 -- Primary Bracket Library loading with instant execution
 local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Libraries/BracketLib.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Libraries/BracketLib.lua"))()
 end)
 
 if success and result then

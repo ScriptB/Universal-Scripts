@@ -23,12 +23,12 @@ Centralized loader script that handles:
 
 ### Direct Load
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Core/Universal_Aimbot.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Core/Universal_Aimbot.lua"))()
 ```
 
 ### Loader (Recommended)
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Core/Loader.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Core/Loader.lua"))()
 ```
 
 ## Dependencies

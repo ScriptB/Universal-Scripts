@@ -29,17 +29,17 @@ Alternative aimbot implementation:
 
 ### AimAssist Example
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Examples/AimAssist.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Examples/AimAssist.lua"))()
 ```
 
 ### PhantomCMD
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Examples/PhantomCMD.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Examples/PhantomCMD.lua"))()
 ```
 
 ### Nexac
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/ScriptB-Universal-Scripts/refs/heads/main/Examples/Nexac.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Examples/Nexac.lua"))()
 ```
 
 ## Features
