@@ -1,29 +1,10 @@
---[[
-	Phantom Suite v8.0 (Complete Rewrite)
-	by Asuneteric (100% Code Analysis & Recreation)
-
-	Complete rewrite with full understanding of every component:
-	- Advanced aimbot with prediction, smoothing, and targeting
-	- Comprehensive ESP system with multiple visual elements
-	- Movement tools (fly, noclip, infinite jump)
-	- Blatant mode for maximum performance
-	- Professional Bracket UI integration
-	- Robust error handling and performance optimization
-	- Dev console copier integration
-]]
-
--- ===================================
--- LIBRARY LOADING
--- ===================================
 
 print("🚀 Loading Phantom Suite v8.0 (Complete Rewrite)...")
 
--- Dev Console Copier Integration
 pcall(function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
 end)
 
--- Bracket Library Loading
 local function loadBracketLibrary()
     local success, lib = pcall(function()
         return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Libraries/BracketLib.lua"))()
@@ -44,10 +25,6 @@ if not Bracket then
     return
 end
 
--- ===================================
--- SERVICES & ENVIRONMENT
--- ===================================
-
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -58,9 +35,6 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- ===================================
--- CORE VARIABLES
--- ===================================
 
 -- Aimbot Configuration
 local Aimbot = {
@@ -128,9 +102,6 @@ local Executor = {
     }
 }
 
--- ===================================
--- EXECUTOR DETECTION
--- ===================================
 
 local function detectExecutor()
     if syn then
@@ -157,9 +128,6 @@ end
 
 detectExecutor()
 
--- ===================================
--- DRAWING SERVICE DETECTION
--- ===================================
 
 pcall(function()
     State.Drawing = Drawing
@@ -171,9 +139,6 @@ pcall(function()
     end
 end)
 
--- ===================================
--- AIMBOT CORE FUNCTIONS
--- ===================================
 
 local function getClosestTarget()
     local closest = nil
@@ -242,9 +207,6 @@ local function applyAimbot(target)
     Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + smoothedDirection)
 end
 
--- ===================================
--- ESP CORE FUNCTIONS
--- ===================================
 
 local function createESPObjects(player)
     if not State.drawingAvailable or not ESP.enabled then return end
@@ -399,9 +361,6 @@ local function cleanupESP(player)
     end
 end
 
--- ===================================
--- MOVEMENT CORE FUNCTIONS
--- ===================================
 
 local function startFly()
     if State.connections.fly then return end
@@ -490,9 +449,6 @@ local function stopInfJump()
     end
 end
 
--- ===================================
--- BLATANT MODE
--- ===================================
 
 local function enableBlatantMode()
     Aimbot.fov = 500
@@ -514,9 +470,6 @@ local function disableBlatantMode()
     print("🛡️ Blatant mode deactivated - Default settings restored!")
 end
 
--- ===================================
--- UI CREATION
--- ===================================
 
 local function createUI()
     local Window = Bracket:Window({
@@ -859,9 +812,6 @@ local function createUI()
     return Window
 end
 
--- ===================================
--- MAIN INITIALIZATION
--- ===================================
 
 local function main()
     -- Create UI
