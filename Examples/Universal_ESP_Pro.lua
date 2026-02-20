@@ -1401,6 +1401,90 @@ if Bracket then
                 end
             })
             
+            SettingsTab:Divider({Text = "DevCopy Tools", Side = "Left"})
+            
+            local devCopyButton = SettingsTab:Button({
+                Name = "📋 Copy Console Log",
+                Side = "Left",
+                Callback = function()
+                    -- Check if DevCopy is available
+                    if success and devCopyLoaded then
+                        -- Trigger DevCopy functionality
+                        pcall(function()
+                            -- Reload DevCopy to ensure latest console content
+                            local freshDevCopy = loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Useful/DevCopy"))()
+                            if freshDevCopy then
+                                Bracket:Notification({Title = "📋 DevCopy Activated", Description = "Console copying buttons have been refreshed", Duration = 2})
+                            else
+                                Bracket:Notification({Title = "❌ DevCopy Failed", Description = "Failed to refresh DevCopy functionality", Duration = 3})
+                            end
+                        end)
+                    else
+                        Bracket:Notification({Title = "⚠️ DevCopy Unavailable", Description = "DevCopy is not loaded - check console for errors", Duration = 3})
+                    end
+                end
+            })
+            
+            local copyScriptButton = SettingsTab:Button({
+                Name = "📄 Copy Script Loadstring",
+                Side = "Left",
+                Callback = function()
+                    local scriptUrl = "https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Examples/Universal_ESP_Pro.lua"
+                    local scriptContent = string.format([===[
+--[[
+	Universal ESP Pro Enhanced - Professional ESP System
+	Designed from scratch using best practices from multiple ESP libraries
+	
+	Enhanced Features:
+	- Performance optimizations (rendering efficiency, memory management)
+	- Advanced ESP features (skeleton, chams, distance-based scaling)
+	- Modular architecture for easy integration
+	- Advanced features (team colors, rainbow effects, animations)
+	- Future-ready structure for script transitions
+	
+	ESP Types:
+	- Box ESP (corner boxes with auto-scaling)
+	- Name ESP (distance/health display)
+	- Health ESP (dynamic health bars)
+	- Tracer ESP (screen edge tracers)
+	- Arrow ESP (off-screen indicators)
+	- Skeleton ESP (bone structure)
+	- Chams ESP (character highlighting)
+	- Distance ESP (distance-based scaling)
+]]
+
+print("🚀 Loading Universal ESP Pro...")
+
+-- Load the script from GitHub
+loadstring(game:HttpGet("%s"))()
+]===], scriptUrl)
+                    
+                    -- Copy to clipboard
+                    if setclipboard then
+                        setclipboard(scriptContent)
+                        Bracket:Notification({Title = "📋 Script Copied", Description = "ESP Pro loadstring copied to clipboard!", Duration = 2})
+                    else
+                        Bracket:Notification({Title = "❌ Clipboard Failed", Description = "setclipboard function not available", Duration = 3})
+                    end
+                end
+            })
+            
+            local copyUrlButton = SettingsTab:Button({
+                Name = "🔗 Copy Script URL",
+                Side = "Left",
+                Callback = function()
+                    local scriptUrl = "https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Examples/Universal_ESP_Pro.lua"
+                    
+                    -- Copy to clipboard
+                    if setclipboard then
+                        setclipboard(scriptUrl)
+                        Bracket:Notification({Title = "🔗 URL Copied", Description = "ESP Pro URL copied to clipboard!", Duration = 2})
+                    else
+                        Bracket:Notification({Title = "❌ Clipboard Failed", Description = "setclipboard function not available", Duration = 3})
+                    end
+                end
+            })
+            
             SettingsTab:Divider({Text = "Danger Zone", Side = "Left"})
             
             local destroyButton = SettingsTab:Button({
