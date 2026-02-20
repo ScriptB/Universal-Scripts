@@ -102,6 +102,7 @@ local tracerEsp = false
 -- Visual variables
 local fovColor = Color3.fromRGB(255, 255, 255)
 local espColor = Color3.fromRGB(255, 0, 0)
+local fovCircle = nil
 
 -- Check variables
 local wallCheck = true
@@ -218,6 +219,7 @@ local function createMainUI()
         Value = aimbotEnabled,
         Callback = function(state)
             aimbotEnabled = state
+            updateFOVCircle()
             print("Aimbot:", state and "ON" or "OFF")
         end
     })
@@ -231,6 +233,7 @@ local function createMainUI()
         Unit = "",
         Callback = function(value)
             aimFov = value
+            updateFOVCircle()
             print("Aimbot FOV:", value)
         end
     })
@@ -287,31 +290,11 @@ local function createMainUI()
     })
     
     AimbotTab:Toggle({
-        Name = "Blatant Mode",
+        Name = "Blatant Aimlock",
         Value = blatantEnabled,
         Callback = function(state)
             blatantEnabled = state
-            print("Blatant Mode:", state and "ON" or "OFF")
-            -- Apply blatant mode effects
-            if blatantEnabled then
-                -- Max settings for blatant mode
-                aimFov = 500
-                smoothing = 1
-                predictionStrength = 0.1
-                wallCheck = false
-                teamCheck = false
-                healthCheck = false
-                print("🔥 Blatant mode activated - Max settings applied!")
-            else
-                -- Reset to default settings
-                aimFov = 100
-                smoothing = 5
-                predictionStrength = 0.065
-                wallCheck = true
-                teamCheck = true
-                healthCheck = false
-                print("🛡️ Blatant mode deactivated - Default settings restored!")
-            end
+            print("Blatant Aimlock:", state and "ON" or "OFF")
         end
     })
     
@@ -535,6 +518,35 @@ local function createMainUI()
     InfoTab:Label({Text = "• Modern UI"})
     
     return Window
+end
+
+-- ===================================
+-- FOV CIRCLE FUNCTIONS
+-- ===================================
+
+local function createFOVCircle()
+    if not drawingAvailable then return end
+    
+    if fovCircle then
+        fovCircle:Remove()
+    end
+    
+    fovCircle = Drawing.new("Circle")
+    fovCircle.Radius = aimFov
+    fovCircle.Thickness = 1
+    fovCircle.Color = fovColor
+    fovCircle.Transparency = 1
+    fovCircle.Visible = aimbotEnabled
+    fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+end
+
+local function updateFOVCircle()
+    if not fovCircle or not drawingAvailable then return end
+    
+    fovCircle.Radius = aimFov
+    fovCircle.Color = fovColor
+    fovCircle.Visible = aimbotEnabled
+    fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 end
 
 -- ===================================
@@ -788,7 +800,7 @@ local function startFly()
         if humanoid then
             local moveDirection = Vector3.new(
                 (UserInputService:IsKeyDown(Enum.KeyCode.W) and 1 or 0) - (UserInputService:IsKeyDown(Enum.KeyCode.S) and 1 or 0),
-                0,
+                (UserInputService:IsKeyDown(Enum.KeyCode.Space) and 1 or 0) - (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and 1 or 0),
                 (UserInputService:IsKeyDown(Enum.KeyCode.D) and 1 or 0) - (UserInputService:IsKeyDown(Enum.KeyCode.A) and 1 or 0)
             )
             
@@ -867,6 +879,9 @@ local function main()
     -- Create UI
     local Window = createMainUI()
     
+    -- Initialize FOV circle
+    createFOVCircle()
+    
     -- Show success message
     print("✅ Phantom Suite v7.8 loaded successfully with Bracket UI!")
     
@@ -894,6 +909,9 @@ local function main()
         while true do
             task.wait()
             
+            -- Update FOV circle
+            updateFOVCircle()
+            
             -- Aimbot logic
             if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
                 local target = getClosestPlayer()
@@ -906,15 +924,16 @@ local function main()
                         targetPos = targetPos + humanoid.MoveDirection * predictionStrength * 50
                     end
                     
-                    -- Calculate aim direction
-                    local aimDirection = (targetPos - camera.CFrame.Position).Unit
-                    
-                    -- Apply smoothing
-                    local currentLook = camera.CFrame.LookVector
-                    local smoothedDirection = currentLook:Lerp(aimDirection, 1 / smoothing)
-                    
-                    -- Update camera
-                    camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + smoothedDirection)
+                    if blatantEnabled then
+                        -- Blatant Aimlock: Instant snap with no smoothing
+                        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+                    else
+                        -- Normal Aimbot: Apply smoothing
+                        local aimDirection = (targetPos - camera.CFrame.Position).Unit
+                        local currentLook = camera.CFrame.LookVector
+                        local smoothedDirection = currentLook:Lerp(aimDirection, 1 / smoothing)
+                        camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + smoothedDirection)
+                    end
                 end
             end
             
