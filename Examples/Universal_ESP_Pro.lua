@@ -1,14 +1,23 @@
 --[[
-	Universal ESP Pro - Professional ESP System
+	Universal ESP Pro Enhanced - Professional ESP System
 	Designed from scratch using best practices from multiple ESP libraries
 	
-	Features:
-	- Clean, modular architecture
-	- Efficient rendering and memory management
-	- Multiple ESP types (Box, Name, Health, Tracer, Arrow)
-	- Proper error handling and cleanup
-	- Performance optimized
-	- Easy to extend and modify
+	Enhanced Features:
+	- Performance optimizations (rendering efficiency, memory management)
+	- Advanced ESP features (skeleton, chams, distance-based scaling)
+	- Modular architecture for easy integration
+	- Advanced features (team colors, rainbow effects, animations)
+	- Future-ready structure for script transitions
+	
+	ESP Types:
+	- Box ESP (corner boxes with auto-scaling)
+	- Name ESP (distance/health display)
+	- Health ESP (dynamic health bars)
+	- Tracer ESP (screen edge tracers)
+	- Arrow ESP (off-screen indicators)
+	- Skeleton ESP (bone structure)
+	- Chams ESP (character highlighting)
+	- Distance ESP (distance-based scaling)
 ]]
 
 print("🚀 Loading Universal ESP Pro...")
@@ -20,12 +29,19 @@ print("🚀 Loading Universal ESP Pro...")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
+-- Performance tracking
+local FrameCount = 0
+local LastTime = tick()
+local FPS = 60
+
 -- ===================================
--- CONFIGURATION
+-- ADVANCED CONFIGURATION
 -- ===================================
 
 local ESPConfig = {
@@ -33,12 +49,33 @@ local ESPConfig = {
 	TeamCheck = false,
 	MaxDistance = 1000,
 	
+	-- Performance Settings
+	Performance = {
+		MaxFPS = 60,
+		UpdateInterval = 1,
+		DistanceCulling = true,
+		OcclusionCulling = true,
+		BatchRendering = true
+	},
+	
+	-- Visual Effects
+	Effects = {
+		Rainbow = false,
+		RainbowSpeed = 0.15,
+		Animations = true,
+		FadeIn = true,
+		Glow = false
+	},
+	
 	-- ESP Features
 	Box = {
 		Enabled = true,
 		Color = Color3.fromRGB(255, 0, 0),
 		Thickness = 1,
-		Transparency = 1
+		Transparency = 1,
+		AutoScale = true,
+		CornerLength = 15,
+		Rainbow = false
 	},
 	
 	Name = {
@@ -46,7 +83,11 @@ local ESPConfig = {
 		Color = Color3.fromRGB(255, 255, 255),
 		Size = 14,
 		ShowDistance = true,
-		ShowHealth = true
+		ShowHealth = true,
+		ShowTeam = true,
+		AutoScale = true,
+		Font = 2,
+		Outline = true
 	},
 	
 	Health = {
@@ -55,26 +96,60 @@ local ESPConfig = {
 		Height = 40,
 		Background = Color3.fromRGB(0, 0, 0),
 		Healthy = Color3.fromRGB(0, 255, 0),
-		Damaged = Color3.fromRGB(255, 0, 0)
+		Damaged = Color3.fromRGB(255, 0, 0),
+		Gradient = true,
+		AutoScale = true
 	},
 	
 	Tracer = {
 		Enabled = true,
 		Color = Color3.fromRGB(255, 255, 255),
 		Thickness = 1,
-		Transparency = 1
+		Transparency = 1,
+		AutoThickness = true,
+		From = "Bottom", -- Bottom, Center, Top
+		Rainbow = false
 	},
 	
 	Arrow = {
 		Enabled = true,
 		Color = Color3.fromRGB(255, 255, 0),
 		Size = 15,
-		Distance = 100
+		Distance = 100,
+		Filled = true,
+		Rainbow = false
+	},
+	
+	Skeleton = {
+		Enabled = false,
+		Color = Color3.fromRGB(255, 255, 255),
+		Thickness = 1,
+		Transparency = 1,
+		AutoThickness = true,
+		Joints = true,
+		Rainbow = false
+	},
+	
+	Chams = {
+		Enabled = false,
+		Color = Color3.fromRGB(255, 0, 0),
+		Transparency = 0.5,
+		Material = "ForceField",
+		Outline = true,
+		OutlineColor = Color3.fromRGB(255, 255, 255)
+	},
+	
+	Distance = {
+		Enabled = true,
+		ScaleFactor = 0.1,
+		MinScale = 0.5,
+		MaxScale = 2.0,
+		FadeDistance = 500
 	}
 }
 
 -- ===================================
--- UTILITY FUNCTIONS
+-- ENHANCED UTILITY FUNCTIONS
 -- ===================================
 
 local function isDrawingAvailable()
@@ -104,12 +179,68 @@ local function clamp(value, min, max)
 	return math.max(min, math.min(max, value))
 end
 
+-- Advanced utility functions
+local function lerp(a, b, t)
+	return a + (b - a) * t
+end
+
+local function getRainbowColor(time, speed)
+	local hue = (time * speed) % 1
+	return Color3.fromHSV(hue, 1, 1)
+end
+
+local function getDistanceScale(distance)
+	if not ESPConfig.Distance.Enabled then return 1 end
+	
+	local scale = 1 - (distance / ESPConfig.Distance.FadeDistance) * ESPConfig.Distance.ScaleFactor
+	return clamp(scale, ESPConfig.Distance.MinScale, ESPConfig.Distance.MaxScale)
+end
+
+local function getFPS()
+	FrameCount = FrameCount + 1
+	local currentTime = tick()
+	if currentTime - LastTime >= 1 then
+		FPS = FrameCount
+		FrameCount = 0
+		LastTime = currentTime
+	end
+	return FPS
+end
+
+local function shouldUpdate()
+	if not ESPConfig.Performance.BatchRendering then return true end
+	
+	local currentFPS = getFPS()
+	if currentFPS < ESPConfig.Performance.MaxFPS then
+		return FrameCount % ESPConfig.Performance.UpdateInterval == 0
+	end
+	return true
+end
+
+local function isOccluded(character)
+	if not ESPConfig.Performance.OcclusionCulling then return false end
+	
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return false end
+	
+	local origin = Camera.CFrame.Position
+	local direction = (rootPart.Position - origin).Unit
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	
+	local result = Workspace:Raycast(origin, direction * getDistance(rootPart, LocalPlayer.Character.HumanoidRootPart), raycastParams)
+	return result and result.Instance ~= rootPart
+end
+
 -- ===================================
--- ESP OBJECT MANAGEMENT
+-- ENHANCED ESP OBJECT MANAGEMENT
 -- ===================================
 
 local ESPObjects = {}
 local Connections = {}
+local ChamsObjects = {}
+local AnimationTweens = {}
 
 local function createDrawing(type, properties)
 	local drawing = Drawing.new(type)
@@ -117,6 +248,48 @@ local function createDrawing(type, properties)
 		drawing[prop] = value
 	end
 	return drawing
+end
+
+local function createChams(character)
+	if not ESPConfig.Chams.Enabled then return end
+	
+	local chams = {}
+	
+	for _, part in pairs(character:GetChildren()) do
+		if part:IsA("BasePart") then
+			local originalColor = part.Color
+			local originalTransparency = part.Transparency
+			local originalMaterial = part.Material
+			
+			-- Create cham material
+			part.Material = ESPConfig.Chams.Material
+			part.Color = ESPConfig.Chams.Color
+			part.Transparency = ESPConfig.Chams.Transparency
+			
+			-- Store original properties
+			chams[part] = {
+				Color = originalColor,
+				Transparency = originalTransparency,
+				Material = originalMaterial
+			}
+		end
+	end
+	
+	ChamsObjects[character] = chams
+end
+
+local function removeChams(character)
+	if not ChamsObjects[character] then return end
+	
+	for part, original in pairs(ChamsObjects[character]) do
+		if part and part.Parent then
+			part.Color = original.Color
+			part.Transparency = original.Transparency
+			part.Material = original.Material
+		end
+	end
+	
+	ChamsObjects[character] = nil
 end
 
 local function cleanupPlayerESP(player)
@@ -143,10 +316,23 @@ local function cleanupPlayerESP(player)
 		end
 		Connections[player] = nil
 	end
+	
+	if player.Character then
+		removeChams(player.Character)
+	end
+	
+	if AnimationTweens[player] then
+		for _, tween in pairs(AnimationTweens[player]) do
+			if tween then
+				tween:Cancel()
+			end
+		end
+		AnimationTweens[player] = nil
+	end
 end
 
 -- ===================================
--- BOX ESP
+-- ENHANCED BOX ESP
 -- ===================================
 
 local function createBoxESP(player)
@@ -160,7 +346,8 @@ local function createBoxESP(player)
 			Visible = false,
 			Color = ESPConfig.Box.Color,
 			Thickness = ESPConfig.Box.Thickness,
-			Transparency = ESPConfig.Box.Transparency
+			Transparency = ESPConfig.Box.Transparency,
+			AntiAliasing = true
 		})
 	end
 	
@@ -168,13 +355,30 @@ local function createBoxESP(player)
 end
 
 local function updateBoxESP(player, box)
-	if not box or not player.Character then return end
+	if not box or not player.Character or not shouldUpdate() then return end
 	
 	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 	local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
 	local head = player.Character:FindFirstChild("Head")
 	
 	if not humanoid or not rootPart or not head or humanoid.Health <= 0 then
+		for _, line in pairs(box) do
+			line.Visible = false
+		end
+		return
+	end
+	
+	-- Distance culling
+	local distance = getDistance(rootPart, LocalPlayer.Character.HumanoidRootPart)
+	if ESPConfig.Performance.DistanceCulling and distance > ESPConfig.MaxDistance then
+		for _, line in pairs(box) do
+			line.Visible = false
+		end
+		return
+	end
+	
+	-- Occlusion culling
+	if isOccluded(player.Character) then
 		for _, line in pairs(box) do
 			line.Visible = false
 		end
@@ -189,8 +393,15 @@ local function updateBoxESP(player, box)
 		return
 	end
 	
-	-- Calculate box dimensions
-	local size = Vector3.new(3, 4.5, 1) -- Approximate character size
+	-- Calculate distance scale
+	local scale = getDistanceScale(distance)
+	
+	-- Calculate box dimensions with auto-scaling
+	local size = Vector3.new(3, 4.5, 1)
+	if ESPConfig.Box.AutoScale then
+		size = size * scale
+	end
+	
 	local cf = CFrame.new(rootPart.Position, Camera.CFrame.Position)
 	
 	-- Get corners
@@ -201,27 +412,42 @@ local function updateBoxESP(player, box)
 		Camera:WorldToViewportPoint((cf * CFrame.new(-size.X/2, -size.Y/2, 0)).Position)
 	}
 	
-	-- Update corner lines (simplified corner box)
-	local cornerLength = 10
+	-- Update corner lines
+	local cornerLength = ESPConfig.Box.CornerLength * scale
 	local color = getPlayerColor(player)
+	
+	-- Apply rainbow effect
+	if ESPConfig.Box.Rainbow or ESPConfig.Effects.Rainbow then
+		color = getRainbowColor(tick(), ESPConfig.Effects.RainbowSpeed)
+	end
+	
+	-- Auto-thickness
+	local thickness = ESPConfig.Box.Thickness
+	if ESPConfig.Box.AutoScale then
+		thickness = math.max(1, thickness * scale)
+	end
 	
 	-- Top-left
 	box[1].From = Vector2.new(corners[1].X, corners[1].Y)
 	box[1].To = Vector2.new(corners[1].X - cornerLength, corners[1].Y)
 	box[1].Color = color
+	box[1].Thickness = thickness
 	
 	box[2].From = Vector2.new(corners[1].X, corners[1].Y)
 	box[2].To = Vector2.new(corners[1].X, corners[1].Y - cornerLength)
 	box[2].Color = color
+	box[2].Thickness = thickness
 	
 	-- Top-right
 	box[3].From = Vector2.new(corners[2].X, corners[2].Y)
 	box[3].To = Vector2.new(corners[2].X + cornerLength, corners[2].Y)
 	box[3].Color = color
+	box[3].Thickness = thickness
 	
 	box[4].From = Vector2.new(corners[2].X, corners[2].Y)
 	box[4].To = Vector2.new(corners[2].X, corners[2].Y - cornerLength)
 	box[4].Color = color
+	box[4].Thickness = thickness
 	
 	-- Show box
 	for _, line in pairs(box) do
@@ -230,7 +456,9 @@ local function updateBoxESP(player, box)
 end
 
 -- ===================================
--- NAME ESP
+-- ENHANCED NAME ESP
+-- ===================================
+-- ENHANCED NAME ESP
 -- ===================================
 
 local function createNameESP(player)
@@ -241,12 +469,13 @@ local function createNameESP(player)
 		Color = ESPConfig.Name.Color,
 		Size = ESPConfig.Name.Size,
 		Center = true,
-		Outline = true
+		Outline = ESPConfig.Name.Outline,
+		Font = ESPConfig.Name.Font
 	})
 end
 
 local function updateNameESP(player, nameText)
-	if not nameText or not player.Character then return end
+	if not nameText or not player.Character or not shouldUpdate() then return end
 	
 	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 	local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
@@ -257,31 +486,64 @@ local function updateNameESP(player, nameText)
 		return
 	end
 	
+	-- Distance culling
+	local distance = getDistance(rootPart, LocalPlayer.Character.HumanoidRootPart)
+	if ESPConfig.Performance.DistanceCulling and distance > ESPConfig.MaxDistance then
+		nameText.Visible = false
+		return
+	end
+	
+	-- Occlusion culling
+	if isOccluded(player.Character) then
+		nameText.Visible = false
+		return
+	end
+	
 	local position, onScreen = worldToScreen(head.Position + Vector3.new(0, 2, 0))
 	if not onScreen then
 		nameText.Visible = false
 		return
 	end
 	
+	-- Calculate distance scale
+	local scale = getDistanceScale(distance)
+	
 	-- Build name text
 	local text = player.Name
 	
+	if ESPConfig.Name.ShowTeam and player.Team then
+		text = text .. " [" .. player.Team.Name .. "]"
+	end
+	
 	if ESPConfig.Name.ShowDistance then
-		local distance = getDistance(rootPart, LocalPlayer.Character.HumanoidRootPart)
 		text = text .. " [" .. math.floor(distance) .. "m]"
 	end
 	
 	if ESPConfig.Name.ShowHealth then
-		text = text .. " [" .. math.floor(humanoid.Health) .. "HP]"
+		text = text .. " [" .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth) .. "HP]"
+	end
+	
+	-- Apply rainbow effect
+	local color = ESPConfig.Name.Color
+	if ESPConfig.Effects.Rainbow then
+		color = getRainbowColor(tick(), ESPConfig.Effects.RainbowSpeed)
+	end
+	
+	-- Auto-scale
+	local size = ESPConfig.Name.Size
+	if ESPConfig.Name.AutoScale then
+		size = math.max(8, size * scale)
 	end
 	
 	nameText.Text = text
 	nameText.Position = position
+	nameText.Color = color
+	nameText.Size = size
 	nameText.Visible = true
 end
 
 -- ===================================
--- HEALTH BAR ESP
+-- ENHANCED HEALTH BAR ESP
 -- ===================================
 
 local function createHealthESP(player)
@@ -469,6 +731,125 @@ local function updateArrowESP(player, arrow)
 end
 
 -- ===================================
+-- SKELETON ESP
+-- ===================================
+
+local function createSkeletonESP(player)
+	if not ESPConfig.Skeleton.Enabled then return {} end
+	
+	local skeleton = {}
+	local joints = {
+		"Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+		"RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+		"RightUpperLeg", "RightLowerLeg", "RightFoot"
+	}
+	
+	-- Create lines for skeleton connections
+	for i = 1, #joints - 1 do
+		skeleton[i] = createDrawing("Line", {
+			Visible = false,
+			Color = ESPConfig.Skeleton.Color,
+			Thickness = ESPConfig.Skeleton.Thickness,
+			Transparency = ESPConfig.Skeleton.Transparency,
+			AntiAliasing = true
+		})
+	end
+	
+	return skeleton
+end
+
+local function updateSkeletonESP(player, skeleton)
+	if not skeleton or not player.Character or not shouldUpdate() then return end
+	
+	local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+	local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+	
+	if not humanoid or not rootPart or humanoid.Health <= 0 then
+		for _, line in pairs(skeleton) do
+			line.Visible = false
+		end
+		return
+	end
+	
+	-- Distance culling
+	local distance = getDistance(rootPart, LocalPlayer.Character.HumanoidRootPart)
+	if ESPConfig.Performance.DistanceCulling and distance > ESPConfig.MaxDistance then
+		for _, line in pairs(skeleton) do
+			line.Visible = false
+		end
+		return
+	end
+	
+	-- Occlusion culling
+	if isOccluded(player.Character) then
+		for _, line in pairs(skeleton) do
+			line.Visible = false
+		end
+		return
+	end
+	
+	-- Skeleton connections
+	local connections = {
+		{"Head", "UpperTorso"},
+		{"UpperTorso", "LowerTorso"},
+		{"UpperTorso", "LeftUpperArm"},
+		{"LeftUpperArm", "LeftLowerArm"},
+		{"LeftLowerArm", "LeftHand"},
+		{"UpperTorso", "RightUpperArm"},
+		{"RightUpperArm", "RightLowerArm"},
+		{"RightLowerArm", "RightHand"},
+		{"LowerTorso", "LeftUpperLeg"},
+		{"LeftUpperLeg", "LeftLowerLeg"},
+		{"LeftLowerLeg", "LeftFoot"},
+		{"LowerTorso", "RightUpperLeg"},
+		{"RightUpperLeg", "RightLowerLeg"},
+		{"RightLowerLeg", "RightFoot"}
+	}
+	
+	-- Calculate distance scale
+	local scale = getDistanceScale(distance)
+	
+	-- Apply rainbow effect
+	local color = ESPConfig.Skeleton.Color
+	if ESPConfig.Skeleton.Rainbow or ESPConfig.Effects.Rainbow then
+		color = getRainbowColor(tick(), ESPConfig.Effects.RainbowSpeed)
+	end
+	
+	-- Auto-thickness
+	local thickness = ESPConfig.Skeleton.Thickness
+	if ESPConfig.Skeleton.AutoThickness then
+		thickness = math.max(1, thickness * scale)
+	end
+	
+	-- Update skeleton lines
+	local lineIndex = 1
+	for _, connection in pairs(connections) do
+		local part1 = player.Character:FindFirstChild(connection[1])
+		local part2 = player.Character:FindFirstChild(connection[2])
+		
+		if part1 and part2 then
+			local pos1, onScreen1 = worldToScreen(part1.Position)
+			local pos2, onScreen2 = worldToScreen(part2.Position)
+			
+			if onScreen1 and onScreen2 then
+				skeleton[lineIndex].From = pos1
+				skeleton[lineIndex].To = pos2
+				skeleton[lineIndex].Color = color
+				skeleton[lineIndex].Thickness = thickness
+				skeleton[lineIndex].Visible = true
+			else
+				skeleton[lineIndex].Visible = false
+			end
+		else
+			skeleton[lineIndex].Visible = false
+		end
+		
+		lineIndex = lineIndex + 1
+		if lineIndex > #skeleton then break end
+	end
+end
+
+-- ===================================
 -- MAIN ESP SYSTEM
 -- ===================================
 
@@ -477,6 +858,7 @@ local function createPlayerESP(player)
 	
 	ESPObjects[player] = {}
 	Connections[player] = {}
+	AnimationTweens[player] = {}
 	
 	-- Create ESP objects
 	ESPObjects[player].Box = createBoxESP(player)
@@ -484,6 +866,12 @@ local function createPlayerESP(player)
 	ESPObjects[player].Health = createHealthESP(player)
 	ESPObjects[player].Tracer = createTracerESP(player)
 	ESPObjects[player].Arrow = createArrowESP(player)
+	ESPObjects[player].Skeleton = createSkeletonESP(player)
+	
+	-- Create chams if enabled
+	if player.Character then
+		createChams(player.Character)
+	end
 end
 
 local function updatePlayerESP(player)
@@ -495,6 +883,7 @@ local function updatePlayerESP(player)
 	updateHealthESP(player, ESPObjects[player].Health)
 	updateTracerESP(player, ESPObjects[player].Tracer)
 	updateArrowESP(player, ESPObjects[player].Arrow)
+	updateSkeletonESP(player, ESPObjects[player].Skeleton)
 end
 
 -- ===================================
@@ -506,13 +895,15 @@ local function onPlayerAdded(player)
 	
 	-- Wait for character to load
 	local characterAdded
-	characterAdded = player.CharacterAdded:Connect(function()
+	characterAdded = player.CharacterAdded:Connect(function(character)
 		createPlayerESP(player)
+		createChams(character)
 	end)
 	
 	-- Create ESP if character already exists
 	if player.Character then
 		createPlayerESP(player)
+		createChams(player.Character)
 	end
 	
 	-- Store connection
@@ -593,18 +984,86 @@ local function toggleArrowESP(enabled)
 	print("Arrow ESP:", enabled and "ON" or "OFF")
 end
 
+local function toggleSkeletonESP(enabled)
+	ESPConfig.Skeleton.Enabled = enabled
+	print("Skeleton ESP:", enabled and "ON" or "OFF")
+end
+
+local function toggleChams(enabled)
+	ESPConfig.Chams.Enabled = enabled
+	print("Chams:", enabled and "ON" or "OFF")
+end
+
+local function toggleRainbow(enabled)
+	ESPConfig.Effects.Rainbow = enabled
+	print("Rainbow Effect:", enabled and "ON" or "OFF")
+end
+
+local function togglePerformance(enabled)
+	ESPConfig.Performance.BatchRendering = enabled
+	print("Performance Mode:", enabled and "ON" or "OFF")
+end
+
+local function setMaxDistance(distance)
+	ESPConfig.MaxDistance = distance
+	print("Max Distance:", distance)
+end
+
+local function getPerformanceStats()
+	return {
+		FPS = getFPS(),
+		Players = #Players:GetPlayers(),
+		ESPObjects = 0,
+		Memory = collectgarbage("count")
+	}
+end
+
 -- ===================================
--- EXPORT API
+-- ENHANCED EXPORT API
 -- ===================================
 
 getgenv().UniversalESP = {
+	-- Basic toggles
 	toggleESP = toggleESP,
 	toggleBoxESP = toggleBoxESP,
 	toggleNameESP = toggleNameESP,
 	toggleHealthESP = toggleHealthESP,
 	toggleTracerESP = toggleTracerESP,
 	toggleArrowESP = toggleArrowESP,
-	Config = ESPConfig
+	
+	-- Advanced toggles
+	toggleSkeletonESP = toggleSkeletonESP,
+	toggleChams = toggleChams,
+	toggleRainbow = toggleRainbow,
+	togglePerformance = togglePerformance,
+	
+	-- Configuration
+	Config = ESPConfig,
+	setMaxDistance = setMaxDistance,
+	
+	-- Performance and stats
+	getPerformanceStats = getPerformanceStats,
+	getFPS = getFPS,
+	
+	-- Utilities
+	getPlayerColor = getPlayerColor,
+	getDistance = getDistance,
+	worldToScreen = worldToScreen,
+	
+	-- Advanced features
+	createChams = createChams,
+	removeChams = removeChams,
+	cleanupPlayerESP = cleanupPlayerESP,
+	
+	-- Module info
+	Version = "2.0.0 Enhanced",
+	Author = "Universal Scripts",
+	Features = {
+		"Box ESP", "Name ESP", "Health ESP", "Tracer ESP", 
+		"Arrow ESP", "Skeleton ESP", "Chams ESP",
+		"Rainbow Effects", "Performance Optimization",
+		"Distance Scaling", "Auto-Thickness", "Occlusion Culling"
+	}
 }
 
 -- Start the ESP system
