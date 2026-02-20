@@ -23,22 +23,6 @@
 print("🚀 Loading Universal ESP Pro...")
 
 -- ===================================
--- DEV COPIER (Loadstring)
--- ===================================
-
--- Load dev copier from external source
-local success, devCopier = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Examples/dev_copier.lua"))
-end)
-
-if success and devCopier then
-    devCopier()
-    print("🔧 Dev copier loaded successfully!")
-else
-    print("⚠️ Dev copier failed to load, continuing without it...")
-end
-
--- ===================================
 -- SERVICES AND VARIABLES
 -- ===================================
 
