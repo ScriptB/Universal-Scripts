@@ -13,6 +13,22 @@
 ]]
 
 -- ===================================
+-- DEVELOPER CONSOLE COPIER
+-- ===================================
+
+-- Try to load Dev Console Copier with fallback
+local success, result = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Tools/DevCopy.lua"))()
+end)
+
+if not success then
+    warn("⚠️ Dev Console Copier could not be loaded:", result)
+    -- Continue without Dev Console Copier
+else
+    print("✅ Dev Console Copier loaded successfully")
+end
+
+-- ===================================
 -- LOAD BRACKET LIBRARY
 -- ===================================
 
