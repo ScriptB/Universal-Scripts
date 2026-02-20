@@ -85,6 +85,7 @@ local Camera = Workspace.CurrentCamera
 local FrameCount = 0
 local LastTime = tick()
 local FPS = 60
+local localTick = tick -- Local tick for rainbow effects
 
 -- ===================================
 -- ADVANCED CONFIGURATION
@@ -475,7 +476,7 @@ local function updateBoxESP(player, box)
 	
 	-- Apply rainbow effect
 	if ESPConfig.Box.Rainbow or ESPConfig.Effects.Rainbow then
-		color = getRainbowColor(tick(), ESPConfig.Effects.RainbowSpeed)
+		color = getRainbowColor(localTick(), ESPConfig.Effects.RainbowSpeed)
 	end
 	
 	-- Auto-thickness
@@ -583,7 +584,7 @@ local function updateNameESP(player, nameText)
 	-- Apply rainbow effect
 	local color = ESPConfig.Name.Color
 	if ESPConfig.Effects.Rainbow then
-		color = getRainbowColor(tick(), ESPConfig.Effects.RainbowSpeed)
+		color = getRainbowColor(localTick(), ESPConfig.Effects.RainbowSpeed)
 	end
 	
 	-- Auto-scale
@@ -869,7 +870,7 @@ local function updateSkeletonESP(player, skeleton)
 	-- Apply rainbow effect
 	local color = ESPConfig.Skeleton.Color
 	if ESPConfig.Skeleton.Rainbow or ESPConfig.Effects.Rainbow then
-		color = getRainbowColor(tick(), ESPConfig.Effects.RainbowSpeed)
+		color = getRainbowColor(localTick(), ESPConfig.Effects.RainbowSpeed)
 	end
 	
 	-- Auto-thickness
