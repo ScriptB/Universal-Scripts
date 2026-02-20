@@ -1,28 +1,70 @@
--- Improved, cleaner, safer, and adds "Copy All" feature
+-- DevConsole Log Copier (Executor Edition)
+-- Works with setclipboard / toclipboard / Clipboard.set
 
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
--- Utility: safe wait for DevConsole
-local function getClientLog()
-    local master = CoreGui:FindFirstChild("DevConsoleMaster")
-    if not master then return end
-
-    local window = master:FindFirstChild("DevConsoleWindow")
-    if not window then return end
-
-    local ui = window:FindFirstChild("DevConsoleUI")
-    if not ui then return end
-
-    local main = ui:FindFirstChild("MainView")
-    if not main then return end
-
-    return main:FindFirstChild("ClientLog")
+-- Executor clipboard compatibility
+local function copyToClipboard(text)
+    if setclipboard then
+        setclipboard(text)
+    elseif toclipboard then
+        toclipboard(text)
+    elseif Clipboard and Clipboard.set then
+        Clipboard.set(text)
+    else
+        warn("[LogCopier] No clipboard function available on this executor.")
+    end
 end
 
--- Create copy button for a single log line
+-- Safely traverse DevConsole hierarchy
+local function getClientLog()
+    local master = CoreGui:FindFirstChild("DevConsoleMaster")
+    if not master then return nil end
+
+    local window = master:FindFirstChildWhichIsA("Frame", true)
+        or master:FindFirstChild("DevConsoleWindow")
+    if not window then return nil end
+
+    -- Walk all descendants looking for ClientLog to be resilient to UI changes
+    for _, obj in ipairs(master:GetDescendants()) do
+        if obj.Name == "ClientLog" then
+            return obj
+        end
+    end
+
+    return nil
+end
+
+-- Safe instance alive check (destroyed instances aren't nil in Roblox)
+local function isAlive(obj)
+    return obj and obj.Parent ~= nil
+end
+
+-- Get text bounds without deprecated GetTextSize
+local function getTextWidth(text, textSize, font, maxWidth)
+    local params = Instance.new("GetTextBoundsParams")
+    params.Text = text
+    params.Size = textSize
+    params.Width = maxWidth or math.huge
+    -- Font.fromEnum handles Enum.Font safely
+    local ok, f = pcall(Font.fromEnum, font)
+    params.Font = ok and f or Font.new("rbxasset://fonts/families/SourceSansPro.json")
+    local ok2, result = pcall(function()
+        return TextService:GetTextBoundsAsync(params)
+    end)
+    if ok2 then
+        return result.X
+    else
+        -- Fallback: just use label.TextBounds.X (good enough)
+        return 0
+    end
+end
+
+-- Attach a [C] copy button to a single log label
 local function attachCopyButton(label)
+    if not isAlive(label) then return end
     if label:FindFirstChild("CopyBtn") then return end
 
     local btn = Instance.new("TextButton")
@@ -30,121 +72,136 @@ local function attachCopyButton(label)
     btn.Size = UDim2.new(0, 30, 0, 18)
     btn.BackgroundTransparency = 1
     btn.Text = "[C]"
-    btn.TextColor3 = label.TextColor3
+    btn.TextColor3 = Color3.fromRGB(180, 180, 180)
     btn.Font = label.Font
     btn.TextSize = label.TextSize
     btn.TextTransparency = 0.5
     btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.ZIndex = label.ZIndex + 1
     btn.Parent = label
 
-    -- Position correctly once text renders
-    local conn
-    conn = RunService.RenderStepped:Connect(function()
-        if not btn.Parent then
-            conn:Disconnect()
-            return
-        end
+    -- Position the button after text bounds are available
+    task.defer(function()
+        if not isAlive(btn) then return end
 
         local bounds = label.TextBounds
-        if bounds.X > 0 then
+        if label.Text:find("\n") then
+            local lastLine = label.Text:match("([^\n]*)$") or label.Text
+            local w = getTextWidth(lastLine, label.TextSize, label.Font, label.AbsoluteSize.X)
+            local xPos = w > 0 and w + 6 or bounds.X + 6
             btn.AnchorPoint = Vector2.new(0, 0.5)
-
-            if label.Text:find("\n") then
-                local lastLine = label.Text:match("([^\n]*)$")
-                local size = TextService:GetTextSize(
-                    lastLine,
-                    label.TextSize,
-                    label.Font,
-                    Vector2.new(label.AbsoluteSize.X, math.huge)
-                )
-                btn.Position = UDim2.new(0, size.X + 6, 1, -label.TextSize / 2)
-            else
-                btn.Position = UDim2.new(0, bounds.X + 6, 0.5, 0)
-            end
-
-            conn:Disconnect()
+            btn.Position = UDim2.new(0, xPos, 1, -label.TextSize / 2)
+        else
+            btn.AnchorPoint = Vector2.new(0, 0.5)
+            btn.Position = UDim2.new(0, bounds.X + 6, 0.5, 0)
         end
     end)
 
-    btn.MouseEnter:Connect(function() btn.TextTransparency = 0 end)
-    btn.MouseLeave:Connect(function() btn.TextTransparency = 0.5 end)
+    btn.MouseEnter:Connect(function()
+        if isAlive(btn) then btn.TextTransparency = 0 end
+    end)
+    btn.MouseLeave:Connect(function()
+        if isAlive(btn) then btn.TextTransparency = 0.5 end
+    end)
 
     btn.MouseButton1Click:Connect(function()
-        if setclipboard then
-            setclipboard(label.Text)
-            btn.Text = "[✓]"
-            task.delay(0.35, function()
-                if btn then btn.Text = "[C]" end
-            end)
-        end
+        if not isAlive(btn) then return end
+        copyToClipboard(label.Text)
+        btn.Text = "[✓]"
+        task.delay(0.4, function()
+            if isAlive(btn) then btn.Text = "[C]" end
+        end)
     end)
 end
 
--- Scan container for labels
-local function scan(container)
-    for _, obj in ipairs(container:GetDescendants()) do
-        if obj:IsA("TextLabel") then
+-- Add [C] buttons to all current labels in the log
+local function scanAndAttach(clientLog)
+    for _, obj in ipairs(clientLog:GetDescendants()) do
+        if obj:IsA("TextLabel") and isAlive(obj) then
             attachCopyButton(obj)
         end
     end
 end
 
--- Create "Copy All" button
+-- Create the "Copy All" button inside the client log panel
 local function createCopyAllButton(clientLog)
+    if not isAlive(clientLog) then return end
     if clientLog:FindFirstChild("CopyAllLogs") then return end
 
     local btn = Instance.new("TextButton")
     btn.Name = "CopyAllLogs"
-    btn.Size = UDim2.new(0, 120, 0, 22)
-    btn.Position = UDim2.new(1, -130, 0, 6)
+    btn.Size = UDim2.new(0, 100, 0, 22)
+    btn.Position = UDim2.new(1, -110, 0, 4)
+    btn.AnchorPoint = Vector2.new(0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     btn.BackgroundTransparency = 0.2
-    btn.Text = "Copy All"
+    btn.BorderSizePixel = 0
+    btn.Text = "Copy All Logs"
+    btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    btn.TextSize = 13
+    btn.Font = Enum.Font.GothamMedium
+    btn.ZIndex = 10
     btn.Parent = clientLog
 
-    btn.MouseButton1Click:Connect(function()
-        local buffer = {}
+    -- Rounded corners
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = btn
 
+    btn.MouseButton1Click:Connect(function()
+        if not isAlive(btn) then return end
+
+        local lines = {}
         for _, obj in ipairs(clientLog:GetDescendants()) do
-            if obj:IsA("TextLabel") and obj.Text and obj.Text ~= "" then
-                table.insert(buffer, obj.Text)
+            if obj:IsA("TextLabel") and isAlive(obj) and obj.Text and obj.Text ~= "" then
+                -- Skip our own injected buttons' labels (none, but just in case)
+                if obj.Name ~= "CopyBtn" then
+                    table.insert(lines, obj.Text)
+                end
             end
         end
 
-        if setclipboard then
-            setclipboard(table.concat(buffer, "\n"))
-            btn.Text = "Copied"
-            task.delay(0.6, function()
-                if btn then btn.Text = "Copy All" end
-            end)
+        if #lines == 0 then
+            btn.Text = "Nothing!"
+        else
+            copyToClipboard(table.concat(lines, "\n"))
+            btn.Text = "Copied ✓"
         end
+
+        task.delay(0.8, function()
+            if isAlive(btn) then btn.Text = "Copy All Logs" end
+        end)
     end)
 end
 
--- Main hook
+-- Main setup: find the console, attach everything
 local function hookConsole()
     local clientLog = getClientLog()
     if not clientLog then return end
 
-    scan(clientLog)
+    scanAndAttach(clientLog)
     createCopyAllButton(clientLog)
 
+    -- Watch for new log lines being added
     clientLog.DescendantAdded:Connect(function(obj)
         if obj:IsA("TextLabel") then
             task.delay(0.05, function()
-                attachCopyButton(obj)
+                if isAlive(obj) then
+                    attachCopyButton(obj)
+                end
             end)
         end
     end)
 end
 
--- Initial run + periodic check
+-- Run immediately, then retry every second in case console isn't open yet
 hookConsole()
 
-local timer = 0
+local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
-    timer += dt
-    if timer > 1 then
-        timer = 0
+    elapsed += dt
+    if elapsed >= 1 then
+        elapsed = 0
         hookConsole()
     end
 end)
