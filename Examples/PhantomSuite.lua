@@ -13,9 +13,6 @@
 	  - Fixed Drawing service detection
 ]]
 
--- ===================================
--- DEVELOPER CONSOLE COPIER
--- ===================================
 
 print("🚀 Loading Phantom Suite v7.8.1 (Fixed)...")
 
@@ -31,9 +28,6 @@ else
     print("✅ Dev Console Copier loaded successfully")
 end
 
--- ===================================
--- LOAD BRACKET LIBRARY
--- ===================================
 
 local function LoadBracketLibrary()
     -- Load the Bracket library from our repository
@@ -57,9 +51,6 @@ if not Bracket then
     return
 end
 
--- ===================================
--- SERVICES
--- ===================================
 
 local RunService = game:GetService("RunService")
 local players    = game:GetService("Players")
@@ -69,9 +60,6 @@ local plr        = players.LocalPlayer
 local camera     = workspace.CurrentCamera
 local mouse      = plr:GetMouse()
 
--- ===================================
--- VARIABLES
--- ===================================
 
 --> [< Aimbot Variables >] <--
 
@@ -184,9 +172,6 @@ end
 
 detectExecutor()
 
--- ===================================
--- FOV CIRCLE FUNCTIONS
--- ===================================
 
 local function createFOVCircle()
     if not drawingAvailable then return end
@@ -213,9 +198,6 @@ local function updateFOVCircle()
     fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 end
 
--- ===================================
--- UI CREATION
--- ===================================
 
 local function createMainUI()
     -- Create Bracket window using correct API (thinner UI)
@@ -549,9 +531,6 @@ local function createMainUI()
     return Window
 end
 
--- ===================================
--- AIMBOT FUNCTIONS
--- ===================================
 
 local function getClosestPlayer()
     local closest = nil
@@ -604,9 +583,6 @@ local function getClosestPlayer()
     return closest
 end
 
--- ===================================
--- ESP FUNCTIONS
--- ===================================
 
 local espObjects = {}
 local drawingAvailable = false
@@ -776,9 +752,6 @@ local function cleanupESP(player)
     end
 end
 
--- ===================================
--- MOVEMENT FUNCTIONS
--- ===================================
 
 local flyConnection = nil
 local noclipConnection = nil
@@ -871,9 +844,6 @@ local function stopInfJump()
     end
 end
 
--- ===================================
--- MAIN INITIALIZATION
--- ===================================
 
 local function main()
     -- Create UI
