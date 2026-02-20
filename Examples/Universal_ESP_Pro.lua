@@ -997,6 +997,9 @@ local function updateSkeletonESP(player, skeleton)
 	-- Update skeleton lines
 	local lineIndex = 1
 	for _, connection in pairs(connections) do
+		-- Safety check: don't exceed available skeleton lines
+		if lineIndex > #skeleton then break end
+		
 		local part1 = player.Character:FindFirstChild(connection[1])
 		local part2 = player.Character:FindFirstChild(connection[2])
 		
@@ -1014,7 +1017,10 @@ local function updateSkeletonESP(player, skeleton)
 				skeleton[lineIndex].Visible = false
 			end
 		else
-			skeleton[lineIndex].Visible = false
+			-- Safety check: ensure skeleton[lineIndex] exists before accessing
+			if skeleton[lineIndex] then
+				skeleton[lineIndex].Visible = false
+			end
 		end
 		
 		lineIndex = lineIndex + 1
