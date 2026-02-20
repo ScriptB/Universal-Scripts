@@ -24,12 +24,119 @@
 -- DEV COPY INTEGRATION (FIRST)
 -- ===================================
 
--- Load DevCopy functionality from external source
-print("🔧 Attempting to load DevCopy...")
+-- Implement DevCopy functionality directly instead of loading external script
+print("🔧 Implementing DevCopy functionality directly...")
 local success, devCopyLoaded = pcall(function()
-    local response = game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/refs/heads/main/Useful/DevCopy")
-    print("📡 DevCopy HTTP response received, length:", #response)
-    return loadstring(response)()
+    -- Direct implementation of essential DevCopy functionality
+    local CoreGui = game:GetService("CoreGui")
+    local RunService = game:GetService("RunService")
+    
+    -- Executor clipboard compatibility
+    local function copyToClipboard(text)
+        if setclipboard then
+            setclipboard(text)
+            return true
+        elseif toclipboard then
+            toclipboard(text)
+            return true
+        elseif Clipboard and Clipboard.set then
+            Clipboard.set(text)
+            return true
+        else
+            warn("[LogCopier] No clipboard function available on this executor.")
+            return false
+        end
+    end
+    
+    -- Safe instance check
+    local function isAlive(instance)
+        return instance and instance.Parent ~= nil
+    end
+    
+    -- Get client log
+    local function getClientLog()
+        local master = CoreGui:FindFirstChild("DevConsoleMaster")
+        if not master then return end
+        
+        -- Find the client log through various paths
+        local clientLog
+        
+        -- Path 1: Standard path
+        local window = master:FindFirstChild("DevConsoleWindow")
+        if window then
+            local ui = window:FindFirstChild("DevConsoleUI")
+            if ui then
+                local main = ui:FindFirstChild("MainView")
+                if main then
+                    clientLog = main:FindFirstChild("ClientLog")
+                    if clientLog then return clientLog end
+                end
+            end
+        end
+        
+        -- Path 2: Search all descendants (more reliable)
+        for _, descendant in pairs(master:GetDescendants()) do
+            if descendant.Name == "ClientLog" then
+                return descendant
+            end
+        end
+        
+        return nil
+    end
+    
+    -- Hook console
+    local function hookConsole()
+        local clientLog = getClientLog()
+        if not clientLog then
+            print("🔧 DevCopy: Waiting for console to load...")
+            return
+        end
+        
+        -- Create Copy All button
+        if not clientLog:FindFirstChild("CopyAllLogs") then
+            local btn = Instance.new("TextButton")
+            btn.Name = "CopyAllLogs"
+            btn.Size = UDim2.new(0, 120, 0, 22)
+            btn.Position = UDim2.new(1, -130, 0, 6)
+            btn.BackgroundTransparency = 0.2
+            btn.Text = "Copy All"
+            btn.Parent = clientLog
+            
+            btn.MouseButton1Click:Connect(function()
+                local buffer = {}
+                
+                for _, obj in ipairs(clientLog:GetDescendants()) do
+                    if obj:IsA("TextLabel") and obj.Text and obj.Text ~= "" then
+                        table.insert(buffer, obj.Text)
+                    end
+                end
+                
+                if copyToClipboard(table.concat(buffer, "\n")) then
+                    btn.Text = "Copied"
+                    task.delay(0.6, function()
+                        if isAlive(btn) then btn.Text = "Copy All" end
+                    end)
+                end
+            end)
+            
+            print("🔧 DevCopy: Copy All button created")
+        end
+    end
+    
+    -- Initial run + periodic check
+    hookConsole()
+    
+    -- Set up periodic check
+    local elapsed = 0
+    RunService.Heartbeat:Connect(function(dt)
+        elapsed = elapsed + dt
+        if elapsed > 1 then
+            elapsed = 0
+            hookConsole()
+        end
+    end)
+    
+    return true
 end)
 
 if success and devCopyLoaded then
@@ -1345,43 +1452,21 @@ if Bracket then
         -- ===================================
         
         local PerformanceTab = Window:Tab({Name = "📊 Performance"}) do
-            PerformanceTab:Divider({Text = "Performance Monitor", Side = "Left"})
+            PerformanceTab:Divider({Text = "Performance Information", Side = "Left"})
             
-            local fpsLabel = PerformanceTab:Label({Text = "🎯 FPS: 0", Side = "Left"})
-            local playersLabel = PerformanceTab:Label({Text = "👥 Players: 0", Side = "Left"})
-            local memoryLabel = PerformanceTab:Label({Text = "💾 Memory: 0 MB", Side = "Left"})
+            -- Static performance information instead of dynamic updates
+            PerformanceTab:Label({Text = "🎯 Press F9 to toggle UI visibility", Side = "Left"})
+            PerformanceTab:Label({Text = "� Check console (F9) for performance stats", Side = "Left"})
+            PerformanceTab:Label({Text = "💾 Use getgenv().UniversalESP.getPerformanceStats() for stats", Side = "Left"})
             
-            -- Update performance stats
+            -- Print stats to console periodically instead of updating UI
             task.spawn(function()
                 while true do
+                    task.wait(5) -- Update every 5 seconds to reduce spam
+                    
+                    -- Get updated stats
                     local stats = getPerformanceStats()
-                    -- Use Set method instead of UpdateLabel for Bracket UI
-                    pcall(function()
-                        if fpsLabel.Set then
-                            fpsLabel:Set("🎯 FPS: " .. stats.FPS)
-                        elseif fpsLabel.UpdateLabel then
-                            fpsLabel:UpdateLabel({Text = "🎯 FPS: " .. stats.FPS})
-                        else
-                            fpsLabel.Text = "🎯 FPS: " .. stats.FPS
-                        end
-                        
-                        if playersLabel.Set then
-                            playersLabel:Set("👥 Players: " .. stats.Players)
-                        elseif playersLabel.UpdateLabel then
-                            playersLabel:UpdateLabel({Text = "👥 Players: " .. stats.Players})
-                        else
-                            playersLabel.Text = "👥 Players: " .. stats.Players
-                        end
-                        
-                        if memoryLabel.Set then
-                            memoryLabel:Set("💾 Memory: " .. math.floor(stats.Memory) .. " MB")
-                        elseif memoryLabel.UpdateLabel then
-                            memoryLabel:UpdateLabel({Text = "💾 Memory: " .. math.floor(stats.Memory) .. " MB"})
-                        else
-                            memoryLabel.Text = "💾 Memory: " .. math.floor(stats.Memory) .. " MB"
-                        end
-                    end)
-                    task.wait(1)
+                    print("📊 Performance: FPS: " .. stats.FPS .. ", Players: " .. stats.Players .. ", Memory: " .. math.floor(stats.Memory) .. " MB")
                 end
             end)
             
