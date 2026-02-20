@@ -15,42 +15,6 @@
 print("🔧 Loading Dev Copier...")
 
 -- ===================================
--- CHAT COMMAND SYSTEM
--- ===================================
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- Chat command handler
-local function onChatMessage(message)
-	if message == "-datcopy" then
-		devCopy()
-	end
-end
-
--- Connect to chat
-local chatConnection
-local function setupChatListener()
-	if LocalPlayer then
-		-- Try to connect to chat service
-		local success, result = pcall(function()
-			return game:GetService("TextChatService").MessageReceived:Connect(function(message)
-				if message.TextInput == "-datcopy" and message.FromUserId == LocalPlayer.UserId then
-					devCopy()
-				end
-			end)
-		end)
-		
-		if not success then
-			-- Fallback to legacy chat
-			pcall(function()
-				chatConnection = LocalPlayer.Chatted:Connect(onChatMessage)
-			end)
-		end
-	end
-end
-
--- ===================================
 -- DEV COPIER FUNCTIONS
 -- ===================================
 
@@ -107,6 +71,51 @@ loadstring(game:HttpGet("%s"))()
     end
     
     print("🌐 Script URL:", scriptUrl)
+end
+
+-- ===================================
+-- CHAT COMMAND SYSTEM
+-- ===================================
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Chat command handler
+local function onChatMessage(message)
+	if message == "-datcopy" then
+		devCopy()
+	end
+end
+
+-- Connect to chat
+local chatConnection
+local function setupChatListener()
+	if LocalPlayer then
+		-- Try to connect to chat service
+		local success, result = pcall(function()
+			return game:GetService("TextChatService").MessageReceived:Connect(function(message)
+				if message.TextInput == "-datcopy" and message.FromUserId == LocalPlayer.UserId then
+					devCopy()
+				end
+			end)
+		end)
+		
+		if not success then
+			-- Fallback to legacy chat
+			pcall(function()
+				chatConnection = LocalPlayer.Chatted:Connect(onChatMessage)
+			end)
+		end
+		
+		-- Additional fallback: Direct chat monitoring
+		pcall(function()
+			game.Players.LocalPlayer.Chatted:Connect(function(msg)
+				if msg:lower() == "-datcopy" then
+					devCopy()
+				end
+			end)
+		end)
+	end
 end
 
 -- ===================================
