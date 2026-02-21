@@ -321,6 +321,14 @@ local FovCircle = NewDrawing("Circle", {
     Visible      = false,
 })
 
+local function getBestBodyPart(char)
+    return char:FindFirstChild(AimbotSettings.HitPart)
+        or char:FindFirstChild("HumanoidRootPart")
+        or char:FindFirstChild("Torso")
+        or char:FindFirstChild("UpperTorso")
+        or char:FindFirstChild("Head")
+end
+
 local function GetClosestTarget()
     local center   = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     local bestDist = AimbotSettings.FOV
@@ -332,13 +340,16 @@ local function GetClosestTarget()
         if AimbotSettings.TeamCheck and player.Team == LocalPlayer.Team then continue end
         local char = player.Character
         if not char then continue end
-        local part = char:FindFirstChild(AimbotSettings.HitPart)
-            or char:FindFirstChild("HumanoidRootPart")
+        
+        local part = getBestBodyPart(char)
         if not part then continue end
+        
         local hum = char:FindFirstChildOfClass("Humanoid")
         if not hum or hum.Health <= 0 then continue end
+        
         local sv, onScreen = Camera:WorldToViewportPoint(part.Position)
         if not onScreen then continue end
+        
         local screenPos = Vector2.new(sv.X, sv.Y)
         local dist = (screenPos - center).Magnitude
         if dist < bestDist then
@@ -845,7 +856,9 @@ local _wmConn = RunService.RenderStepped:Connect(function()
                 Camera.CFrame   = Camera.CFrame:Lerp(targetCF, 1 / smooth)
             elseif AimbotSettings.Mode == "Mouse (1st Person)" then
                 local sv = Camera:WorldToViewportPoint(target.Position)
-                local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                -- Calculate real screen center including GuiService inset
+                local guiInset = game:GetService("GuiService"):GetGuiInset()
+                local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
                 local delta = Vector2.new(sv.X, sv.Y) - center
                 local sens = AimbotSettings.Sensitivity
                 -- Use mousemoverel if supported by the executor, otherwise fallback
