@@ -462,7 +462,6 @@ oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
                     -- Redirect ray to target
                     local origin = ray.Origin
                     local direction = getDirection(origin, SilentAimState.TargetPart.Position)
-                    print("Silent Aim Hook: Redirecting FindPartOnRayWithIgnoreList to " .. SilentAimState.TargetPart.Name .. " at " .. tostring(SilentAimState.TargetPart.Position))
                     args[1] = Ray.new(origin, direction)
                     return oldNamecall(self, unpack(args))
                 end
