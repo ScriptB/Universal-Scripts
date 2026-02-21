@@ -150,7 +150,7 @@ local SilentAimSettings = {
     TeamCheck    = true,
     ShowTargetLine = true,
     TargetLineColor = Color3.fromRGB(0, 255, 0),
-    Keybind      = "LeftMouseButton",
+    Method       = "All", -- "RCL", "Modern", "Old", or "All"
 }
 
 -- Silent Aim State
@@ -392,8 +392,10 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     
     -- Only intercept calls from the game, not from exploits
     if not checkcaller() and canUseSilentAim() then
+        local methodEnabled = SilentAimSettings.Method == "All"
+        
         -- Hook FindPartOnRayWithIgnoreList (RCL guns)
-        if method == "FindPartOnRayWithIgnoreList" and self == workspace then
+        if method == "FindPartOnRayWithIgnoreList" and self == workspace and (methodEnabled or SilentAimSettings.Method == "RCL") then
             local ray = args[1] -- Ray is first argument after self
             if ray and typeof(ray) == "Ray" then
                 -- Redirect ray to target
@@ -406,7 +408,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         end
         
         -- Hook FindPartOnRay (Basic ray method)
-        if method == "FindPartOnRay" and self == workspace then
+        if method == "FindPartOnRay" and self == workspace and (methodEnabled or SilentAimSettings.Method == "RCL") then
             local ray = args[1]
             if ray and typeof(ray) == "Ray" then
                 local origin = ray.Origin
@@ -418,7 +420,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         end
         
         -- Hook Raycast (Modern guns)
-        if method == "Raycast" and self == workspace then
+        if method == "Raycast" and self == workspace and (methodEnabled or SilentAimSettings.Method == "Modern") then
             local origin = args[1]   -- Origin is first argument after self
             local direction = args[2] -- Direction is second argument after self
             if origin and direction and typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
@@ -437,22 +439,26 @@ end)
 oldIndex = hookmetamethod(game, "__index", function(self, key)
     -- Only intercept calls from the game, not from exploits
     if not checkcaller() and self:IsA("Mouse") and canUseSilentAim() then
-        if key == "Hit" then
-            return SilentAimState.TargetPart.CFrame
-        elseif key == "Target" then
-            return SilentAimState.TargetPart
-        elseif key == "X" then
-            local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
-            return targetPos.X
-        elseif key == "Y" then
-            local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
-            return targetPos.Y
-        elseif key == "UnitRay" then
-            local mouse = oldIndex(self, key)
-            local origin = mouse.Origin
-            local targetPos = SilentAimState.TargetPart.Position
-            local direction = (targetPos - origin).Unit * 1000
-            return Ray.new(origin, direction)
+        local methodEnabled = SilentAimSettings.Method == "All" or SilentAimSettings.Method == "Old"
+        
+        if methodEnabled then
+            if key == "Hit" then
+                return SilentAimState.TargetPart.CFrame
+            elseif key == "Target" then
+                return SilentAimState.TargetPart
+            elseif key == "X" then
+                local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
+                return targetPos.X
+            elseif key == "Y" then
+                local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
+                return targetPos.Y
+            elseif key == "UnitRay" then
+                local mouse = oldIndex(self, key)
+                local origin = mouse.Origin
+                local targetPos = SilentAimState.TargetPart.Position
+                local direction = (targetPos - origin).Unit * 1000
+                return Ray.new(origin, direction)
+            end
         end
     end
     return oldIndex(self, key)
@@ -817,6 +823,14 @@ GbSilent:AddToggle("SilentAimEnabled", {
     Tooltip = "Silently redirects bullets to target without moving cursor",
 })
 local DepSilent = GbSilent:AddDependencyBox()
+DepSilent:AddDropdown("SilentMethod", {
+    Values  = { "All", "RCL", "Modern", "Old" },
+    Default = 1,
+    Text    = "Gun System",
+    Tooltip = "All: Hook all methods, RCL: FindPartOnRay methods, Modern: Raycast, Old: Mouse.Hit/Target",
+}):OnChanged(function(val)
+    SilentAimSettings.Method = val
+end)
 DepSilent:AddDropdown("SilentHitPart", {
     Values  = { "Head", "HumanoidRootPart", "Torso", "UpperTorso" },
     Default = 1,
@@ -1074,36 +1088,31 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         FovCircle.Visible = false
     end
     
-    -- Silent Aim input detection  
-    local silentAimActive = false
-    if SilentAimSettings.Enabled then
-        -- Check for LeftMouseButton activation (default Silent Aim keybind)
-        if SilentAimSettings.Keybind == "LeftMouseButton" then
-            silentAimActive = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-        -- Add other keybind support if needed
-        elseif SilentAimSettings.Keybind == "RightMouseButton" then
-            silentAimActive = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
-        end
-    end
+    -- Silent Aim is always active when enabled (no keybind required)
+    local silentAimActive = SilentAimSettings.Enabled
     
-    -- Update Silent Aim target only when active
+    -- Update Silent Aim target when enabled
     if silentAimActive then
         local silentTarget, silentChar = GetClosestSilentTarget()
         SilentAimState.Target = silentChar
         SilentAimState.TargetPart = silentTarget
     else
-        -- Clear target when not active
+        -- Clear target when disabled
         SilentAimState.Target = nil
         SilentAimState.TargetPart = nil
     end
     
-    -- Draw target line only when Silent Aim is active and has target
+    -- Draw target line when Silent Aim is enabled and has target
     if silentAimActive and SilentAimSettings.ShowTargetLine and SilentAimState.TargetPart then
         local targetScreenPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
         TargetLine.From = mouseLoc
         TargetLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
         TargetLine.Color = SilentAimSettings.TargetLineColor
+        TargetLine.Thickness = 2
+        TargetLine.Transparency = 0
         TargetLine.Visible = true
+        -- Debug output
+        print("Target Line Should Be Visible:", TargetLine.Visible, "From:", TargetLine.From, "To:", TargetLine.To)
     else
         TargetLine.Visible = false
     end
