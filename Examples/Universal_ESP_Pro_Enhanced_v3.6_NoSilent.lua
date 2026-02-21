@@ -390,25 +390,43 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
     
-    -- Hook FindPartOnRayWithIgnoreList (RCL guns)
-    if method == "FindPartOnRayWithIgnoreList" and canUseSilentAim() then
-        local ray = args[1]
-        if ray then
-            -- Redirect ray to target
-            local newDirection = (SilentAimState.TargetPart.Position - ray.Origin).Unit * ray.Direction.Magnitude
-            local newRay = Ray.new(ray.Origin, newDirection)
-            args[1] = newRay
+    -- Only intercept calls from the game, not from exploits
+    if not checkcaller() and canUseSilentAim() then
+        -- Hook FindPartOnRayWithIgnoreList (RCL guns)
+        if method == "FindPartOnRayWithIgnoreList" and self == workspace then
+            local ray = args[1] -- Ray is first argument after self
+            if ray and typeof(ray) == "Ray" then
+                -- Redirect ray to target
+                local origin = ray.Origin
+                local targetPos = SilentAimState.TargetPart.Position
+                local newDirection = (targetPos - origin).Unit * ray.Direction.Magnitude
+                local newRay = Ray.new(origin, newDirection)
+                args[1] = newRay
+            end
         end
-    end
-    
-    -- Hook Raycast (Modern guns)
-    if method == "Raycast" and self == workspace and canUseSilentAim() then
-        local origin = args[1]
-        local direction = args[2]
-        if origin and direction then
-            -- Redirect direction to target
-            local newDirection = (SilentAimState.TargetPart.Position - origin).Unit * direction.Magnitude
-            args[2] = newDirection
+        
+        -- Hook FindPartOnRay (Basic ray method)
+        if method == "FindPartOnRay" and self == workspace then
+            local ray = args[1]
+            if ray and typeof(ray) == "Ray" then
+                local origin = ray.Origin
+                local targetPos = SilentAimState.TargetPart.Position
+                local newDirection = (targetPos - origin).Unit * ray.Direction.Magnitude
+                local newRay = Ray.new(origin, newDirection)
+                args[1] = newRay
+            end
+        end
+        
+        -- Hook Raycast (Modern guns)
+        if method == "Raycast" and self == workspace then
+            local origin = args[1]   -- Origin is first argument after self
+            local direction = args[2] -- Direction is second argument after self
+            if origin and direction and typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
+                -- Redirect direction to target
+                local targetPos = SilentAimState.TargetPart.Position
+                local newDirection = (targetPos - origin).Unit * direction.Magnitude
+                args[2] = newDirection
+            end
         end
     end
     
@@ -417,11 +435,24 @@ end)
 
 -- Hook __index for Mouse.Hit/Target (Old guns)
 oldIndex = hookmetamethod(game, "__index", function(self, key)
-    if self:IsA("Mouse") and canUseSilentAim() then
+    -- Only intercept calls from the game, not from exploits
+    if not checkcaller() and self:IsA("Mouse") and canUseSilentAim() then
         if key == "Hit" then
             return SilentAimState.TargetPart.CFrame
         elseif key == "Target" then
             return SilentAimState.TargetPart
+        elseif key == "X" then
+            local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
+            return targetPos.X
+        elseif key == "Y" then
+            local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
+            return targetPos.Y
+        elseif key == "UnitRay" then
+            local mouse = oldIndex(self, key)
+            local origin = mouse.Origin
+            local targetPos = SilentAimState.TargetPart.Position
+            local direction = (targetPos - origin).Unit * 1000
+            return Ray.new(origin, direction)
         end
     end
     return oldIndex(self, key)
