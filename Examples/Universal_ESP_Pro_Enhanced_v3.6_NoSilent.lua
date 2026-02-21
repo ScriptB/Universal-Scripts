@@ -512,25 +512,47 @@ oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         -- Hook RemoteEvent FireServer (RemoteEvent guns)
         if method == "FireServer" and self:IsA("RemoteEvent") and (methodEnabled or SilentAimSettings.Method == "RemoteEvent") then
             -- Check if any argument looks like shooting direction or position
+            local modified = false
             for i, arg in ipairs(args) do
                 if typeof(arg) == "Vector3" then
-                    -- Replace Vector3 arguments with target position or direction
-                    args[i] = SilentAimState.TargetPart.Position
+                    -- If the vector is small (magnitude < 200), it's likely a direction vector
+                    -- If it's large, it's likely a world position
+                    local targetPos = SilentAimState.TargetPart.Position
+                    if arg.Magnitude < 200 then
+                        -- Replace with direction vector
+                        local origin = Camera.CFrame.Position
+                        args[i] = (targetPos - origin).Unit
+                    else
+                        -- Replace with position vector
+                        args[i] = targetPos
+                    end
+                    modified = true
                 elseif typeof(arg) == "Instance" and arg:IsA("BasePart") then
                     -- Replace BasePart arguments with target part
                     args[i] = SilentAimState.TargetPart
+                    modified = true
                 elseif typeof(arg) == "table" then
                     -- Handle table arguments (common in modern games)
                     for j, tableArg in ipairs(arg) do
                         if typeof(tableArg) == "Vector3" then
-                            arg[j] = SilentAimState.TargetPart.Position
-                            break
+                            local targetPos = SilentAimState.TargetPart.Position
+                            if tableArg.Magnitude < 200 then
+                                local origin = Camera.CFrame.Position
+                                arg[j] = (targetPos - origin).Unit
+                            else
+                                arg[j] = targetPos
+                            end
+                            modified = true
                         elseif typeof(tableArg) == "Instance" and tableArg:IsA("BasePart") then
                             arg[j] = SilentAimState.TargetPart
-                            break
+                            modified = true
                         end
                     end
                 end
+            end
+            
+            if modified then
+                return oldNamecall(self, unpack(args))
             end
         end
     end
@@ -546,11 +568,13 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
         
         if methodEnabled then
             if key == "Hit" or key == "hit" then
-                -- Use prediction if enabled (future enhancement)
+                -- Return a CFrame positioned at the target but looking back at the camera
+                -- This ensures that when the game uses the LookVector or orientation, it points towards the target
                 local targetPos = SilentAimState.TargetPart.Position
-                -- Create proper CFrame oriented towards camera like normal Mouse.Hit
-                local lookDirection = (Camera.CFrame.Position - targetPos).Unit
-                return CFrame.lookAt(targetPos, targetPos + lookDirection)
+                local cameraPos = Camera.CFrame.Position
+                -- CFrame.lookAt(Position, LookAtTarget)
+                -- We position it at the target, but orient it so it faces the same way the camera is facing
+                return CFrame.lookAt(targetPos, targetPos + (targetPos - cameraPos).Unit)
             elseif key == "Target" or key == "target" then
                 return SilentAimState.TargetPart
             elseif key == "X" or key == "x" then
