@@ -3,31 +3,65 @@
 -- Features: Advanced ESP, Silent Aimbot, Third Person Aimbot, Rainbow Effects, Performance Optimized
 -- Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/main/Examples/Universal_ESP_Pro_Enhanced.lua", true))()
 
--- DEBUG: Script starting
-print("[DEBUG] Universal ESP Pro Enhanced v3.8 - Script loading...")
-print("[DEBUG] Third Person Aimbot Mode Added!")
+-- ══════════════════════════════════════════
+-- POLYFILLS & COMPATIBILITY
+-- ══════════════════════════════════════════
+local function safe_getgenv()
+    return (type(getgenv) == "function" and getgenv()) or _G
+end
+local getgenv = safe_getgenv
+
+-- Polyfills
+local tick = tick or os.clock
+local print = print or warn or function(...) end
+local warn = warn or print or function(...) end
+
+-- Safe warn function
+local function SafeWarn(...)
+    if type(warn) == "function" then 
+        pcall(warn, ...) 
+    elseif type(print) == "function" then 
+        pcall(print, "[WARN]", ...) 
+    end
+end
+
+-- Ensure essential functions exist
+if not getgenv().mousemoverel then getgenv().mousemoverel = function(x,y) end end
+if not getgenv().mousemove then getgenv().mousemove = function(x,y) end end
+if not getgenv().setclipboard then getgenv().setclipboard = function(s) end end
+if not getgenv().Drawing then 
+    getgenv().Drawing = { new = function(t) return {Visible = false, Remove = function() end} end } 
+end
+
+-- Service aliases for speed and safety
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local GuiService = game:GetService("GuiService")
 
 -- ══════════════════════════════════════════
 -- INITIALIZATION
 -- ══════════════════════════════════════════
 repeat task.wait() until game:IsLoaded()
-print("[DEBUG] Game loaded, initializing services...")
 
 -- Performance tracking
 local _startTime = tick()
 local _memoryUsage = 0
 local _lastCleanup = tick()
+local _fps          = 60
+local _frameTimer   = tick()
+local _frameCounter = 0
+local _ping         = 0
 
 -- ══════════════════════════════════════════
--- SERVICES & UTILITIES
+-- NOTIFICATION ON LOAD
 -- ══════════════════════════════════════════
-local Players     = game:GetService("Players")
-local RunService  = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local Camera      = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
+if Library then
+    Library:Notify("Loaded", "Universal ESP & Aimbot v3.8 Loaded!", 5)
+end
 
 -- Wait for character to load
 repeat task.wait() until LocalPlayer and LocalPlayer.Character
@@ -238,7 +272,7 @@ local function HideESP(e)
     -- Hide all drawing objects
     if e.Boxes then
         for _, l in ipairs(e.Boxes) do
-            SafeCall(function() l.Visible = false end)
+            pcall(function() l.Visible = false end)
         end
     end
     
@@ -518,7 +552,8 @@ local TweenService     = game:GetService("TweenService")
 local mouse = LocalPlayer:GetMouse()
 
 local AimbotSettings = {
-    Enabled        = false,
+    Enabled        = true,
+    AlwaysActive   = false, -- New debug option
     TeamCheck      = false,
     AliveCheck     = true,
     WallCheck      = false,
@@ -527,24 +562,27 @@ local AimbotSettings = {
     TriggerKey     = Enum.UserInputType.MouseButton2,
     Sensitivity    = 0.05,
     Sensitivity2   = 3.5,
-    LockMode       = 1,  -- 1 = CFrame, 2 = MouseMove, 3 = ThirdPerson
+    LockMode       = 3,  -- 1 = CFrame, 2 = MouseMove, 3 = ThirdPerson
+    RotationMethod = "CFrame", -- "Mouse" or "CFrame"
     Prediction     = 0.065,
     ThirdPerson = {
-        Smoothness    = 0.1,  -- Mouse movement smoothing
-        MaxSpeed      = 15,   -- Maximum mouse speed
-        Acceleration  = 0.8,  -- Mouse acceleration
-        Deadzone      = 5,    -- Deadzone around target
+        Smoothness    = 0.5,  -- 0 = instant, 1 = infinite smoothing
+        Sensitivity   = 2.0,  -- Divider for mouse movement
+        MaxSpeed      = 500,  -- Unused in new logic but kept for config compatibility
+        Acceleration  = 1,    -- Unused in new logic
+        Deadzone      = 2,    -- Deadzone around center
     },
     FOV = {
         Enabled       = true,
         Visible       = true,
-        Radius        = 120,
+        Radius        = 300,
         Thickness     = 1,
         Color         = Color3.fromRGB(255, 255, 255),
         LockedColor   = Color3.fromRGB(255, 100, 100),
         OutlineColor  = Color3.fromRGB(0, 0, 0),
         Rainbow       = false,
         RainbowSpeed  = 1,
+        IgnoreRadius  = false, -- New option to ignore radius check
     },
 }
 
@@ -555,8 +593,8 @@ local _aimbotConns    = {}
 local currentTarget  = nil
 local aiming          = false
 local _lastEnabledState = false
+local _candidateCount = 0
 
-print("[DEBUG] Aimbot initialized - _aimbotRunning:", _aimbotRunning, "Enabled:", AimbotSettings.Enabled)
 
 local FOVCircle        = Drawing.new("Circle")
 local FOVCircleOutline = Drawing.new("Circle")
@@ -571,10 +609,11 @@ end
 local function _aimbotCancelLock()
     _aimbotLocked = nil
     currentTarget = nil
-    if _aimbotAnim then 
-        _aimbotAnim:Cancel() 
-        _aimbotAnim = nil
+    _mouseVelocity = Vector2.new(0, 0)
+    if _aimbotAnim and type(_aimbotAnim.Cancel) == "function" then 
+        pcall(function() _aimbotAnim:Cancel() end)
     end
+    _aimbotAnim = nil
 end
 
 local function checkTeam(player)
@@ -590,11 +629,14 @@ local function checkWall(targetCharacter)
     local targetHead = targetCharacter:FindFirstChild(AimbotSettings.LockPart)
     if not targetHead then return true end
     
-    local origin = Camera.CFrame.Position
-    local direction = (targetHead.Position - origin).unit * (targetHead.Position - origin).magnitude
+    local cam = workspace.CurrentCamera
+    if not cam then return false end
+    
+    local origin = cam.CFrame.Position
+    local direction = (targetHead.Position - origin)
     local raycastParams = RaycastParams.new()
     raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, targetCharacter}
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
     
     local raycastResult = workspace:Raycast(origin, direction, raycastParams)
     return raycastResult and raycastResult.Instance ~= nil
@@ -620,214 +662,314 @@ local function getHeadPosition(player)
     return nil
 end
 
+local function getBestBodyPart(char)
+    if not char then return nil end
+    return char:FindFirstChild(AimbotSettings.LockPart) or 
+           char:FindFirstChild("Head") or 
+           char:FindFirstChild("HumanoidRootPart") or 
+           char:FindFirstChild("Torso") or 
+           char:FindFirstChild("UpperTorso")
+end
+
 -- Third Person Mouse Aimbot Function
 local _lastMousePos = Vector2.new(0, 0)
 local _mouseVelocity = Vector2.new(0, 0)
 local _targetMousePos = Vector2.new(0, 0)
 
+local function isTriggerHeld()
+    local key = AimbotSettings.TriggerKey
+    if not key then return false end
+    
+    if key == Enum.UserInputType.MouseButton1 or 
+       key == Enum.UserInputType.MouseButton2 or 
+       key == Enum.UserInputType.MouseButton3 then
+        return UserInputService:IsMouseButtonPressed(key)
+    end
+    
+    if typeof(key) == "EnumItem" and key.EnumType == Enum.KeyCode then
+        return UserInputService:IsKeyDown(key)
+    end
+    
+    return false
+end
+
 local function thirdPersonAimbot(targetPos)
     if not targetPos then return end
     
-    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+    -- Always use current camera
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    
+    local screenPos, onScreen = cam:WorldToViewportPoint(targetPos)
     if not onScreen then return end
     
+    -- Align Target with Screen Center (Crosshair)
+    local center = cam.ViewportSize / 2
     local targetScreenPos = Vector2.new(screenPos.X, screenPos.Y)
-    local currentMousePos = UserInputService:GetMouseLocation()
     
-    local distance = (targetScreenPos - currentMousePos).Magnitude
+    -- Calculate distance from center
+    local delta = targetScreenPos - center
+    local distance = delta.Magnitude
     
     if distance <= AimbotSettings.ThirdPerson.Deadzone then
         return
     end
     
+    -- Calculate move amount based on smoothness and sensitivity
+    local sensitivityFactor = 1 - AimbotSettings.ThirdPerson.Smoothness
+    local divider = AimbotSettings.ThirdPerson.Sensitivity
+    if divider < 0.1 then divider = 0.1 end
+    
+    -- Clamp sensitivityFactor to avoid getting stuck
+    if sensitivityFactor < 0.05 then sensitivityFactor = 0.05 end
+    if sensitivityFactor > 1 then sensitivityFactor = 1 end
+    
+    -- Special case for 0 smoothness (Instant)
     if AimbotSettings.ThirdPerson.Smoothness <= 0.01 then
-        local delta = targetScreenPos - currentMousePos
-        mousemoverel(delta.X, delta.Y)
-        _mouseVelocity = Vector2.new(0, 0)
-    else
-        local desiredVelocity = (targetScreenPos - currentMousePos) * AimbotSettings.ThirdPerson.Acceleration
-        
-        local speed = desiredVelocity.Magnitude
-        if speed > AimbotSettings.ThirdPerson.MaxSpeed then
-            desiredVelocity = desiredVelocity.Unit * AimbotSettings.ThirdPerson.MaxSpeed
-        end
-        
-        _mouseVelocity = _mouseVelocity:Lerp(desiredVelocity, AimbotSettings.ThirdPerson.Smoothness)
-        mousemoverel(_mouseVelocity.X, _mouseVelocity.Y)
+        sensitivityFactor = 1
     end
     
-    _lastMousePos = currentMousePos
-    _targetMousePos = targetScreenPos
-end
-
-local function _aimbotGetClosest()
-    if _aimbotLocked and currentTarget then
-        local char = currentTarget.Character
-        local part = char and char:FindFirstChild(AimbotSettings.LockPart)
-        if not part or not char:FindFirstChildOfClass("Humanoid") or char.Humanoid.Health <= 0 then 
-            _aimbotCancelLock()
-            return 
-        end
-        
-        if AimbotSettings.LockMode ~= 3 then
-            local sv, _ = Camera:WorldToViewportPoint(part.Position)
-            local dist = (UserInputService:GetMouseLocation() - Vector2.new(sv.X, sv.Y)).Magnitude
-            local radius = AimbotSettings.FOV.Enabled and AimbotSettings.FOV.Radius or 2000
-            if dist > radius or checkTeam(currentTarget) or checkWall(char) then 
-                _aimbotCancelLock()
-            end
+    local move = (delta / divider) * sensitivityFactor
+    
+    -- Apply movement based on method
+    if AimbotSettings.RotationMethod == "Mouse" then
+        if type(mousemoverel) == "function" then
+            mousemoverel(move.X, move.Y)
+        elseif type(mousemove) == "function" then
+            mousemove(move.X, move.Y)
         else
-            -- Third person: check FOV from screen center
-            local sv, _ = Camera:WorldToViewportPoint(part.Position)
-            local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            local dist = (screenCenter - Vector2.new(sv.X, sv.Y)).Magnitude
-            local radius = AimbotSettings.FOV.Enabled and AimbotSettings.FOV.Radius or 2000
-            if dist > radius or checkTeam(currentTarget) or checkWall(char) then
-                _aimbotCancelLock()
-            end
+            -- Auto-fallback to CFrame if no mouse function
+            local rotSpeed = 1.0
+            if sensitivityFactor > 0 then rotSpeed = 1.0 / sensitivityFactor end
+            local yaw = math.rad(-move.X * rotSpeed * 0.5) 
+            local pitch = math.rad(-move.Y * rotSpeed * 0.5)
+            cam.CFrame = cam.CFrame * CFrame.Angles(pitch, yaw, 0)
         end
-        return
-    end
-
-    local best, bestDist = nil, math.huge
-    local radius = AimbotSettings.FOV.Enabled and AimbotSettings.FOV.Radius or 2000
-    bestDist = radius
-
-    -- In third person mode, measure FOV from screen center
-    local refPos = AimbotSettings.LockMode == 3
-        and Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-        or UserInputService:GetMouseLocation()
-
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr == LocalPlayer then continue end
-        local char = plr.Character
-        local hum  = char and char:FindFirstChildOfClass("Humanoid")
-        local part = char and char:FindFirstChild(AimbotSettings.LockPart)
+    else
+        -- Forced CFrame Rotation (More reliable for Third Person)
+        -- Use simple 3D LookAt with Lerp for robust tracking
+        local currentCF = cam.CFrame
+        local targetCF = CFrame.new(currentCF.Position, targetPos) -- Replaced CFrame.lookAt with CFrame.new for compatibility
         
-        if not char or not hum or not part then continue end
-        if AimbotSettings.AliveCheck and hum.Health <= 0 then continue end
-        if checkTeam(plr) then continue end
-        if checkWall(char) then continue end
+        -- Apply smoothing
+        -- sensitivityFactor is calculated above (1 = instant, lower = smoother)
+        -- We map it to a reasonable Lerp alpha
+        local lerpAlpha = sensitivityFactor
         
-        local sv, onScreen = Camera:WorldToViewportPoint(part.Position)
-        if not onScreen then continue end
+        -- Clamp for stability
+        if lerpAlpha < 0.01 then lerpAlpha = 0.01 end
+        if lerpAlpha > 1 then lerpAlpha = 1 end
         
-        local dist = (refPos - Vector2.new(sv.X, sv.Y)).Magnitude
-        if dist < bestDist then
-            bestDist, best = dist, plr
-        end
+        cam.CFrame = currentCF:Lerp(targetCF, lerpAlpha)
     end
     
-    _aimbotLocked = best
-    currentTarget = best
+    -- Debug movement (throttled)
+    if tick() % 0.5 < 0.05 then
+        print(string.format("[DEBUG] Moving mouse: %.1f, %.1f | Dist: %.1f", move.X, move.Y, distance))
+    end
 end
 
-local function smoothCFrame(from, to)
-    return from:Lerp(to, AimbotSettings.Sensitivity)
-end
+-- Remove misplaced SafeAimbotUpdate function
+-- (It was defined here before _aimbotUpdate was defined, causing nil value errors)
 
 local function _aimbotUpdate()
-    local fov = AimbotSettings.FOV
-    local mousePos = UserInputService:GetMouseLocation()
+    -- Safety Check: Ensure core globals exist
+    if not workspace or not workspace.CurrentCamera or not UserInputService then return end
+    
+    local cam = workspace.CurrentCamera
+    -- Ensure Settings exist
+    if not AimbotSettings or not AimbotSettings.FOV then return end
+    
+    -- Self-contained logger to prevent upvalue errors
+    local function LogError(msg, err)
+        pcall(warn, "[Aimbot]", msg, err)
+    end
 
-    -- Update FOV Circle
-    if fov.Enabled and AimbotSettings.Enabled then
-        local fovColor
-        if fov.Rainbow then
+    -- Step 1: Targeting
+    local lastDebugReason = "Idle"
+    if AimbotSettings.Enabled then
+        local s, r = pcall(_aimbotGetClosest)
+        if s and r then lastDebugReason = r end
+    end
+    
+    -- Step 2: Visuals
+    pcall(function()
+        if not AimbotSettings.FOV.Enabled or not AimbotSettings.Enabled then
+            if FOVCircle then FOVCircle.Visible = false end
+            if FOVCircleOutline then FOVCircleOutline.Visible = false end
+            if StatusText then StatusText.Visible = false end
+            if LockLine then LockLine.Visible = false end
+            return
+        end
+
+        local fovColor = Color3.new(1, 1, 1)
+        if AimbotSettings.FOV.Rainbow and _aimbotGetRainbow then
             fovColor = _aimbotGetRainbow()
         elseif _aimbotLocked then
-            fovColor = fov.LockedColor
+            fovColor = AimbotSettings.FOV.LockedColor or Color3.new(1, 0, 0)
         else
-            fovColor = fov.Color
+            fovColor = AimbotSettings.FOV.Color or Color3.new(0, 1, 0)
         end
         
-        -- Update FOV circle properties
-        FOVCircle.Position = Vector2.new(mousePos.X, mousePos.Y)
-        FOVCircleOutline.Position = Vector2.new(mousePos.X, mousePos.Y)
-        FOVCircle.Visible = fov.Visible
-        FOVCircleOutline.Visible = fov.Visible
-        FOVCircle.Radius = fov.Radius
-        FOVCircleOutline.Radius = fov.Radius
-        FOVCircle.Thickness = fov.Thickness
-        FOVCircleOutline.Thickness = fov.Thickness + 2
-        FOVCircle.Color = fovColor
-        FOVCircleOutline.Color = fov.OutlineColor
-    else
-        FOVCircle.Visible = false
-        FOVCircleOutline.Visible = false
-    end
-
-    -- Only run aimbot logic if it's enabled and running
-    if not AimbotSettings.Enabled or not _aimbotRunning then
-        if _aimbotLocked then
-            _aimbotCancelLock()
+        local circlePos = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+        
+        if FOVCircle then
+            FOVCircle.Position = circlePos
+            FOVCircleOutline.Position = circlePos
+            FOVCircle.Visible = AimbotSettings.FOV.Visible
+            FOVCircleOutline.Visible = AimbotSettings.FOV.Visible
+            FOVCircle.Radius = AimbotSettings.FOV.Radius or 100
+            FOVCircleOutline.Radius = AimbotSettings.FOV.Radius or 100
+            FOVCircle.Thickness = AimbotSettings.FOV.Thickness or 1
+            FOVCircleOutline.Thickness = (AimbotSettings.FOV.Thickness or 1) + 2
+            FOVCircle.Color = fovColor
+            FOVCircleOutline.Color = AimbotSettings.FOV.OutlineColor or Color3.new(0, 0, 0)
         end
-        return
-    end
-
-    _aimbotGetClosest()
-
-    if not _aimbotLocked or not currentTarget then 
-        return 
-    end
-    
-    local char = currentTarget.Character
-    if not char then 
-        _aimbotCancelLock()
-        return 
-    end
-    
-    -- Get the correct target part
-    local targetPart = char:FindFirstChild(AimbotSettings.LockPart)
-    if not targetPart then 
-        _aimbotCancelLock()
-        return 
-    end
-
-    -- Use prediction for moving targets
-    local targetPos
-    if AimbotSettings.LockPart == "Head" then
-        -- For head, use head position with prediction
-        local headPos = getHeadPosition(currentTarget)
-        if headPos then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local velocity = hrp.Velocity
-                targetPos = headPos + (velocity * AimbotSettings.Prediction)
-            else
-                targetPos = headPos
+        
+        if LockLine then
+            LockLine.Visible = false
+            if _aimbotLocked and currentTarget and AimbotSettings.Enabled then
+                local char = currentTarget.Character
+                if char and getBestBodyPart then
+                    local part = getBestBodyPart(char)
+                    if part then
+                        local screenPos, onScreen = cam:WorldToViewportPoint(part.Position)
+                        if onScreen then
+                            LockLine.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+                            LockLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                            LockLine.Visible = true
+                            LockLine.Color = _aimbotRunning and Color3.new(1, 0, 0) or Color3.new(1, 1, 0)
+                        end
+                    end
+                end
             end
+        end
+        
+        if StatusText then
+            StatusText.Visible = AimbotSettings.FOV.Visible
+            StatusText.Position = Vector2.new(circlePos.X, circlePos.Y + (AimbotSettings.FOV.Radius or 100) + 20)
+            if not AimbotSettings.Enabled then
+                StatusText.Text = "OFF"
+                StatusText.Color = Color3.new(1,0,0)
+            elseif _aimbotLocked and currentTarget then
+                StatusText.Text = _aimbotRunning and ("LOCKED: " .. tostring(currentTarget.Name)) or ("FOUND: " .. tostring(currentTarget.Name))
+                StatusText.Color = _aimbotRunning and Color3.new(0,1,0) or Color3.new(1,1,0)
+            else
+                StatusText.Text = "SCAN: " .. tostring(lastDebugReason)
+                StatusText.Color = Color3.new(1,1,1)
+            end
+        end
+    end)
+
+    -- Step 3: Logic
+    local s_logic, err_logic = pcall(function()
+        if not AimbotSettings.Enabled then
+            if _aimbotLocked then _aimbotCancelLock() end
+            return
+        end
+        
+        if AimbotSettings.AlwaysActive then
+            _aimbotRunning = true
+        elseif not AimbotSettings.Toggle and type(isTriggerHeld) == "function" then
+            pcall(function() _aimbotRunning = isTriggerHeld() end)
+        end
+        
+        if not _aimbotRunning then return end
+        if not _aimbotLocked or not currentTarget then return end
+        
+        local char = currentTarget.Character
+        if not char then _aimbotCancelLock() return end
+        
+        local targetPart
+        if type(getBestBodyPart) == "function" then
+            targetPart = getBestBodyPart(char)
+        end
+        if not targetPart then _aimbotCancelLock() return end
+        
+        -- Pass targetPart to next step via upvalue or return (but here we just ensure it exists)
+    end)
+
+    if not s_logic then
+        return -- Exit if logic failed
+    end
+
+    -- Re-verify critical state before movement
+    if not _aimbotRunning or not _aimbotLocked or not currentTarget then return end
+    
+    -- Step 5: Movement
+    local s_move, err_move = pcall(function()
+        -- Re-acquire targetPart to ensure existence in this scope
+        local char = currentTarget and currentTarget.Character
+        if not char then return end
+        local targetPart
+        if type(getBestBodyPart) == "function" then
+            targetPart = getBestBodyPart(char)
+        end
+        if not targetPart then return end
+
+        local targetPos
+        if AimbotSettings.LockPart == "Head" and type(getHeadPosition) == "function" then
+            local headPos = getHeadPosition(currentTarget)
+            if headPos then
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    targetPos = headPos + (hrp.Velocity * AimbotSettings.Prediction)
+                else
+                    targetPos = headPos
+                end
+            else
+                targetPos = targetPart.Position
+            end
+        elseif type(predict) == "function" then
+            targetPos = predict(currentTarget) or targetPart.Position
         else
             targetPos = targetPart.Position
         end
-    else
-        -- For other parts, use prediction on the part itself
-        targetPos = predict(currentTarget) or targetPart.Position
-    end
-
-    if AimbotSettings.LockMode == 2 then
-        -- MouseMove mode
-        local sv = Camera:WorldToViewportPoint(targetPos)
-        local targetPos2D = Vector2.new(sv.X, sv.Y)
-        local delta = targetPos2D - mousePos
-        mousemoverel(delta.X / AimbotSettings.Sensitivity2, delta.Y / AimbotSettings.Sensitivity2)
-    elseif AimbotSettings.LockMode == 3 then
-        -- Third Person mode
-        thirdPersonAimbot(targetPos)
-    else
-        -- CFrame mode (silent aim)
-        local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         
-        if AimbotSettings.Sensitivity > 0 then
-            Camera.CFrame = smoothCFrame(Camera.CFrame, targetCFrame)
+        if not targetPos then return end
+
+        if AimbotSettings.LockMode == 2 then
+            local sv = cam:WorldToViewportPoint(targetPos)
+            local delta = Vector2.new(sv.X, sv.Y) - mousePos
+            if type(mousemoverel) == "function" then
+                mousemoverel(delta.X / AimbotSettings.Sensitivity2, delta.Y / AimbotSettings.Sensitivity2)
+            elseif type(mousemove) == "function" then
+                mousemove(delta.X / AimbotSettings.Sensitivity2, delta.Y / AimbotSettings.Sensitivity2)
+            end
+        elseif AimbotSettings.LockMode == 3 then
+            if type(thirdPersonAimbot) == "function" then
+                thirdPersonAimbot(targetPos)
+            end
         else
-            Camera.CFrame = targetCFrame
+            local targetCFrame = CFrame.new(cam.CFrame.Position, targetPos)
+            if AimbotSettings.Sensitivity > 0 and type(smoothCFrame) == "function" then
+                cam.CFrame = smoothCFrame(cam.CFrame, targetCFrame)
+            else
+                cam.CFrame = targetCFrame
+            end
+        end
+    end)
+    
+    if not s_move then
+        LogError("Movement Error:", err_move)
+    end
+end
+
+-- Safely run update with error printing
+local function SafeAimbotUpdate()
+    if type(_aimbotUpdate) == "function" then
+        local success, err = pcall(_aimbotUpdate)
+        if not success then
+            SafeWarn("[Aimbot Critical]:", err)
         end
     end
 end
 
 -- Fixed input handling
-_aimbotConns.render = RunService.RenderStepped:Connect(_aimbotUpdate)
+-- Use BindToRenderStep with high priority to run AFTER game camera scripts
+-- Priority Last to ensure we override everything
+pcall(function() RunService:UnbindFromRenderStep("UniversalAimbot") end)
+RunService:BindToRenderStep("UniversalAimbot", Enum.RenderPriority.Last.Value, SafeAimbotUpdate)
 
 _aimbotConns.inputBegan = UserInputService.InputBegan:Connect(function(input)
     if not AimbotSettings.Enabled then 
@@ -1072,12 +1214,18 @@ GbAimbot:AddToggle("AimbotEnabled", {
     Default = AimbotSettings.Enabled,
     Tooltip = "Master aimbot toggle",
 })
+GbAimbot:AddToggle("AimbotAlwaysActive", {
+    Text    = "Always Active (Debug)",
+    Default = false,
+    Tooltip = "Force aimbot to run without holding key (Risky!)",
+})
+GbAimbot:AddDivider()
 GbAimbot:AddLabel("Trigger Key"):AddKeyPicker("AimbotKey", {
-    Default         = "RightControl",
+    Default         = "MB2",
     SyncToggleState = false,
     Mode            = "Hold",
     Text            = "Aim",
-    Tooltip         = "Hold/press this key to activate aimbot (default: RCtrl; RMB handled automatically)",
+    Tooltip         = "Hold/press this key to activate aimbot (default: RMB)",
 })
 GbAimbot:AddDivider()
 GbAimbot:AddToggle("AimbotToggleMode", {
@@ -1109,7 +1257,7 @@ GbAimbot:AddDropdown("AimbotLockPart", {
 })
 GbAimbot:AddDropdown("AimbotLockMode", {
     Values  = { "CFrame (Silent)", "MouseMove", "Third Person" },
-    Default = 1,
+    Default = 3,
     Text    = "Lock Mode",
     Tooltip = "CFrame = silent aim; MouseMove = moves cursor; Third Person = smooth mouse control",
 })
@@ -1142,41 +1290,53 @@ GbAimbot:AddSlider("AimbotSensitivity2", {
 })
 GbAimbot:AddDivider()
 GbAimbot:AddLabel("Third Person Settings")
+GbAimbot:AddDropdown("ThirdPersonMethod", {
+    Values  = { "Mouse", "CFrame" },
+    Default = 2,
+    Text    = "Rotation Method",
+    Tooltip = "Mouse = uses mousemoverel; CFrame = modifies camera directly (recommended)",
+})
+
+GbAimbot:AddSlider("ThirdPersonSensitivity", {
+    Text     = "Sensitivity",
+    Default  = 2.0,
+    Min      = 0.1,
+    Max      = 10,
+    Rounding = 1,
+    Tooltip  = "Higher = slower/less shaking (divides movement)",
+})
+
 GbAimbot:AddSlider("ThirdPersonSmoothness", {
     Text     = "Smoothness",
-    Default  = AimbotSettings.ThirdPerson.Smoothness,
+    Default  = 0.5,
     Min      = 0,
     Max      = 1,
     Rounding = 2,
-    Compact  = true,
-    Tooltip  = "0 = Instant Aimlock | Lower = Smoother | Higher = More Responsive",
+    Tooltip  = "0 = instant; 1 = very smooth",
 })
 GbAimbot:AddSlider("ThirdPersonMaxSpeed", {
     Text     = "Max Speed",
-    Default  = AimbotSettings.ThirdPerson.MaxSpeed,
+    Default  = 200,
     Min      = 1,
-    Max      = 50,
+    Max      = 500,
     Rounding = 0,
-    Compact  = true,
-    Tooltip  = "Maximum mouse movement speed",
+    Tooltip  = "Maximum pixel movement per frame",
 })
 GbAimbot:AddSlider("ThirdPersonAcceleration", {
     Text     = "Acceleration",
-    Default  = AimbotSettings.ThirdPerson.Acceleration,
+    Default  = 2,
     Min      = 0.1,
-    Max      = 2,
-    Rounding = 2,
-    Compact  = true,
-    Tooltip  = "Mouse acceleration factor",
+    Max      = 5,
+    Rounding = 1,
+    Tooltip  = "How fast speed builds up",
 })
 GbAimbot:AddSlider("ThirdPersonDeadzone", {
     Text     = "Deadzone",
-    Default  = AimbotSettings.ThirdPerson.Deadzone,
+    Default  = 2,
     Min      = 0,
-    Max      = 20,
+    Max      = 50,
     Rounding = 0,
-    Compact  = true,
-    Tooltip  = "Deadzone around target (pixels)",
+    Tooltip  = "Pixels to ignore around target",
 })
 
 -- RIGHT: FOV circle
@@ -1191,12 +1351,17 @@ GbFOV:AddToggle("FOVVisible", {
     Default = AimbotSettings.FOV.Visible,
     Tooltip = "Show the FOV circle on screen",
 })
+GbFOV:AddToggle("FOVIgnoreRadius", {
+    Text    = "Ignore Radius",
+    Default = AimbotSettings.FOV.IgnoreRadius,
+    Tooltip = "Target players anywhere on screen (ignores circle size)",
+})
 local DepFOV = GbFOV:AddDependencyBox()
 DepFOV:AddSlider("FOVRadius", {
     Text     = "Radius",
-    Default  = AimbotSettings.FOV.Radius,
+    Default  = 800,
     Min      = 10,
-    Max      = 600,
+    Max      = 1500,
     Rounding = 0,
     Compact  = true,
     Tooltip  = "FOV circle radius in pixels",
@@ -1373,8 +1538,8 @@ end)
 Toggles.AimbotEnabled:OnChanged(function()    
     AimbotSettings.Enabled = Toggles.AimbotEnabled.Value
     _lastEnabledState = AimbotSettings.Enabled
-    print("[DEBUG] Aimbot enabled state changed to:", _lastEnabledState)
 end)
+Toggles.AimbotAlwaysActive:OnChanged(function() AimbotSettings.AlwaysActive = Toggles.AimbotAlwaysActive.Value end)
 Toggles.AimbotToggleMode:OnChanged(function() AimbotSettings.Toggle          = Toggles.AimbotToggleMode.Value end)
 Toggles.AimbotTeamCheck:OnChanged(function()  AimbotSettings.TeamCheck       = Toggles.AimbotTeamCheck.Value  end)
 Toggles.AimbotAliveCheck:OnChanged(function() AimbotSettings.AliveCheck      = Toggles.AimbotAliveCheck.Value end)
@@ -1384,13 +1549,10 @@ Options.AimbotLockMode:OnChanged(function()
     local mode = Options.AimbotLockMode.Value
     if mode == "CFrame (Silent)" then
         AimbotSettings.LockMode = 1
-        print("[DEBUG] LockMode changed to: CFrame (Silent)")
     elseif mode == "MouseMove" then
         AimbotSettings.LockMode = 2
-        print("[DEBUG] LockMode changed to: MouseMove")
     else
-        AimbotSettings.LockMode = 3  -- Third Person
-        print("[DEBUG] LockMode changed to: Third Person")
+        AimbotSettings.LockMode = 3
     end
 end)
 Options.AimbotSensitivity:OnChanged(function()  AimbotSettings.Sensitivity  = Options.AimbotSensitivity.Value  end)
@@ -1398,12 +1560,15 @@ Options.AimbotSensitivity2:OnChanged(function() AimbotSettings.Sensitivity2 = Op
 Options.AimbotPrediction:OnChanged(function() AimbotSettings.Prediction = Options.AimbotPrediction.Value end)
 
 -- Third Person callbacks
+Options.ThirdPersonMethod:OnChanged(function() AimbotSettings.RotationMethod = Options.ThirdPersonMethod.Value end)
+Options.ThirdPersonSensitivity:OnChanged(function() AimbotSettings.ThirdPerson.Sensitivity = Options.ThirdPersonSensitivity.Value end)
 Options.ThirdPersonSmoothness:OnChanged(function() AimbotSettings.ThirdPerson.Smoothness = Options.ThirdPersonSmoothness.Value end)
 Options.ThirdPersonMaxSpeed:OnChanged(function() AimbotSettings.ThirdPerson.MaxSpeed = Options.ThirdPersonMaxSpeed.Value end)
 Options.ThirdPersonAcceleration:OnChanged(function() AimbotSettings.ThirdPerson.Acceleration = Options.ThirdPersonAcceleration.Value end)
 Options.ThirdPersonDeadzone:OnChanged(function() AimbotSettings.ThirdPerson.Deadzone = Options.ThirdPersonDeadzone.Value end)
 
 -- FOV callbacks
+Toggles.FOVIgnoreRadius:OnChanged(function() AimbotSettings.FOV.IgnoreRadius = Toggles.FOVIgnoreRadius.Value end)
 Toggles.FOVEnabled:OnChanged(function()   AimbotSettings.FOV.Enabled      = Toggles.FOVEnabled.Value   end)
 Toggles.FOVVisible:OnChanged(function()   AimbotSettings.FOV.Visible      = Toggles.FOVVisible.Value   end)
 Toggles.FOVRainbow:OnChanged(function()   AimbotSettings.FOV.Rainbow      = Toggles.FOVRainbow.Value   end)
@@ -1414,13 +1579,19 @@ Options.FOVColor:OnChanged(function()     AimbotSettings.FOV.Color        = Opti
 Options.FOVLockedColor:OnChanged(function()  AimbotSettings.FOV.LockedColor  = Options.FOVLockedColor.Value  end)
 Options.FOVOutlineColor:OnChanged(function() AimbotSettings.FOV.OutlineColor = Options.FOVOutlineColor.Value end)
 
-Options.AimbotKey:OnChanged(function()
+local function _syncAimbotKey()
     local kc = Options.AimbotKey.Value
-    if kc and kc ~= Enum.KeyCode.Unknown then
-        AimbotSettings.TriggerKey = kc
-        print("[DEBUG] Aimbot keybind changed to: " .. tostring(kc))
+    if kc then
+        -- Handle MB2 specially if it comes as a string
+        if kc == "MB2" then
+            AimbotSettings.TriggerKey = Enum.UserInputType.MouseButton2
+        elseif typeof(kc) == "EnumItem" then
+            AimbotSettings.TriggerKey = kc
+        end
     end
-end)
+end
+Options.AimbotKey:OnChanged(_syncAimbotKey)
+_syncAimbotKey()
 
 -- ══════════════════════════════════════════
 -- WATERMARK
@@ -1453,15 +1624,6 @@ local _frameCounter = 0
 local _fps          = 60
 local _ping         = 0
 
--- ══════════════════════════════════════════
--- ESP RUNTIME
--- ══════════════════════════════════════════
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        CreateESP(player)
-    end
-end)
-
 Players.PlayerRemoving:Connect(function(player)
     RemoveESP(player)
 end)
@@ -1472,7 +1634,7 @@ for _, player in ipairs(Players:GetPlayers()) do
     end
 end
 
-local _wmConn = RunService.RenderStepped:Connect(function()
+local _wmConn = RunService.RenderStepped:Connect(function(dt)
     _frameCounter += 1
     if (tick() - _frameTimer) >= 1 then
         _fps          = _frameCounter
@@ -1494,9 +1656,13 @@ end)
 
 Library:OnUnload(function()
     _wmConn:Disconnect()
+    pcall(function() RunService:UnbindFromRenderStep("UniversalAimbot") end)
     for _, c in pairs(_aimbotConns) do pcall(function() c:Disconnect() end) end
     pcall(function() FOVCircle:Remove() end)
     pcall(function() FOVCircleOutline:Remove() end)
+    pcall(function() StatusText:Remove() end)
+    pcall(function() DebugHUD:Remove() end)
+    pcall(function() LockLine:Remove() end)
     _aimbotCancelLock()
     UserInputService.MouseDeltaSensitivity = 1
     for player in pairs(ESPObjects) do
