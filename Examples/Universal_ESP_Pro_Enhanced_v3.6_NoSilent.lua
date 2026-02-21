@@ -146,7 +146,7 @@ end
 -- ══════════════════════════════════════════
 local AimbotSettings = {
     Enabled      = false,
-    Mode         = "Camera (3rd Person)", -- "Camera (3rd Person)" or "Mouse (1st Person)"
+    Mode         = "Mouse (1st Person)", -- "Camera (3rd Person)" or "Mouse (1st Person)"
     FOV          = 150,
     Smoothness   = 10,
     Sensitivity  = 0.5,
@@ -330,7 +330,17 @@ local function getBestBodyPart(char)
 end
 
 local function GetClosestTarget()
-    local center   = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local mouseLoc = UserInputService:GetMouseLocation()
+    local center
+    if AimbotSettings.Mode == "Mouse (1st Person)" then
+        -- In 1st person, the mouse is fixed at the center of the screen
+        local guiInset = game:GetService("GuiService"):GetGuiInset()
+        center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
+    else
+        -- In 3rd person, use the actual mouse cursor location
+        center = mouseLoc
+    end
+    
     local bestDist = AimbotSettings.FOV
     local bestChar = nil
     local bestPart = nil
@@ -358,7 +368,7 @@ local function GetClosestTarget()
             bestPart = part
         end
     end
-    return bestPart, bestChar
+    return bestPart, bestChar, center
 end
 
 -- ══════════════════════════════════════════
@@ -552,11 +562,13 @@ GbAim:AddLabel("Hold Key"):AddKeyPicker("AimbotKey", {
 GbAim:AddDivider()
 local DepAim = GbAim:AddDependencyBox()
 DepAim:AddDropdown("AimbotMode", {
-    Values  = { "Camera (3rd Person)", "Mouse (1st Person)" },
+    Values  = { "Mouse (1st Person)", "Camera (3rd Person)" },
     Default = 1,
     Text    = "Aimbot Mode",
-    Tooltip = "Camera works best for 3rd person. Mouse works best for 1st person.",
-})
+    Tooltip = "1st Person = Fixed Screen Center\n3rd Person = Follows Mouse Cursor",
+}):OnChanged(function(val)
+    AimbotSettings.Mode = val
+end)
 DepAim:AddSlider("AimbotFOV", {
     Text     = "FOV",
     Default  = AimbotSettings.FOV,
@@ -589,8 +601,10 @@ DepAim:AddDropdown("AimbotHitPart", {
     Values  = { "Head", "HumanoidRootPart", "Torso", "UpperTorso" },
     Default = 1,
     Text    = "Hit Part",
-    Tooltip = "Which body part to aim at",
-})
+    Tooltip = "Which body part the aimbot should target",
+}):OnChanged(function(val)
+    AimbotSettings.HitPart = val
+end)
 DepAim:AddToggle("AimbotTeamCheck", {
     Text    = "Team Check",
     Default = AimbotSettings.TeamCheck,
@@ -827,9 +841,19 @@ local _wmConn = RunService.RenderStepped:Connect(function()
     end
 
     -- FOV circle
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local mouseLoc = UserInputService:GetMouseLocation()
+    local fovCenter
+    if AimbotSettings.Mode == "Mouse (1st Person)" then
+        -- In 1st person, the mouse is fixed at the center of the screen
+        local guiInset = game:GetService("GuiService"):GetGuiInset()
+        fovCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
+    else
+        -- In 3rd person, use the actual mouse cursor location
+        fovCenter = mouseLoc
+    end
+
     if AimbotSettings.ShowFOV then
-        FovCircle.Position    = center
+        FovCircle.Position    = fovCenter
         FovCircle.Radius      = AimbotSettings.FOV
         FovCircle.Color       = AimbotSettings.FOVColor
         FovCircle.Visible     = true
@@ -849,23 +873,15 @@ local _wmConn = RunService.RenderStepped:Connect(function()
     end
 
     if AimbotSettings.Enabled and aimbotHeld then
-        local target, _ = GetClosestTarget()
-        if target then
-            if AimbotSettings.Mode == "Camera (3rd Person)" then
-                local targetCF  = CFrame.new(Camera.CFrame.Position, target.Position)
-                local smooth    = math.clamp(AimbotSettings.Smoothness, 1, 50)
-                Camera.CFrame   = Camera.CFrame:Lerp(targetCF, 1 / smooth)
-            elseif AimbotSettings.Mode == "Mouse (1st Person)" then
-                local sv = Camera:WorldToViewportPoint(target.Position)
-                -- Calculate real screen center including GuiService inset
-                local guiInset = game:GetService("GuiService"):GetGuiInset()
-                local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
-                local delta = Vector2.new(sv.X, sv.Y) - center
-                local sens = AimbotSettings.Sensitivity
-                -- Use mousemoverel if supported by the executor, otherwise fallback
-                if mousemoverel then
-                    mousemoverel(delta.X * sens, delta.Y * sens)
-                end
+        local target, _, center = GetClosestTarget()
+        if target and center then
+            local sv = Camera:WorldToViewportPoint(target.Position)
+            local delta = Vector2.new(sv.X, sv.Y) - center
+            local sens = AimbotSettings.Sensitivity
+            
+            -- Use mousemoverel if supported by the executor, otherwise fallback
+            if mousemoverel then
+                mousemoverel(delta.X * sens, delta.Y * sens)
             end
         end
     end
