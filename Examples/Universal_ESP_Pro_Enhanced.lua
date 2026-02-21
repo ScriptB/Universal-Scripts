@@ -64,6 +64,7 @@ if Library then
 end
 
 -- Wait for character to load
+local LocalPlayer = Players.LocalPlayer
 repeat task.wait() until LocalPlayer and LocalPlayer.Character
 
 -- Utility functions
