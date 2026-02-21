@@ -581,7 +581,7 @@ local FovCircle = NewDrawing("Circle", {
 local TargetLine = NewDrawing("Line", {
     Thickness    = 2,
     Color        = Color3.fromRGB(0, 255, 0),
-    Transparency = 0,
+    Transparency = 1,
     Visible      = false,
 })
 
@@ -1221,7 +1221,7 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         TargetLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
         TargetLine.Color = SilentAimSettings.TargetLineColor
         TargetLine.Thickness = 2
-        TargetLine.Transparency = 0
+        TargetLine.Transparency = 1
         TargetLine.Visible = true
         -- Debug output
         print("Target Line Should Be Visible:", TargetLine.Visible, "From:", TargetLine.From, "To:", TargetLine.To)
