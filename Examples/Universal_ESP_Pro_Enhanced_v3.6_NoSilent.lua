@@ -390,18 +390,8 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
     
-    -- Only intercept calls from the game, not from exploits
-    if not checkcaller() and canUseSilentAim() then
-        -- Get calling script info to avoid interfering with Roblox internal systems
-        local info = debug.getinfo(2, "s")
-        local source = info and info.source or ""
-        
-        -- Exclude Roblox internal scripts (PlayerModule, CameraModule, etc.)
-        if source:match("PlayerModule") or source:match("CameraModule") or 
-           source:match("ZoomController") or source:match("Popper") or
-           source:match("CoreScript") or source:match("RobloxGui") then
-            return oldNamecall(self, unpack(args))
-        end
+    -- Only intercept calls from the game when we have a valid target
+    if not checkcaller() and SilentAimSettings.Enabled and SilentAimState.TargetPart then
         local methodEnabled = SilentAimSettings.Method == "All"
         
         -- Hook FindPartOnRayWithIgnoreList (RCL guns)
@@ -481,18 +471,8 @@ end)
 
 -- Hook __index for Mouse.Hit/Target (Old guns)
 oldIndex = hookmetamethod(game, "__index", function(self, key)
-    -- Only intercept calls from the game, not from exploits
-    if not checkcaller() and self:IsA("Mouse") and canUseSilentAim() then
-        -- Get calling script info to avoid interfering with Roblox internal systems
-        local info = debug.getinfo(2, "s")
-        local source = info and info.source or ""
-        
-        -- Exclude Roblox internal scripts (PlayerModule, CameraModule, etc.)
-        if source:match("PlayerModule") or source:match("CameraModule") or 
-           source:match("ZoomController") or source:match("Popper") or
-           source:match("CoreScript") or source:match("RobloxGui") then
-            return oldIndex(self, key)
-        end
+    -- Only intercept Mouse calls when we have a valid target
+    if not checkcaller() and self:IsA("Mouse") and SilentAimSettings.Enabled and SilentAimState.TargetPart then
         local methodEnabled = SilentAimSettings.Method == "All" or SilentAimSettings.Method == "Old"
         
         if methodEnabled then
