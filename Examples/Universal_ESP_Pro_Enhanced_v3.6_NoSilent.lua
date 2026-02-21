@@ -843,7 +843,7 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         aimbotHeld = Options.AimbotKey:GetState()
     end
     -- Fallback for RightMouseButton if LinoriaLib isn't picking it up via GetState
-    if Options.AimbotKey and Options.AimbotKey.Value == "RightMouseButton" and not aimbotHeld then
+    if not aimbotHeld and Options.AimbotKey and Options.AimbotKey.Value == "RightMouseButton" then
         aimbotHeld = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
     end
 
