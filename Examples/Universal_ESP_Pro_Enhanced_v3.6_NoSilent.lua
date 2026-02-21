@@ -412,9 +412,6 @@ local function GetClosestSilentTarget()
         -- Only fallback to HumanoidRootPart if the selected part doesn't exist
         if not part then
             part = char:FindFirstChild("HumanoidRootPart")
-            print("Silent Aim Debug: Selected part '" .. SilentAimSettings.HitPart .. "' not found, using HumanoidRootPart fallback")
-        else
-            print("Silent Aim Debug: Successfully targeting selected part: " .. part.Name)
         end
         if not part then continue end
 
@@ -465,6 +462,7 @@ oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
                     -- Redirect ray to target
                     local origin = ray.Origin
                     local direction = getDirection(origin, SilentAimState.TargetPart.Position)
+                    print("Silent Aim Hook: Redirecting FindPartOnRayWithIgnoreList to " .. SilentAimState.TargetPart.Name .. " at " .. tostring(SilentAimState.TargetPart.Position))
                     args[1] = Ray.new(origin, direction)
                     return oldNamecall(self, unpack(args))
                 end
