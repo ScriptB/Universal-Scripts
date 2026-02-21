@@ -430,6 +430,40 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
                 args[2] = newDirection
             end
         end
+        
+        -- Hook RemoteEvent:FireServer (Modern games using RemoteEvents)
+        if method == "FireServer" and (methodEnabled or SilentAimSettings.Method == "RemoteEvent") then
+            local remoteName = tostring(self)
+            local targetPart = SilentAimState.TargetPart
+            local targetPos = targetPart.Position
+            
+            -- Common RemoteEvent patterns for shooting
+            if remoteName:match("Hit") or remoteName:match("Fire") or remoteName:match("Shoot") or remoteName:match("Damage") then
+                -- Try to find and replace position/part arguments
+                for i, arg in ipairs(args) do
+                    if typeof(arg) == "Vector3" then
+                        -- Replace Vector3 positions with target position
+                        args[i] = targetPos
+                        break
+                    elseif typeof(arg) == "Instance" and arg:IsA("BasePart") then
+                        -- Replace part references with target part
+                        args[i] = targetPart
+                        break
+                    elseif typeof(arg) == "table" then
+                        -- Handle table arguments (common in modern games)
+                        for j, tableArg in ipairs(arg) do
+                            if typeof(tableArg) == "Vector3" then
+                                arg[j] = targetPos
+                                break
+                            elseif typeof(tableArg) == "Instance" and tableArg:IsA("BasePart") then
+                                arg[j] = targetPart
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
     end
     
     return oldNamecall(self, unpack(args))
@@ -824,10 +858,10 @@ GbSilent:AddToggle("SilentAimEnabled", {
 })
 local DepSilent = GbSilent:AddDependencyBox()
 DepSilent:AddDropdown("SilentMethod", {
-    Values  = { "All", "RCL", "Modern", "Old" },
+    Values  = { "All", "RCL", "Modern", "Old", "RemoteEvent" },
     Default = 1,
     Text    = "Gun System",
-    Tooltip = "All: Hook all methods, RCL: FindPartOnRay methods, Modern: Raycast, Old: Mouse.Hit/Target",
+    Tooltip = "All: Hook all methods, RCL: FindPartOnRay, Modern: Raycast, Old: Mouse.Hit/Target, RemoteEvent: FireServer hooks",
 }):OnChanged(function(val)
     SilentAimSettings.Method = val
 end)
