@@ -146,13 +146,15 @@ end
 -- ══════════════════════════════════════════
 local AimbotSettings = {
     Enabled      = false,
+    Mode         = "Camera (3rd Person)", -- "Camera (3rd Person)" or "Mouse (1st Person)"
     FOV          = 150,
     Smoothness   = 10,
+    Sensitivity  = 0.5,
     HitPart      = "Head",
     TeamCheck    = true,
     ShowFOV      = true,
     FOVColor     = Color3.fromRGB(255, 255, 255),
-    Keybind      = "MouseButton2",
+    Keybind      = "RightMouseButton",
 }
 
 -- ══════════════════════════════════════════
@@ -531,13 +533,19 @@ GbAim:AddToggle("AimbotEnabled", {
     Tooltip = "Rotate camera toward nearest target within FOV",
 })
 GbAim:AddLabel("Hold Key"):AddKeyPicker("AimbotKey", {
-    Default = "MouseButton2",
+    Default = "RightMouseButton",
     Mode    = "Hold",
     Text    = "Aim",
     Tooltip = "Hold this key to activate aimbot",
 })
 GbAim:AddDivider()
 local DepAim = GbAim:AddDependencyBox()
+DepAim:AddDropdown("AimbotMode", {
+    Values  = { "Camera (3rd Person)", "Mouse (1st Person)" },
+    Default = 1,
+    Text    = "Aimbot Mode",
+    Tooltip = "Camera works best for 3rd person. Mouse works best for 1st person.",
+})
 DepAim:AddSlider("AimbotFOV", {
     Text     = "FOV",
     Default  = AimbotSettings.FOV,
@@ -549,13 +557,22 @@ DepAim:AddSlider("AimbotFOV", {
     Tooltip  = "Screen-space radius in pixels to search for targets",
 })
 DepAim:AddSlider("AimbotSmooth", {
-    Text     = "Smoothness",
+    Text     = "Smoothness (Camera)",
     Default  = AimbotSettings.Smoothness,
     Min      = 1,
     Max      = 50,
     Rounding = 0,
     Compact  = true,
-    Tooltip  = "Higher = slower/smoother camera movement",
+    Tooltip  = "Higher = slower/smoother camera movement (3rd Person mode)",
+})
+DepAim:AddSlider("AimbotSens", {
+    Text     = "Sensitivity (Mouse)",
+    Default  = AimbotSettings.Sensitivity,
+    Min      = 0.1,
+    Max      = 5.0,
+    Rounding = 1,
+    Compact  = true,
+    Tooltip  = "Higher = faster mouse movement (1st Person mode)",
 })
 DepAim:AddDropdown("AimbotHitPart", {
     Values  = { "Head", "HumanoidRootPart", "Torso", "UpperTorso" },
@@ -722,8 +739,10 @@ end)
 Toggles.AimbotEnabled:OnChanged(function()  AimbotSettings.Enabled    = Toggles.AimbotEnabled.Value  end)
 Toggles.AimbotTeamCheck:OnChanged(function() AimbotSettings.TeamCheck  = Toggles.AimbotTeamCheck.Value end)
 Toggles.ShowFOV:OnChanged(function()        AimbotSettings.ShowFOV    = Toggles.ShowFOV.Value         end)
+Options.AimbotMode:OnChanged(function()     AimbotSettings.Mode       = Options.AimbotMode.Value      end)
 Options.AimbotFOV:OnChanged(function()      AimbotSettings.FOV        = Options.AimbotFOV.Value       end)
 Options.AimbotSmooth:OnChanged(function()   AimbotSettings.Smoothness  = Options.AimbotSmooth.Value    end)
+Options.AimbotSens:OnChanged(function()     AimbotSettings.Sensitivity = Options.AimbotSens.Value      end)
 Options.AimbotHitPart:OnChanged(function()  AimbotSettings.HitPart    = Options.AimbotHitPart.Value   end)
 Options.FOVColor:OnChanged(function()       AimbotSettings.FOVColor   = Options.FOVColor.Value        end)
 
@@ -807,15 +826,26 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         FovCircle.Visible = false
     end
 
-    -- Aimbot (camera-based)
+    -- Aimbot (camera-based / mouse-based)
     local aimbotHeld = Options.AimbotKey and Options.AimbotKey:GetKeybindActive()
 
     if AimbotSettings.Enabled and aimbotHeld then
         local target, _ = GetClosestTarget()
         if target then
-            local targetCF  = CFrame.new(Camera.CFrame.Position, target.Position)
-            local smooth    = math.clamp(AimbotSettings.Smoothness, 1, 50)
-            Camera.CFrame   = Camera.CFrame:Lerp(targetCF, 1 / smooth)
+            if AimbotSettings.Mode == "Camera (3rd Person)" then
+                local targetCF  = CFrame.new(Camera.CFrame.Position, target.Position)
+                local smooth    = math.clamp(AimbotSettings.Smoothness, 1, 50)
+                Camera.CFrame   = Camera.CFrame:Lerp(targetCF, 1 / smooth)
+            elseif AimbotSettings.Mode == "Mouse (1st Person)" then
+                local sv = Camera:WorldToViewportPoint(target.Position)
+                local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                local delta = Vector2.new(sv.X, sv.Y) - center
+                local sens = AimbotSettings.Sensitivity
+                -- Use mousemoverel if supported by the executor, otherwise fallback
+                if mousemoverel then
+                    mousemoverel(delta.X * sens, delta.Y * sens)
+                end
+            end
         end
     end
 end)
