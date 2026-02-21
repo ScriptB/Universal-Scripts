@@ -1,4 +1,4 @@
--- Universal ESP Pro Enhanced v3.6
+-- Universal ESP Pro Enhanced v3.5
 -- UI: LinoriaLib | Full ESP | Config System
 -- Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/main/Examples/Universal_ESP_Pro_Enhanced.lua", true))()
 
@@ -7,12 +7,11 @@ repeat task.wait() until game:IsLoaded()
 -- ══════════════════════════════════════════
 -- SERVICES
 -- ══════════════════════════════════════════
-local Players          = game:GetService("Players")
-local RunService       = game:GetService("RunService")
-local HttpService      = game:GetService("HttpService")
-local UserInputService = game:GetService("UserInputService")
-local Camera           = workspace.CurrentCamera
-local LocalPlayer      = Players.LocalPlayer
+local Players     = game:GetService("Players")
+local RunService  = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local Camera      = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
 -- ══════════════════════════════════════════
 -- LOAD LINORIA UI LIBRARY
@@ -58,16 +57,6 @@ local Settings = {
     Rainbow = {
         Enabled = false,
         Speed   = 1,
-    },
-    Aimbot = {
-        Enabled    = false,
-        Smoothness = 10,
-        FOV        = 120,
-        ShowFOV    = true,
-        FOVColor   = Color3.fromRGB(255, 255, 255),
-        HitPart    = "Head",
-        TeamCheck  = true,
-        SilentAim  = false,
     },
 }
 
@@ -157,17 +146,6 @@ end
 -- ══════════════════════════════════════════
 local ESPObjects = {}
 
-local function NewDrawing(class, props)
-    local ok, obj = pcall(Drawing.new, class)
-    if not ok then
-        return { Visible = false, Remove = function() end }
-    end
-    for k, v in pairs(props) do
-        pcall(function() obj[k] = v end)
-    end
-    return obj
-end
-
 local function GetColor(player, default)
     if Settings.Rainbow.Enabled then
         return Color3.fromHSV((tick() * Settings.Rainbow.Speed) % 1, 1, 1)
@@ -178,70 +156,15 @@ local function GetColor(player, default)
     return default
 end
 
--- ══════════════════════════════════════════
--- AIMBOT CORE
--- ══════════════════════════════════════════
-local AimbotFOVCircle = NewDrawing("Circle", {
-    Thickness    = 1,
-    Color        = Color3.fromRGB(255, 255, 255),
-    Filled       = false,
-    Transparency = 1,
-    Visible      = false,
-})
-
-local function GetAimPart(char, partName)
-    return char:FindFirstChild(partName) or char:FindFirstChild("HumanoidRootPart")
-end
-
-local function GetClosestTarget()
-    local center   = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    local bestDist = Settings.Aimbot.FOV
-    local bestPart = nil
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player == LocalPlayer then continue end
-        if Settings.Aimbot.TeamCheck and player.Team == LocalPlayer.Team then continue end
-
-        local char = player.Character
-        if not char then continue end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum or hum.Health <= 0 then continue end
-
-        local part = GetAimPart(char, Settings.Aimbot.HitPart)
-        if not part then continue end
-
-        local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-        if not onScreen then continue end
-
-        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-        if dist < bestDist then
-            bestDist = dist
-            bestPart = part
-        end
+local function NewDrawing(class, props)
+    local ok, obj = pcall(Drawing.new, class)
+    if not ok then
+        return { Visible = false, Remove = function() end }
     end
-
-    return bestPart
-end
-
-local function RunAimbot()
-    if not Settings.Aimbot.Enabled then return end
-    if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
-
-    local target = GetClosestTarget()
-    if not target then return end
-
-    local smooth   = math.max(1, Settings.Aimbot.Smoothness)
-    local currentCF = Camera.CFrame
-    local targetCF  = CFrame.new(currentCF.Position, target.Position)
-    Camera.CFrame   = currentCF:Lerp(targetCF, 1 / smooth)
-end
-
-local function UpdateFOVCircle()
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    AimbotFOVCircle.Position = center
-    AimbotFOVCircle.Radius   = Settings.Aimbot.FOV
-    AimbotFOVCircle.Color    = Settings.Aimbot.FOVColor
-    AimbotFOVCircle.Visible  = Settings.Aimbot.Enabled and Settings.Aimbot.ShowFOV
+    for k, v in pairs(props) do
+        pcall(function() obj[k] = v end)
+    end
+    return obj
 end
 
 local function HideESP(e)
@@ -382,7 +305,6 @@ local Window = Library:CreateWindow({
 
 local Tabs = {
     ESP     = Window:AddTab("ESP"),
-    Aimbot  = Window:AddTab("Aimbot"),
     Visuals = Window:AddTab("Visuals"),
     Config  = Window:AddTab("Config"),
     UI      = Window:AddTab("UI Settings"),
@@ -541,69 +463,6 @@ DepName:AddLabel("Color"):AddColorPicker("NameColor", {
 DepName:SetupDependencies({ { Toggles.NameEnabled, true } })
 
 -- ══════════════════════════════════════════
--- TAB: AIMBOT
--- ══════════════════════════════════════════
-
-local GbAim = Tabs.Aimbot:AddLeftGroupbox("Aimbot")
-GbAim:AddToggle("AimbotEnabled", {
-    Text    = "Enabled",
-    Default = Settings.Aimbot.Enabled,
-    Tooltip = "Hold Right Mouse Button to aim at nearest target",
-})
-GbAim:AddLabel("Hold Key"):AddKeyPicker("AimbotKey", {
-    Default = "MouseButton2",
-    Mode    = "Hold",
-    Text    = "Aimbot Hold",
-    Tooltip = "Hold this key to activate aimbot",
-})
-GbAim:AddDivider()
-local DepAim = GbAim:AddDependencyBox()
-DepAim:AddSlider("AimbotSmooth", {
-    Text     = "Smoothness",
-    Default  = Settings.Aimbot.Smoothness,
-    Min      = 1,
-    Max      = 50,
-    Rounding = 0,
-    Compact  = false,
-    Tooltip  = "Higher = slower/smoother aim. 1 = instant snap",
-})
-DepAim:AddSlider("AimbotFOV", {
-    Text     = "FOV Radius",
-    Default  = Settings.Aimbot.FOV,
-    Min      = 10,
-    Max      = 500,
-    Rounding = 0,
-    Compact  = false,
-    Suffix   = " px",
-    Tooltip  = "Screen radius in pixels to search for targets",
-})
-DepAim:AddDropdown("AimbotHitPart", {
-    Values  = { "Head", "HumanoidRootPart", "Torso", "UpperTorso" },
-    Default = 1,
-    Text    = "Target Part",
-    Tooltip = "Which body part to aim at",
-})
-DepAim:AddToggle("AimbotTeamCheck", {
-    Text    = "Team Check",
-    Default = Settings.Aimbot.TeamCheck,
-    Tooltip = "Skip teammates when finding a target",
-})
-DepAim:SetupDependencies({ { Toggles.AimbotEnabled, true } })
-
-local GbFOV = Tabs.Aimbot:AddRightGroupbox("FOV Circle")
-GbFOV:AddToggle("AimbotShowFOV", {
-    Text    = "Show FOV Circle",
-    Default = Settings.Aimbot.ShowFOV,
-    Tooltip = "Draw the FOV circle on screen",
-})
-local DepFOV = GbFOV:AddDependencyBox()
-DepFOV:AddLabel("Circle Color"):AddColorPicker("AimbotFOVColor", {
-    Default = Settings.Aimbot.FOVColor,
-    Title   = "FOV Circle Color",
-})
-DepFOV:SetupDependencies({ { Toggles.AimbotShowFOV, true } })
-
--- ══════════════════════════════════════════
 -- TAB: VISUALS
 -- ══════════════════════════════════════════
 local GbRainbow = Tabs.Visuals:AddLeftGroupbox("Rainbow")
@@ -651,7 +510,7 @@ GbConfig:AddLabel("File: " .. CONFIG_FILE, true)
 
 local GbScriptInfo = Tabs.Config:AddRightGroupbox("About")
 GbScriptInfo:AddLabel("Universal ESP Pro Enhanced", true)
-GbScriptInfo:AddLabel("v3.6  |  LinoriaLib", true)
+GbScriptInfo:AddLabel("v3.5  |  LinoriaLib", true)
 GbScriptInfo:AddDivider()
 GbScriptInfo:AddLabel("Loadstring in script header.", true)
 GbScriptInfo:AddDivider()
@@ -730,14 +589,6 @@ Options.HealthThickness:OnChanged(function() Settings.Health.Thickness   = Optio
 Toggles.RainbowEnabled:OnChanged(function() Settings.Rainbow.Enabled    = Toggles.RainbowEnabled.Value  end)
 Options.RainbowSpeed:OnChanged(function()   Settings.Rainbow.Speed       = Options.RainbowSpeed.Value    end)
 
-Toggles.AimbotEnabled:OnChanged(function()   Settings.Aimbot.Enabled    = Toggles.AimbotEnabled.Value   end)
-Options.AimbotSmooth:OnChanged(function()    Settings.Aimbot.Smoothness  = Options.AimbotSmooth.Value    end)
-Options.AimbotFOV:OnChanged(function()       Settings.Aimbot.FOV         = Options.AimbotFOV.Value        end)
-Options.AimbotHitPart:OnChanged(function()   Settings.Aimbot.HitPart     = Options.AimbotHitPart.Value    end)
-Toggles.AimbotTeamCheck:OnChanged(function() Settings.Aimbot.TeamCheck   = Toggles.AimbotTeamCheck.Value  end)
-Toggles.AimbotShowFOV:OnChanged(function()   Settings.Aimbot.ShowFOV     = Toggles.AimbotShowFOV.Value    end)
-Options.AimbotFOVColor:OnChanged(function()  Settings.Aimbot.FOVColor    = Options.AimbotFOVColor.Value   end)
-
 Options.ESPKeybind:OnClick(function()
     Settings.Enabled = Toggles.ESPEnabled.Value
 end)
@@ -758,7 +609,7 @@ task.delay(10, function()
     end
 end)
 
--- NotificationArea: bottom-right corner flush with screen edge
+-- NotificationArea: bottom-right corner exactly at screen corner
 Library.NotificationArea.AnchorPoint = Vector2.new(1, 1)
 Library.NotificationArea.Position    = UDim2.new(1, 0, 1, 0)
 Library.NotificationArea.Size        = UDim2.new(0, 300, 0, 600)
@@ -803,15 +654,13 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         return math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
     end)
     _ping = ok and p or _ping
-    Library:SetWatermark(("Universal ESP v3.6  |  %d fps  |  %dms  |  %d players"):format(
+    Library:SetWatermark(("Universal ESP v3.5  |  %d fps  |  %dms  |  %d players"):format(
         math.floor(_fps), _ping,
         math.max(0, #Players:GetPlayers() - 1)
     ))
     for _, e in pairs(ESPObjects) do
         pcall(UpdateESP, e)
     end
-    pcall(RunAimbot)
-    pcall(UpdateFOVCircle)
 end)
 
 Library:OnUnload(function()
@@ -819,7 +668,6 @@ Library:OnUnload(function()
     for player in pairs(ESPObjects) do
         RemoveESP(player)
     end
-    pcall(function() AimbotFOVCircle:Remove() end)
     print("[Universal ESP] Unloaded.")
 end)
 
@@ -835,4 +683,4 @@ getgenv().UniversalESP = {
 
 SaveManager:LoadAutoloadConfig()
 Notify("Universal ESP Pro Enhanced", "Loaded! Press End to toggle menu.", 5)
-print("[Universal ESP Pro Enhanced v3.6] Loaded successfully.")
+print("[Universal ESP Pro Enhanced v3.5] Loaded successfully.")
