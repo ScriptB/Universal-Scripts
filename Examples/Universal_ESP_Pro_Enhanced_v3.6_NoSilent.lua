@@ -155,22 +155,6 @@ local AimbotSettings = {
     ShowFOV      = true,
     FOVColor     = Color3.fromRGB(255, 255, 255),
     Keybind      = "RightMouseButton",
-    -- Enhanced features
-    Prediction   = true,
-    PredictionStrength = 0.8,
-    StickyTarget = true,
-    WallCheck    = true,
-    DynamicSens  = true,
-    MaxSmoothDist = 200,
-}
-
--- Enhanced aimbot state tracking
-local AimbotState = {
-    currentTarget = nil,
-    targetLockTime = 0,
-    lastTargetPos = nil,
-    targetVelocity = Vector3.new(),
-    smoothingHistory = {},
 }
 
 -- ══════════════════════════════════════════
@@ -345,47 +329,6 @@ local function getBestBodyPart(char)
         or char:FindFirstChild("Head")
 end
 
--- Enhanced wall check function
-local function checkWallBetween(startPos, endPos)
-    if not AimbotSettings.WallCheck then return false end
-    
-    local rayDirection = (endPos - startPos)
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
-    
-    local raycast = workspace:Raycast(startPos, rayDirection, raycastParams)
-    return raycast ~= nil
-end
-
--- Calculate target velocity for prediction
-local function calculateTargetVelocity(targetPart)
-    if not AimbotState.lastTargetPos then
-        AimbotState.lastTargetPos = targetPart.Position
-        return Vector3.new()
-    end
-    
-    local currentPos = targetPart.Position
-    local deltaTime = RunService.Heartbeat:Wait()
-    local velocity = (currentPos - AimbotState.lastTargetPos) / (deltaTime > 0 and deltaTime or 0.016)
-    
-    AimbotState.lastTargetPos = currentPos
-    return velocity
-end
-
--- Predict target position based on velocity
-local function predictTargetPosition(targetPart, predictionTime)
-    if not AimbotSettings.Prediction then return targetPart.Position end
-    
-    local velocity = calculateTargetVelocity(targetPart)
-    AimbotState.targetVelocity = velocity
-    
-    -- Apply prediction based on distance and velocity
-    local distance = (targetPart.Position - Camera.CFrame.Position).Magnitude
-    local adjustedPrediction = predictionTime * AimbotSettings.PredictionStrength * (distance / 100)
-    
-    return targetPart.Position + (velocity * adjustedPrediction)
-end
 
 -- Function to get true crosshair position using camera ray casting
 local function getTrueCrosshairPosition()
@@ -446,74 +389,27 @@ local function GetClosestTarget()
     local bestChar = nil
     local bestPart = nil
 
-    -- Sticky target logic - prioritize current target if still valid
-    if AimbotSettings.StickyTarget and AimbotState.currentTarget then
-        local currentChar = AimbotState.currentTarget.Parent
-        if currentChar and currentChar.Parent == Players then
-            local player = Players:GetPlayerFromCharacter(currentChar)
-            if player and player ~= LocalPlayer then
-                if not (AimbotSettings.TeamCheck and player.Team == LocalPlayer.Team) then
-                    local hum = currentChar:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 then
-                        local sv, onScreen = Camera:WorldToViewportPoint(AimbotState.currentTarget.Position)
-                        if onScreen then
-                            local screenPos = Vector2.new(sv.X, sv.Y)
-                            local dist = (screenPos - center).Magnitude
-                            if dist < AimbotSettings.FOV * 1.2 then -- Extended FOV for sticky targeting
-                                -- Check wall between camera and target
-                                if not checkWallBetween(Camera.CFrame.Position, AimbotState.currentTarget.Position) then
-                                    bestDist = dist
-                                    bestChar = currentChar
-                                    bestPart = AimbotState.currentTarget
-                                    AimbotState.targetLockTime = AimbotState.targetLockTime + RunService.Heartbeat:Wait()
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    -- If no sticky target or it's invalid, find new target
-    if not bestPart then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player == LocalPlayer then continue end
-            if AimbotSettings.TeamCheck and player.Team == LocalPlayer.Team then continue end
-            local char = player.Character
-            if not char then continue end
-            
-            local part = getBestBodyPart(char)
-            if not part then continue end
-            
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if not hum or hum.Health <= 0 then continue end
-            
-            -- Check wall between camera and target
-            if checkWallBetween(Camera.CFrame.Position, part.Position) then continue end
-            
-            local sv, onScreen = Camera:WorldToViewportPoint(part.Position)
-            if not onScreen then continue end
-            
-            local screenPos = Vector2.new(sv.X, sv.Y)
-            local dist = (screenPos - center).Magnitude
-            
-            -- Enhanced target prioritization: closer targets in FOV get priority
-            local distanceToTarget = (part.Position - Camera.CFrame.Position).Magnitude
-            local priorityScore = dist + (distanceToTarget * 0.01) -- Slight bias toward closer targets
-            
-            if priorityScore < bestDist then
-                bestDist = priorityScore
-                bestChar = char
-                bestPart = part
-            end
-        end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if AimbotSettings.TeamCheck and player.Team == LocalPlayer.Team then continue end
+        local char = player.Character
+        if not char then continue end
         
-        -- Update sticky target state
-        if bestPart ~= AimbotState.currentTarget then
-            AimbotState.currentTarget = bestPart
-            AimbotState.targetLockTime = 0
-            AimbotState.lastTargetPos = nil
+        local part = getBestBodyPart(char)
+        if not part then continue end
+        
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health <= 0 then continue end
+        
+        local sv, onScreen = Camera:WorldToViewportPoint(part.Position)
+        if not onScreen then continue end
+        
+        local screenPos = Vector2.new(sv.X, sv.Y)
+        local dist = (screenPos - center).Magnitude
+        if dist < bestDist then
+            bestDist = dist
+            bestChar = char
+            bestPart = part
         end
     end
     return bestPart, bestChar, center
@@ -1046,54 +942,18 @@ local _wmConn = RunService.RenderStepped:Connect(function()
     if AimbotSettings.Enabled and aimbotHeld then
         local target, _, center = GetClosestTarget()
         if target and center then
-            -- Get predicted target position
-            local predictedPos = predictTargetPosition(target, 0.1)
-            local sv = Camera:WorldToViewportPoint(predictedPos)
-            local screenTargetPos = Vector2.new(sv.X, sv.Y)
-            local delta = screenTargetPos - center
+            local sv = Camera:WorldToViewportPoint(target.Position)
+            local delta = Vector2.new(sv.X, sv.Y) - center
             
-            -- Dynamic sensitivity based on distance
-            local distance = (target.Position - Camera.CFrame.Position).Magnitude
-            local dynamicSens = AimbotSettings.Sensitivity
-            if AimbotSettings.DynamicSens then
-                -- Closer targets = lower sensitivity for precision
-                dynamicSens = dynamicSens * math.max(0.3, math.min(1.5, distance / 100))
+            -- Simple smoothing
+            if AimbotSettings.Smoothness > 1 then
+                delta = delta / AimbotSettings.Smoothness
             end
-            
-            -- Enhanced smoothing based on distance and movement
-            local smoothingFactor = AimbotSettings.Smoothness
-            if delta.Magnitude > AimbotSettings.MaxSmoothDist then
-                smoothingFactor = smoothingFactor * 0.5 -- Less smoothing for large movements
-            end
-            
-            -- Apply smoothing with velocity consideration
-            local smoothedDelta = delta
-            if smoothingFactor > 1 then
-                local velocityInfluence = AimbotState.targetVelocity.Magnitude * 0.01
-                local adjustedSmoothing = math.max(1, smoothingFactor - velocityInfluence)
-                smoothedDelta = delta / adjustedSmoothing
-            end
-            
-            -- Store in smoothing history for better interpolation
-            table.insert(AimbotState.smoothingHistory, smoothedDelta)
-            if #AimbotState.smoothingHistory > 5 then
-                table.remove(AimbotState.smoothingHistory, 1)
-            end
-            
-            -- Apply averaged smoothing for stability
-            local avgDelta = Vector2.new(0, 0)
-            for _, histDelta in pairs(AimbotState.smoothingHistory) do
-                avgDelta = avgDelta + histDelta
-            end
-            avgDelta = avgDelta / #AimbotState.smoothingHistory
             
             -- Use mousemoverel if supported by the executor, otherwise fallback
             if mousemoverel then
-                mousemoverel(avgDelta.X * dynamicSens, avgDelta.Y * dynamicSens)
+                mousemoverel(delta.X * AimbotSettings.Sensitivity, delta.Y * AimbotSettings.Sensitivity)
             end
-        else
-            -- Clear smoothing history when no target
-            AimbotState.smoothingHistory = {}
         end
     end
 end)
