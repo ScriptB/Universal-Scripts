@@ -607,6 +607,55 @@ local function _aimbotGetRainbow()
     return Color3.fromHSV((tick() * AimbotSettings.FOV.RainbowSpeed) % 1, 1, 1)
 end
 
+local function _aimbotGetClosest()
+    local cam = workspace.CurrentCamera
+    if not cam then return "No Camera" end
+    
+    local shortestDistance = math.huge
+    local closestPlayer = nil
+    local mouseLocation = UserInputService:GetMouseLocation()
+    
+    _candidateCount = 0
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local char = player.Character
+            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+                local hum = char.Humanoid
+                if hum.Health > 0 or not AimbotSettings.AliveCheck then
+                    if not checkTeam(player) then
+                        local targetPart = getBestBodyPart(char)
+                        if targetPart then
+                            local screenPos, onScreen = cam:WorldToViewportPoint(targetPart.Position)
+                            if onScreen then
+                                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mouseLocation).Magnitude
+                                
+                                if (not AimbotSettings.FOV.Enabled or AimbotSettings.FOV.IgnoreRadius or distance <= (AimbotSettings.FOV.Radius or 100)) then
+                                    if not checkWall(char) then
+                                        _candidateCount = _candidateCount + 1
+                                        if distance < shortestDistance then
+                                            shortestDistance = distance
+                                            closestPlayer = player
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    if closestPlayer then
+        currentTarget = closestPlayer
+        _aimbotLocked = true
+        return "Found: " .. closestPlayer.Name
+    else
+        _aimbotCancelLock()
+        return "Scanning..."
+    end
+end
+
 local function _aimbotCancelLock()
     _aimbotLocked = nil
     currentTarget = nil
