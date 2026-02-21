@@ -1,6 +1,5 @@
--- Universal ESP Pro Enhanced v3.0
--- UI: VapeV4 Library | Full ESP | Config System
--- Toggle GUI: RightShift (VapeV4 default)
+-- Universal ESP Pro Enhanced v3.1
+-- UI: AquaLib | Full ESP | Config System
 -- Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/main/Examples/Universal_ESP_Pro_Enhanced.lua", true))()
 
 repeat task.wait() until game:IsLoaded()
@@ -8,40 +7,35 @@ repeat task.wait() until game:IsLoaded()
 -- ══════════════════════════════════════════
 -- SERVICES
 -- ══════════════════════════════════════════
-local Players         = game:GetService("Players")
-local RunService      = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local HttpService     = game:GetService("HttpService")
-local Camera          = workspace.CurrentCamera
-local LocalPlayer     = Players.LocalPlayer
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
+local HttpService      = game:GetService("HttpService")
+local Camera           = workspace.CurrentCamera
+local LocalPlayer      = Players.LocalPlayer
 
 -- ══════════════════════════════════════════
--- LOAD VAPE V4 LIBRARY
+-- LOAD UI LIBRARY
 -- ══════════════════════════════════════════
-local GuiLibrary = loadstring(game:HttpGet("https://vxperblx.xyz/NewGuiLibrary.lua", true))()
-shared.GuiLibrary = GuiLibrary
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/TheoTheEpic/AquaLib/main/AquaLib.lua"))()
 
 -- ══════════════════════════════════════════
 -- ESP SETTINGS
 -- ══════════════════════════════════════════
 local Settings = {
-    Enabled    = true,
-    TeamCheck  = false,
-    TeamColor  = false,
-    MaxDist    = 1000,
+    Enabled   = true,
+    TeamCheck = false,
+    TeamColor = false,
+    MaxDist   = 1000,
     Box = {
-        Enabled      = true,
-        Color        = Color3.fromRGB(255, 255, 255),
-        Thickness    = 1,
-        Transparency = 1,
-        Filled       = false,
+        Enabled   = true,
+        Color     = Color3.fromRGB(255, 255, 255),
+        Thickness = 1,
     },
     Tracer = {
-        Enabled      = true,
-        Color        = Color3.fromRGB(255, 255, 255),
-        Thickness    = 1,
-        Transparency = 1,
-        Origin       = "Bottom",
+        Enabled   = true,
+        Color     = Color3.fromRGB(255, 255, 255),
+        Thickness = 1,
+        Origin    = "Bottom",
     },
     Name = {
         Enabled      = true,
@@ -77,9 +71,13 @@ end
 local function DeepSerialize(t)
     local o = {}
     for k, v in pairs(t) do
-        if typeof(v) == "Color3" then o[k] = SerializeColor(v)
-        elseif type(v) == "table" then o[k] = DeepSerialize(v)
-        else o[k] = v end
+        if typeof(v) == "Color3" then
+            o[k] = SerializeColor(v)
+        elseif type(v) == "table" then
+            o[k] = DeepSerialize(v)
+        else
+            o[k] = v
+        end
     end
     return o
 end
@@ -87,9 +85,14 @@ local function DeepDeserialize(t)
     local o = {}
     for k, v in pairs(t) do
         if type(v) == "table" then
-            if v.R ~= nil and v.G ~= nil and v.B ~= nil then o[k] = DeserializeColor(v)
-            else o[k] = DeepDeserialize(v) end
-        else o[k] = v end
+            if v.R ~= nil and v.G ~= nil and v.B ~= nil then
+                o[k] = DeserializeColor(v)
+            else
+                o[k] = DeepDeserialize(v)
+            end
+        else
+            o[k] = v
+        end
     end
     return o
 end
@@ -98,7 +101,11 @@ local function SaveConfig()
     local ok, err = pcall(function()
         writefile(CONFIG_FILE, HttpService:JSONEncode(DeepSerialize(Settings)))
     end)
-    if ok then print("[ESP] Config saved.") else warn("[ESP] Save failed: " .. tostring(err)) end
+    if ok then
+        print("[ESP] Config saved.")
+    else
+        warn("[ESP] Save failed: " .. tostring(err))
+    end
 end
 
 local function LoadConfig()
@@ -110,8 +117,12 @@ local function LoadConfig()
         for k, v in pairs(loaded) do
             if Settings[k] ~= nil then
                 if type(v) == "table" and type(Settings[k]) == "table" then
-                    for sk, sv in pairs(v) do Settings[k][sk] = sv end
-                else Settings[k] = v end
+                    for sk, sv in pairs(v) do
+                        Settings[k][sk] = sv
+                    end
+                else
+                    Settings[k] = v
+                end
             end
         end
         print("[ESP] Config loaded.")
@@ -135,7 +146,9 @@ end
 
 local function NewDrawing(class, props)
     local ok, obj = pcall(Drawing.new, class)
-    if not ok then return { Visible = false, Remove = function() end } end
+    if not ok then
+        return { Visible = false, Remove = function() end }
+    end
     for k, v in pairs(props) do
         pcall(function() obj[k] = v end)
     end
@@ -156,16 +169,16 @@ local function CreateESP(player)
     local e = {
         Player = player,
         Boxes = {
-            NewDrawing("Line", { Thickness=1, Color=Color3.new(1,1,1), Transparency=1, Visible=false }),
-            NewDrawing("Line", { Thickness=1, Color=Color3.new(1,1,1), Transparency=1, Visible=false }),
-            NewDrawing("Line", { Thickness=1, Color=Color3.new(1,1,1), Transparency=1, Visible=false }),
-            NewDrawing("Line", { Thickness=1, Color=Color3.new(1,1,1), Transparency=1, Visible=false }),
+            NewDrawing("Line", { Thickness = 1, Color = Color3.new(1,1,1), Transparency = 1, Visible = false }),
+            NewDrawing("Line", { Thickness = 1, Color = Color3.new(1,1,1), Transparency = 1, Visible = false }),
+            NewDrawing("Line", { Thickness = 1, Color = Color3.new(1,1,1), Transparency = 1, Visible = false }),
+            NewDrawing("Line", { Thickness = 1, Color = Color3.new(1,1,1), Transparency = 1, Visible = false }),
         },
-        Tracer  = NewDrawing("Line", { Thickness=1, Color=Color3.new(1,1,1), Transparency=1, Visible=false }),
-        Name    = NewDrawing("Text", { Text=player.Name, Size=14, Center=true, Outline=true, Color=Color3.new(1,1,1), Transparency=1, Visible=false }),
-        HpBg    = NewDrawing("Line", { Thickness=4, Color=Color3.new(0,0,0), Transparency=0.5, Visible=false }),
-        HpBar   = NewDrawing("Line", { Thickness=3, Color=Color3.new(0,1,0), Transparency=1, Visible=false }),
-        HpText  = NewDrawing("Text", { Text="100hp", Size=11, Center=true, Outline=true, Color=Color3.new(1,1,1), Transparency=1, Visible=false }),
+        Tracer = NewDrawing("Line", { Thickness = 1, Color = Color3.new(1,1,1), Transparency = 1, Visible = false }),
+        Name   = NewDrawing("Text", { Text = player.Name, Size = 14, Center = true, Outline = true, Color = Color3.new(1,1,1), Transparency = 1, Visible = false }),
+        HpBg   = NewDrawing("Line", { Thickness = 4, Color = Color3.new(0,0,0), Transparency = 0.5, Visible = false }),
+        HpBar  = NewDrawing("Line", { Thickness = 3, Color = Color3.new(0,1,0), Transparency = 1, Visible = false }),
+        HpText = NewDrawing("Text", { Text = "100hp", Size = 11, Center = true, Outline = true, Color = Color3.new(1,1,1), Transparency = 1, Visible = false }),
     }
     ESPObjects[player] = e
 end
@@ -212,11 +225,10 @@ local function UpdateESP(e)
     local bc  = GetColor(player, Settings.Box.Color)
     local bv  = Settings.Enabled and Settings.Box.Enabled
     local bt  = Settings.Box.Thickness
-    local btr = Settings.Box.Transparency
-    e.Boxes[1].From=tl; e.Boxes[1].To=tr; e.Boxes[1].Color=bc; e.Boxes[1].Thickness=bt; e.Boxes[1].Transparency=btr; e.Boxes[1].Visible=bv
-    e.Boxes[2].From=tr; e.Boxes[2].To=br; e.Boxes[2].Color=bc; e.Boxes[2].Thickness=bt; e.Boxes[2].Transparency=btr; e.Boxes[2].Visible=bv
-    e.Boxes[3].From=br; e.Boxes[3].To=bl; e.Boxes[3].Color=bc; e.Boxes[3].Thickness=bt; e.Boxes[3].Transparency=btr; e.Boxes[3].Visible=bv
-    e.Boxes[4].From=bl; e.Boxes[4].To=tl; e.Boxes[4].Color=bc; e.Boxes[4].Thickness=bt; e.Boxes[4].Transparency=btr; e.Boxes[4].Visible=bv
+    e.Boxes[1].From = tl; e.Boxes[1].To = tr; e.Boxes[1].Color = bc; e.Boxes[1].Thickness = bt; e.Boxes[1].Visible = bv
+    e.Boxes[2].From = tr; e.Boxes[2].To = br; e.Boxes[2].Color = bc; e.Boxes[2].Thickness = bt; e.Boxes[2].Visible = bv
+    e.Boxes[3].From = br; e.Boxes[3].To = bl; e.Boxes[3].Color = bc; e.Boxes[3].Thickness = bt; e.Boxes[3].Visible = bv
+    e.Boxes[4].From = bl; e.Boxes[4].To = tl; e.Boxes[4].Color = bc; e.Boxes[4].Thickness = bt; e.Boxes[4].Visible = bv
 
     -- Tracer
     local tOrigin
@@ -227,12 +239,11 @@ local function UpdateESP(e)
     else
         tOrigin = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
     end
-    e.Tracer.From        = tOrigin
-    e.Tracer.To          = Vector2.new(cx, cy + h/2)
-    e.Tracer.Color       = GetColor(player, Settings.Tracer.Color)
-    e.Tracer.Thickness   = Settings.Tracer.Thickness
-    e.Tracer.Transparency= Settings.Tracer.Transparency
-    e.Tracer.Visible     = Settings.Enabled and Settings.Tracer.Enabled
+    e.Tracer.From      = tOrigin
+    e.Tracer.To        = Vector2.new(cx, cy + h/2)
+    e.Tracer.Color     = GetColor(player, Settings.Tracer.Color)
+    e.Tracer.Thickness = Settings.Tracer.Thickness
+    e.Tracer.Visible   = Settings.Enabled and Settings.Tracer.Enabled
 
     -- Name
     local nameStr = player.Name
@@ -247,9 +258,9 @@ local function UpdateESP(e)
 
     -- Health Bar
     if hum and Settings.Health.Enabled and Settings.Health.ShowBar then
-        local ratio = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
-        local bx    = tl.X - 6
-        local hColor = Color3.fromRGB(math.floor(255*(1-ratio)), math.floor(255*ratio), 0)
+        local ratio  = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
+        local bx     = tl.X - 6
+        local hColor = Color3.fromRGB(math.floor(255 * (1 - ratio)), math.floor(255 * ratio), 0)
         e.HpBg.From      = Vector2.new(bx, tl.Y)
         e.HpBg.To        = Vector2.new(bx, bl.Y)
         e.HpBg.Thickness = Settings.Health.Thickness + 1
@@ -257,7 +268,7 @@ local function UpdateESP(e)
         e.HpBar.From     = Vector2.new(bx, bl.Y - (bl.Y - tl.Y) * ratio)
         e.HpBar.To       = Vector2.new(bx, bl.Y)
         e.HpBar.Color    = hColor
-        e.HpBar.Thickness= Settings.Health.Thickness
+        e.HpBar.Thickness = Settings.Health.Thickness
         e.HpBar.Visible  = Settings.Enabled
         if Settings.Health.ShowText then
             e.HpText.Text     = math.floor(hum.Health) .. "hp"
@@ -267,220 +278,103 @@ local function UpdateESP(e)
             e.HpText.Visible = false
         end
     else
-        e.HpBg.Visible  = false
-        e.HpBar.Visible = false
-        e.HpText.Visible= false
+        e.HpBg.Visible   = false
+        e.HpBar.Visible  = false
+        e.HpText.Visible = false
     end
 end
 
 -- ══════════════════════════════════════════
--- BUILD VAPE V4 UI
+-- BUILD UI (AquaLib)
 -- ══════════════════════════════════════════
-local GUI     = GuiLibrary.CreateMainWindow()
+local window = lib.createWindow("Universal ESP Pro Enhanced", "UniversalESP", true)
 
-local ESPWin  = GuiLibrary.CreateWindow({ Name = "ESP",     IconSize = 16 })
-local VisWin  = GuiLibrary.CreateWindow({ Name = "Visuals", IconSize = 16 })
-local CfgWin  = GuiLibrary.CreateWindow({ Name = "Config",  IconSize = 16 })
+-- ── Tab: ESP ───────────────────────────────
+local tabESP = window.createTab("ESP")
 
--- Sidebar navigation buttons
-GUI.CreateDivider()
-GUI.CreateButton({ Name = "ESP",     Function = function(cb) ESPWin.SetVisible(cb) end })
-GUI.CreateButton({ Name = "Visuals", Function = function(cb) VisWin.SetVisible(cb) end })
-GUI.CreateButton({ Name = "Config",  Function = function(cb) CfgWin.SetVisible(cb) end })
-GUI.CreateDivider()
-
--- ── Master Controls (main GUI sidebar section) ────
-local MasterSection = GUI.CreateDivider2("Master Controls")
-
-MasterSection.CreateToggle({
-    Name     = "ESP Enabled",
-    Default  = Settings.Enabled,
-    Function = function(v) Settings.Enabled = v end,
-    HoverText = "Master toggle for all ESP features",
-})
-
-MasterSection.CreateToggle({
-    Name     = "Team Check",
-    Default  = Settings.TeamCheck,
-    Function = function(v) Settings.TeamCheck = v end,
-    HoverText = "Hide ESP for teammates",
-})
-
-MasterSection.CreateToggle({
-    Name     = "Team Color",
-    Default  = Settings.TeamColor,
-    Function = function(v) Settings.TeamColor = v end,
-    HoverText = "Use team color for ESP elements",
-})
-
-MasterSection.CreateSlider({
-    Name     = "Max Distance",
-    Min      = 100,
-    Max      = 5000,
-    Default  = Settings.MaxDist,
-    Function = function(v) Settings.MaxDist = v end,
-})
-
--- ── ESP Window ──────────────────────────────────
-ESPWin.CreateToggle({
-    Name     = "Box ESP",
-    Default  = Settings.Box.Enabled,
-    Function = function(v) Settings.Box.Enabled = v end,
-})
-
-ESPWin.CreateSlider({
-    Name     = "Box Thickness",
-    Min      = 1,
-    Max      = 5,
-    Default  = Settings.Box.Thickness,
-    Function = function(v) Settings.Box.Thickness = v end,
-})
-
-ESPWin.CreateColorSlider({
-    Name     = "Box Color",
-    Function = function(h, s, v)
-        Settings.Box.Color = Color3.fromHSV(h, s, v)
-    end,
-})
-
--- Tracer ESP
-ESPWin.CreateToggle({
-    Name     = "Tracer ESP",
-    Default  = Settings.Tracer.Enabled,
-    Function = function(v) Settings.Tracer.Enabled = v end,
-})
-
-ESPWin.CreateSlider({
-    Name     = "Tracer Thickness",
-    Min      = 1,
-    Max      = 5,
-    Default  = Settings.Tracer.Thickness,
-    Function = function(v) Settings.Tracer.Thickness = v end,
-})
-
-ESPWin.CreateColorSlider({
-    Name     = "Tracer Color",
-    Function = function(h, s, v)
-        Settings.Tracer.Color = Color3.fromHSV(h, s, v)
-    end,
-})
-
-ESPWin.CreateDropdown({
-    Name     = "Tracer Origin",
-    List     = { "Bottom", "Center", "Top" },
-    Function = function(v) Settings.Tracer.Origin = v end,
-})
-
--- Name ESP
-ESPWin.CreateToggle({
-    Name     = "Name ESP",
-    Default  = Settings.Name.Enabled,
-    Function = function(v) Settings.Name.Enabled = v end,
-})
-
-ESPWin.CreateToggle({
-    Name     = "Show Distance",
-    Default  = Settings.Name.ShowDistance,
-    Function = function(v) Settings.Name.ShowDistance = v end,
-})
-
-ESPWin.CreateToggle({
-    Name     = "Show Health (Name)",
-    Default  = Settings.Name.ShowHealth,
-    Function = function(v) Settings.Name.ShowHealth = v end,
-})
-
-ESPWin.CreateSlider({
-    Name     = "Name Size",
-    Min      = 10,
-    Max      = 24,
-    Default  = Settings.Name.Size,
-    Function = function(v) Settings.Name.Size = v end,
-})
-
-ESPWin.CreateColorSlider({
-    Name     = "Name Color",
-    Function = function(h, s, v)
-        Settings.Name.Color = Color3.fromHSV(h, s, v)
-    end,
-})
-
--- Health Bar
-ESPWin.CreateToggle({
-    Name     = "Health Bar",
-    Default  = Settings.Health.Enabled,
-    Function = function(v) Settings.Health.Enabled = v end,
-})
-
-ESPWin.CreateToggle({
-    Name     = "Health Text",
-    Default  = Settings.Health.ShowText,
-    Function = function(v) Settings.Health.ShowText = v end,
-})
-
-ESPWin.CreateSlider({
-    Name     = "Health Bar Thickness",
-    Min      = 1,
-    Max      = 6,
-    Default  = Settings.Health.Thickness,
-    Function = function(v) Settings.Health.Thickness = v end,
-})
-
--- ── Visuals Window ─────────────────────────
-VisWin.CreateToggle({
-    Name     = "Rainbow Mode",
-    Default  = Settings.Rainbow.Enabled,
-    Function = function(v) Settings.Rainbow.Enabled = v end,
-    HoverText = "Cycles all ESP colors through rainbow",
-})
-
-VisWin.CreateSlider({
-    Name     = "Rainbow Speed",
-    Min      = 1,
-    Max      = 10,
-    Default  = Settings.Rainbow.Speed,
-    Function = function(v) Settings.Rainbow.Speed = v end,
-})
-
-VisWin.CreateToggle({
-    Name     = "Name Outline",
-    Default  = Settings.Name.Outline,
-    Function = function(v) Settings.Name.Outline = v end,
-})
-
--- ── Config Window ──────────────────────────
-CfgWin.CreateButton2({
-    Name     = "SAVE CONFIG",
-    Function = SaveConfig,
-})
-
-CfgWin.CreateButton2({
-    Name     = "LOAD CONFIG",
-    Function = LoadConfig,
-})
-
--- ── GUI Settings (main sidebar) ────────────────
-local GUISettings = GUI.CreateDivider2("GUI Settings")
-
-GUISettings.CreateToggle({
-    Name     = "Show Tooltips",
-    Default  = true,
-    Function = function(v) GuiLibrary.ToggleTooltips = v end,
-    HoverText = "Toggles visibility of hover tooltips",
-})
-
-GUISettings.CreateToggle({
-    Name     = "Notifications",
-    Default  = true,
-    Function = function(v) GuiLibrary.Notifications = v end,
-    HoverText = "Shows notifications",
-})
-
-GUI.CreateColorSlider("GUI Theme", function(h, s, v)
-    GuiLibrary.UpdateUI(h, s, v)
+local secMaster = tabESP.createSection("Master", false)
+secMaster.createToggle("ESP Enabled", Settings.Enabled, function(v)
+    Settings.Enabled = v
+end)
+secMaster.createToggle("Team Check", Settings.TeamCheck, function(v)
+    Settings.TeamCheck = v
+end)
+secMaster.createToggle("Team Color", Settings.TeamColor, function(v)
+    Settings.TeamColor = v
+end)
+secMaster.createSlider("Max Distance", { min = 100, max = 5000, defualt = Settings.MaxDist }, function(v)
+    Settings.MaxDist = v
 end)
 
-GUI.CreateGUIBind()
+local secBox = tabESP.createSection("Box ESP", false)
+secBox.createToggle("Box Enabled", Settings.Box.Enabled, function(v)
+    Settings.Box.Enabled = v
+end)
+secBox.createSlider("Box Thickness", { min = 1, max = 5, defualt = Settings.Box.Thickness }, function(v)
+    Settings.Box.Thickness = v
+end)
+
+local secTracer = tabESP.createSection("Tracer ESP", false)
+secTracer.createToggle("Tracer Enabled", Settings.Tracer.Enabled, function(v)
+    Settings.Tracer.Enabled = v
+end)
+secTracer.createSlider("Tracer Thickness", { min = 1, max = 5, defualt = Settings.Tracer.Thickness }, function(v)
+    Settings.Tracer.Thickness = v
+end)
+secTracer.createDropdown("Tracer Origin", { "Bottom", "Center", "Top" }, Settings.Tracer.Origin, function(v)
+    Settings.Tracer.Origin = v
+end)
+
+local secName = tabESP.createSection("Name ESP", false)
+secName.createToggle("Name Enabled", Settings.Name.Enabled, function(v)
+    Settings.Name.Enabled = v
+end)
+secName.createToggle("Show Distance", Settings.Name.ShowDistance, function(v)
+    Settings.Name.ShowDistance = v
+end)
+secName.createToggle("Show Health", Settings.Name.ShowHealth, function(v)
+    Settings.Name.ShowHealth = v
+end)
+secName.createToggle("Name Outline", Settings.Name.Outline, function(v)
+    Settings.Name.Outline = v
+end)
+secName.createSlider("Name Size", { min = 10, max = 24, defualt = Settings.Name.Size }, function(v)
+    Settings.Name.Size = v
+end)
+
+local secHealth = tabESP.createSection("Health Bar", false)
+secHealth.createToggle("Health Bar Enabled", Settings.Health.Enabled, function(v)
+    Settings.Health.Enabled = v
+end)
+secHealth.createToggle("Health Text", Settings.Health.ShowText, function(v)
+    Settings.Health.ShowText = v
+end)
+secHealth.createSlider("Bar Thickness", { min = 1, max = 6, defualt = Settings.Health.Thickness }, function(v)
+    Settings.Health.Thickness = v
+end)
+
+-- ── Tab: Visuals ───────────────────────────
+local tabVisuals = window.createTab("Visuals")
+
+local secRainbow = tabVisuals.createSection("Rainbow", false)
+secRainbow.createToggle("Rainbow Mode", Settings.Rainbow.Enabled, function(v)
+    Settings.Rainbow.Enabled = v
+end)
+secRainbow.createSlider("Rainbow Speed", { min = 1, max = 10, defualt = Settings.Rainbow.Speed }, function(v)
+    Settings.Rainbow.Speed = v
+end)
+
+-- ── Tab: Config ────────────────────────────
+local tabConfig = window.createTab("Config")
+
+local secConfig = tabConfig.createSection("Configuration", false)
+secConfig.createButton("Save Config", function()
+    SaveConfig()
+end)
+secConfig.createButton("Load Config", function()
+    LoadConfig()
+end)
+secConfig.createText("Config file: UniversalESP_Config.json")
 
 -- ══════════════════════════════════════════
 -- ESP RUNTIME
@@ -515,11 +409,10 @@ getgenv().UniversalESP = {
     SaveConfig = SaveConfig,
     LoadConfig = LoadConfig,
     Destroy    = function()
-        for player, _ in pairs(ESPObjects) do
+        for player in pairs(ESPObjects) do
             RemoveESP(player)
         end
-        GuiLibrary.SelfDestruct()
     end,
 }
 
-print("[Universal ESP Pro Enhanced v3.0] Loaded successfully.")
+print("[Universal ESP Pro Enhanced v3.1] Loaded successfully.")
