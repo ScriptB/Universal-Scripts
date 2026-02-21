@@ -145,12 +145,13 @@ end
 -- SILENT AIM SETTINGS
 -- ══════════════════════════════════════════
 local SilentAimSettings = {
-    Enabled      = false,
-    HitPart      = "Head",
-    TeamCheck    = true,
+    Enabled = false,
+    HitPart = "Head",
+    TeamCheck = false,
     ShowTargetLine = true,
     TargetLineColor = Color3.fromRGB(0, 255, 0),
-    Method       = "All", -- "RCL", "Modern", "Old", or "All"
+    Method = "All",
+    HitChance = 100
 }
 
 -- Silent Aim State
@@ -158,6 +159,65 @@ local SilentAimState = {
     Target = nil,
     TargetPart = nil,
 }
+
+-- Hit Chance Calculation
+local function CalculateChance(Percentage)
+    -- Floor the percentage
+    Percentage = math.floor(Percentage)
+    
+    -- Get the chance
+    local chance = math.floor(Random.new().NextNumber(Random.new(), 0, 1) * 100) / 100
+    
+    -- Return
+    return chance <= Percentage / 100
+end
+
+-- Expected Arguments for validation
+local ExpectedArguments = {
+    FindPartOnRayWithIgnoreList = {
+        ArgCountRequired = 3,
+        Args = {
+            "Instance", "Ray", "table", "boolean", "boolean"
+        }
+    },
+    FindPartOnRayWithWhitelist = {
+        ArgCountRequired = 3,
+        Args = {
+            "Instance", "Ray", "table", "boolean"
+        }
+    },
+    FindPartOnRay = {
+        ArgCountRequired = 2,
+        Args = {
+            "Instance", "Ray", "Instance", "boolean", "boolean"
+        }
+    },
+    Raycast = {
+        ArgCountRequired = 3,
+        Args = {
+            "Instance", "Vector3", "Vector3", "RaycastParams"
+        }
+    }
+}
+
+-- Validate Arguments Function
+local function ValidateArguments(Args, RayMethod)
+    local Matches = 0
+    if #Args < RayMethod.ArgCountRequired then
+        return false
+    end
+    for Pos, Argument in next, Args do
+        if typeof(Argument) == RayMethod.Args[Pos] then
+            Matches = Matches + 1
+        end
+    end
+    return Matches >= RayMethod.ArgCountRequired
+end
+
+-- Get Direction Function
+local function getDirection(Origin, Position)
+    return (Position - Origin).Unit * 1000
+end
 
 -- ══════════════════════════════════════════
 -- AIMBOT SETTINGS
@@ -381,84 +441,92 @@ end
 -- SILENT AIM HOOKS
 -- ══════════════════════════════════════════
 
--- Store original functions
 local oldNamecall
 local oldIndex
 
 -- Hook __namecall for RCL and Modern gun systems
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
+    local chance = CalculateChance(SilentAimSettings.HitChance)
     
-    -- Only intercept calls from the game when we have a valid target
-    if not checkcaller() and SilentAimSettings.Enabled and SilentAimState.TargetPart then
+    -- Only intercept calls from the game when we have a valid target and hit chance succeeds
+    if not checkcaller() and SilentAimSettings.Enabled and SilentAimState.TargetPart and chance then
         local methodEnabled = SilentAimSettings.Method == "All"
         
         -- Hook FindPartOnRayWithIgnoreList (RCL guns)
         if method == "FindPartOnRayWithIgnoreList" and self == workspace and (methodEnabled or SilentAimSettings.Method == "RCL") then
-            local ray = args[1] -- Ray is first argument after self
-            if ray and typeof(ray) == "Ray" then
-                -- Redirect ray to target
-                local origin = ray.Origin
-                local targetPos = SilentAimState.TargetPart.Position
-                local newDirection = (targetPos - origin).Unit * ray.Direction.Magnitude
-                local newRay = Ray.new(origin, newDirection)
-                args[1] = newRay
+            if ValidateArguments(args, ExpectedArguments.FindPartOnRayWithIgnoreList) then
+                local ray = args[1] -- Ray is first argument after self
+                if ray and typeof(ray) == "Ray" then
+                    -- Redirect ray to target
+                    local origin = ray.Origin
+                    local direction = getDirection(origin, SilentAimState.TargetPart.Position)
+                    args[1] = Ray.new(origin, direction)
+                    return oldNamecall(self, unpack(args))
+                end
             end
         end
         
-        -- Hook FindPartOnRay (Basic ray method)
-        if method == "FindPartOnRay" and self == workspace and (methodEnabled or SilentAimSettings.Method == "RCL") then
-            local ray = args[1]
-            if ray and typeof(ray) == "Ray" then
-                local origin = ray.Origin
-                local targetPos = SilentAimState.TargetPart.Position
-                local newDirection = (targetPos - origin).Unit * ray.Direction.Magnitude
-                local newRay = Ray.new(origin, newDirection)
-                args[1] = newRay
+        -- Hook FindPartOnRayWithWhitelist (RCL guns)
+        if method == "FindPartOnRayWithWhitelist" and self == workspace and (methodEnabled or SilentAimSettings.Method == "RCL") then
+            if ValidateArguments(args, ExpectedArguments.FindPartOnRayWithWhitelist) then
+                local ray = args[1]
+                if ray and typeof(ray) == "Ray" then
+                    -- Redirect ray to target
+                    local origin = ray.Origin
+                    local direction = getDirection(origin, SilentAimState.TargetPart.Position)
+                    args[1] = Ray.new(origin, direction)
+                    return oldNamecall(self, unpack(args))
+                end
+            end
+        end
+        
+        -- Hook FindPartOnRay (RCL guns)  
+        if (method == "FindPartOnRay" or method == "findPartOnRay") and self == workspace and (methodEnabled or SilentAimSettings.Method == "RCL") then
+            if ValidateArguments(args, ExpectedArguments.FindPartOnRay) then
+                local ray = args[1]
+                if ray and typeof(ray) == "Ray" then
+                    -- Redirect ray to target
+                    local origin = ray.Origin
+                    local direction = getDirection(origin, SilentAimState.TargetPart.Position)
+                    args[1] = Ray.new(origin, direction)
+                    return oldNamecall(self, unpack(args))
+                end
             end
         end
         
         -- Hook Raycast (Modern guns)
         if method == "Raycast" and self == workspace and (methodEnabled or SilentAimSettings.Method == "Modern") then
-            local origin = args[1]   -- Origin is first argument after self
-            local direction = args[2] -- Direction is second argument after self
-            if origin and direction and typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
-                -- Redirect direction to target
-                local targetPos = SilentAimState.TargetPart.Position
-                local newDirection = (targetPos - origin).Unit * direction.Magnitude
-                args[2] = newDirection
+            if ValidateArguments(args, ExpectedArguments.Raycast) then
+                local origin = args[1]
+                if origin and typeof(origin) == "Vector3" then
+                    -- Redirect direction to target
+                    args[2] = getDirection(origin, SilentAimState.TargetPart.Position)
+                    return oldNamecall(self, unpack(args))
+                end
             end
         end
         
-        -- Hook RemoteEvent:FireServer (Modern games using RemoteEvents)
-        if method == "FireServer" and (methodEnabled or SilentAimSettings.Method == "RemoteEvent") then
-            local remoteName = tostring(self)
-            local targetPart = SilentAimState.TargetPart
-            local targetPos = targetPart.Position
-            
-            -- Common RemoteEvent patterns for shooting
-            if remoteName:match("Hit") or remoteName:match("Fire") or remoteName:match("Shoot") or remoteName:match("Damage") then
-                -- Try to find and replace position/part arguments
-                for i, arg in ipairs(args) do
-                    if typeof(arg) == "Vector3" then
-                        -- Replace Vector3 positions with target position
-                        args[i] = targetPos
-                        break
-                    elseif typeof(arg) == "Instance" and arg:IsA("BasePart") then
-                        -- Replace part references with target part
-                        args[i] = targetPart
-                        break
-                    elseif typeof(arg) == "table" then
-                        -- Handle table arguments (common in modern games)
-                        for j, tableArg in ipairs(arg) do
-                            if typeof(tableArg) == "Vector3" then
-                                arg[j] = targetPos
-                                break
-                            elseif typeof(tableArg) == "Instance" and tableArg:IsA("BasePart") then
-                                arg[j] = targetPart
-                                break
-                            end
+        -- Hook RemoteEvent FireServer (RemoteEvent guns)
+        if method == "FireServer" and self:IsA("RemoteEvent") and (methodEnabled or SilentAimSettings.Method == "RemoteEvent") then
+            -- Check if any argument looks like shooting direction or position
+            for i, arg in ipairs(args) do
+                if typeof(arg) == "Vector3" then
+                    -- Replace Vector3 arguments with target position or direction
+                    args[i] = SilentAimState.TargetPart.Position
+                elseif typeof(arg) == "Instance" and arg:IsA("BasePart") then
+                    -- Replace BasePart arguments with target part
+                    args[i] = SilentAimState.TargetPart
+                elseif typeof(arg) == "table" then
+                    -- Handle table arguments (common in modern games)
+                    for j, tableArg in ipairs(arg) do
+                        if typeof(tableArg) == "Vector3" then
+                            arg[j] = SilentAimState.TargetPart.Position
+                            break
+                        elseif typeof(tableArg) == "Instance" and tableArg:IsA("BasePart") then
+                            arg[j] = SilentAimState.TargetPart
+                            break
                         end
                     end
                 end
@@ -467,36 +535,36 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return oldNamecall(self, unpack(args))
-end)
+end))
 
 -- Hook __index for Mouse.Hit/Target (Old guns)
-oldIndex = hookmetamethod(game, "__index", function(self, key)
-    -- Only intercept Mouse calls when we have a valid target
-    if not checkcaller() and self:IsA("Mouse") and SilentAimSettings.Enabled and SilentAimState.TargetPart then
+oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
+    -- Only intercept Mouse calls when we have a valid target and hit chance succeeds
+    if not checkcaller() and self:IsA("Mouse") and SilentAimSettings.Enabled and SilentAimState.TargetPart and CalculateChance(SilentAimSettings.HitChance) then
         local methodEnabled = SilentAimSettings.Method == "All" or SilentAimSettings.Method == "Old"
         
         if methodEnabled then
-            if key == "Hit" then
+            if key == "Hit" or key == "hit" then
+                -- Use prediction if enabled (future enhancement)
                 return SilentAimState.TargetPart.CFrame
-            elseif key == "Target" then
+            elseif key == "Target" or key == "target" then
                 return SilentAimState.TargetPart
-            elseif key == "X" then
+            elseif key == "X" or key == "x" then
                 local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
                 return targetPos.X
-            elseif key == "Y" then
+            elseif key == "Y" or key == "y" then
                 local targetPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
                 return targetPos.Y
             elseif key == "UnitRay" then
-                local mouse = oldIndex(self, key)
-                local origin = mouse.Origin
+                -- Support for Mouse.UnitRay (common in old gun systems)
                 local targetPos = SilentAimState.TargetPart.Position
-                local direction = (targetPos - origin).Unit * 1000
-                return Ray.new(origin, direction)
+                local origin = Camera.CFrame.Position
+                return Ray.new(origin, (targetPos - origin).Unit)
             end
         end
     end
     return oldIndex(self, key)
-end)
+end))
 
 -- ══════════════════════════════════════════
 -- AIMBOT CORE
@@ -864,6 +932,16 @@ DepSilent:AddDropdown("SilentMethod", {
     Tooltip = "All: Hook all methods, RCL: FindPartOnRay, Modern: Raycast, Old: Mouse.Hit/Target, RemoteEvent: FireServer hooks",
 }):OnChanged(function(val)
     SilentAimSettings.Method = val
+end)
+DepSilent:AddSlider('SilentHitChance', {
+    Text = 'Hit Chance %',
+    Default = 100,
+    Min = 0,
+    Max = 100,
+    Rounding = 1,
+    Compact = false,
+}):OnChanged(function(val)
+    SilentAimSettings.HitChance = val
 end)
 DepSilent:AddDropdown("SilentHitPart", {
     Values  = { "Head", "HumanoidRootPart", "Torso", "UpperTorso" },
