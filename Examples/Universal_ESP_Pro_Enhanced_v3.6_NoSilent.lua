@@ -355,34 +355,12 @@ local function GetClosestTarget()
     local center
     
     if AimbotSettings.Mode == "Mouse (1st Person)" then
-        -- In 1st person, use camera ray casting to find true crosshair position
-        center = getTrueCrosshairPosition()
-    else
-        -- In 3rd person, combine camera ray with mouse position for accuracy
-        local trueCrosshair = getTrueCrosshairPosition()
-        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        -- In 1st person, the mouse is fixed at the center of the screen
         local guiInset = game:GetService("GuiService"):GetGuiInset()
-        screenCenter = screenCenter - (guiInset / 2)
-        
-        -- Check displacement between mouse and true crosshair
-        local crosshairDisplacement = (trueCrosshair - screenCenter).Magnitude
-        local mouseDisplacement = (mouseLoc - screenCenter).Magnitude
-        
-        -- If crosshair is significantly displaced, use it; otherwise use mouse
-        if crosshairDisplacement > mouseDisplacement * 0.5 and crosshairDisplacement > 50 then
-            center = trueCrosshair
-        else
-            -- Apply bias correction toward true crosshair position
-            local displacement = mouseLoc - trueCrosshair
-            local distanceFactor = displacement.Magnitude / (Camera.ViewportSize.X * 0.3)
-            
-            if distanceFactor > 0.5 then
-                local correctionStrength = math.min(distanceFactor * 0.4, 0.6)
-                center = mouseLoc - (displacement * correctionStrength)
-            else
-                center = mouseLoc
-            end
-        end
+        center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
+    else
+        -- In 3rd person, use actual mouse cursor location
+        center = mouseLoc
     end
     
     local bestDist = AimbotSettings.FOV
@@ -889,34 +867,12 @@ local _wmConn = RunService.RenderStepped:Connect(function()
     local fovCenter
     
     if AimbotSettings.Mode == "Mouse (1st Person)" then
-        -- In 1st person, use camera ray casting to find true crosshair position
-        fovCenter = getTrueCrosshairPosition()
-    else
-        -- In 3rd person, combine camera ray with mouse position for accuracy
-        local trueCrosshair = getTrueCrosshairPosition()
-        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        -- In 1st person, the mouse is fixed at the center of the screen
         local guiInset = game:GetService("GuiService"):GetGuiInset()
-        screenCenter = screenCenter - (guiInset / 2)
-        
-        -- Check displacement between mouse and true crosshair
-        local crosshairDisplacement = (trueCrosshair - screenCenter).Magnitude
-        local mouseDisplacement = (mouseLoc - screenCenter).Magnitude
-        
-        -- If crosshair is significantly displaced, use it; otherwise use mouse
-        if crosshairDisplacement > mouseDisplacement * 0.5 and crosshairDisplacement > 50 then
-            fovCenter = trueCrosshair
-        else
-            -- Apply bias correction toward true crosshair position
-            local displacement = mouseLoc - trueCrosshair
-            local distanceFactor = displacement.Magnitude / (Camera.ViewportSize.X * 0.3)
-            
-            if distanceFactor > 0.5 then
-                local correctionStrength = math.min(distanceFactor * 0.4, 0.6)
-                fovCenter = mouseLoc - (displacement * correctionStrength)
-            else
-                fovCenter = mouseLoc
-            end
-        end
+        fovCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
+    else
+        -- In 3rd person, use actual mouse cursor location
+        fovCenter = mouseLoc
     end
 
     if AimbotSettings.ShowFOV and AimbotSettings.Enabled then
