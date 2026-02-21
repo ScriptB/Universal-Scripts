@@ -868,8 +868,9 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         pcall(UpdateESP, e)
     end
 
-    -- FOV circle - use same camera-compensated center as aimbot for perfect sync
-    local fovCenter = getCameraCompensatedCenter()
+    -- FOV circle - directly follows cursor position
+    local mouseLoc = UserInputService:GetMouseLocation()
+    local fovCenter = mouseLoc
 
     if AimbotSettings.ShowFOV then
         FovCircle.Position    = fovCenter
