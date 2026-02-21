@@ -1,4 +1,4 @@
--- Universal ESP Pro Enhanced v3.5
+-- Universal ESP Pro Enhanced v3.6
 -- UI: LinoriaLib | Full ESP | Config System
 -- Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/main/Examples/Universal_ESP_Pro_Enhanced.lua", true))()
 
@@ -293,6 +293,172 @@ local function UpdateESP(e)
 end
 
 -- ══════════════════════════════════════════
+-- AIMBOT CORE (Exunys-style)
+-- ══════════════════════════════════════════
+local UserInputService = game:GetService("UserInputService")
+local TweenService     = game:GetService("TweenService")
+
+local AimbotSettings = {
+    Enabled        = false,
+    TeamCheck      = false,
+    AliveCheck     = true,
+    WallCheck      = false,
+    Toggle         = false,
+    LockPart       = "Head",
+    TriggerKey     = Enum.UserInputType.MouseButton2,
+    Sensitivity    = 0,
+    Sensitivity2   = 3.5,
+    LockMode       = 1,
+    FOV = {
+        Enabled       = true,
+        Visible       = true,
+        Radius        = 120,
+        Thickness     = 1,
+        Color         = Color3.fromRGB(255, 255, 255),
+        LockedColor   = Color3.fromRGB(255, 100, 100),
+        OutlineColor  = Color3.fromRGB(0, 0, 0),
+        Rainbow       = false,
+    },
+}
+
+local _aimbotRunning  = false
+local _aimbotLocked   = nil
+local _aimbotAnim     = nil
+local _aimbotConns    = {}
+
+local FOVCircle        = Drawing.new("Circle")
+local FOVCircleOutline = Drawing.new("Circle")
+FOVCircle.Visible        = false
+FOVCircleOutline.Visible = false
+
+local function _aimbotGetRainbow()
+    return Color3.fromHSV(tick() % 1, 1, 1)
+end
+
+local function _aimbotCancelLock()
+    _aimbotLocked = nil
+    if _aimbotAnim then _aimbotAnim:Cancel() end
+end
+
+local function _aimbotGetClosest()
+    if _aimbotLocked then
+        local char = _aimbotLocked.Character
+        local part = char and char:FindFirstChild(AimbotSettings.LockPart)
+        if not part then _aimbotCancelLock(); return end
+        local sv, _ = Camera:WorldToViewportPoint(part.Position)
+        local dist  = (UserInputService:GetMouseLocation() - Vector2.new(sv.X, sv.Y)).Magnitude
+        local radius = AimbotSettings.FOV.Enabled and AimbotSettings.FOV.Radius or 2000
+        if dist > radius then _aimbotCancelLock() end
+        return
+    end
+
+    local radius = AimbotSettings.FOV.Enabled and AimbotSettings.FOV.Radius or 2000
+    local best, bestDist = nil, radius
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr == LocalPlayer then continue end
+        local char = plr.Character
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        local part = char and char:FindFirstChild(AimbotSettings.LockPart)
+        if not char or not hum or not part then continue end
+        if AimbotSettings.TeamCheck and plr.Team == LocalPlayer.Team then continue end
+        if AimbotSettings.AliveCheck and hum.Health <= 0 then continue end
+        if AimbotSettings.WallCheck then
+            local bl = {}
+            for _, v in ipairs(LocalPlayer.Character and LocalPlayer.Character:GetDescendants() or {}) do bl[#bl+1] = v end
+            for _, v in ipairs(char:GetDescendants()) do bl[#bl+1] = v end
+            if #Camera:GetPartsObscuringTarget({part.Position}, bl) > 0 then continue end
+        end
+        local sv, onScreen = Camera:WorldToViewportPoint(part.Position)
+        if not onScreen then continue end
+        local dist = (UserInputService:GetMouseLocation() - Vector2.new(sv.X, sv.Y)).Magnitude
+        if dist < bestDist then
+            bestDist, best = dist, plr
+        end
+    end
+    _aimbotLocked = best
+end
+
+local function _aimbotUpdate()
+    local fov = AimbotSettings.FOV
+    local mousePos = UserInputService:GetMouseLocation()
+
+    if fov.Enabled and AimbotSettings.Enabled then
+        local fovColor = (fov.Rainbow and _aimbotGetRainbow()) or (_aimbotLocked and fov.LockedColor) or fov.Color
+        FOVCircle.Visible     = fov.Visible
+        FOVCircle.Position    = mousePos
+        FOVCircle.Radius      = fov.Radius
+        FOVCircle.Thickness   = fov.Thickness
+        FOVCircle.Color       = fovColor
+        FOVCircle.Filled      = false
+        FOVCircleOutline.Visible   = fov.Visible
+        FOVCircleOutline.Position  = mousePos
+        FOVCircleOutline.Radius    = fov.Radius
+        FOVCircleOutline.Thickness = fov.Thickness + 1
+        FOVCircleOutline.Color     = fov.OutlineColor
+        FOVCircleOutline.Filled    = false
+    else
+        FOVCircle.Visible        = false
+        FOVCircleOutline.Visible = false
+    end
+
+    if not (_aimbotRunning and AimbotSettings.Enabled) then return end
+
+    _aimbotGetClosest()
+
+    if not _aimbotLocked then return end
+    local char = _aimbotLocked.Character
+    local part = char and char:FindFirstChild(AimbotSettings.LockPart)
+    if not part then _aimbotCancelLock(); return end
+
+    local sv = Camera:WorldToViewportPoint(part.Position)
+    local targetPos2D = Vector2.new(sv.X, sv.Y)
+
+    if AimbotSettings.LockMode == 2 then
+        local delta = targetPos2D - mousePos
+        mousemoverel(delta.X / AimbotSettings.Sensitivity2, delta.Y / AimbotSettings.Sensitivity2)
+    else
+        if AimbotSettings.Sensitivity > 0 then
+            _aimbotAnim = TweenService:Create(Camera, TweenInfo.new(AimbotSettings.Sensitivity, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+                CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+            })
+            _aimbotAnim:Play()
+        else
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+        end
+        UserInputService.MouseDeltaSensitivity = 0
+    end
+end
+
+_aimbotConns.render = RunService.RenderStepped:Connect(_aimbotUpdate)
+
+_aimbotConns.inputBegan = UserInputService.InputBegan:Connect(function(input)
+    if not AimbotSettings.Enabled then return end
+    local tk = AimbotSettings.TriggerKey
+    local match = (input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == tk)
+               or (input.UserInputType == tk)
+    if not match then return end
+    if AimbotSettings.Toggle then
+        _aimbotRunning = not _aimbotRunning
+        if not _aimbotRunning then _aimbotCancelLock() end
+    else
+        _aimbotRunning = true
+    end
+end)
+
+_aimbotConns.inputEnded = UserInputService.InputEnded:Connect(function(input)
+    if AimbotSettings.Toggle or not AimbotSettings.Enabled then return end
+    local tk = AimbotSettings.TriggerKey
+    local match = (input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == tk)
+               or (input.UserInputType == tk)
+    if match then
+        _aimbotRunning = false
+        _aimbotCancelLock()
+        UserInputService.MouseDeltaSensitivity = 1
+    end
+end)
+
+-- ══════════════════════════════════════════
 -- BUILD LINORIA UI
 -- ══════════════════════════════════════════
 local Window = Library:CreateWindow({
@@ -305,6 +471,7 @@ local Window = Library:CreateWindow({
 
 local Tabs = {
     ESP     = Window:AddTab("ESP"),
+    Aimbot  = Window:AddTab("Aimbot"),
     Visuals = Window:AddTab("Visuals"),
     Config  = Window:AddTab("Config"),
     UI      = Window:AddTab("UI Settings"),
@@ -463,6 +630,127 @@ DepName:AddLabel("Color"):AddColorPicker("NameColor", {
 DepName:SetupDependencies({ { Toggles.NameEnabled, true } })
 
 -- ══════════════════════════════════════════
+-- TAB: AIMBOT
+-- ══════════════════════════════════════════
+
+-- LEFT: General aimbot settings
+local GbAimbot = Tabs.Aimbot:AddLeftGroupbox("Aimbot")
+GbAimbot:AddToggle("AimbotEnabled", {
+    Text    = "Enabled",
+    Default = AimbotSettings.Enabled,
+    Tooltip = "Master aimbot toggle",
+})
+GbAimbot:AddLabel("Trigger Key"):AddKeyPicker("AimbotKey", {
+    Default         = "MouseButton2",
+    SyncToggleState = false,
+    Mode            = "Hold",
+    Text            = "Aim",
+    Tooltip         = "Hold this key to activate aimbot",
+})
+GbAimbot:AddDivider()
+GbAimbot:AddToggle("AimbotToggleMode", {
+    Text    = "Toggle Mode",
+    Default = AimbotSettings.Toggle,
+    Tooltip = "Press key to toggle instead of hold",
+})
+GbAimbot:AddToggle("AimbotTeamCheck", {
+    Text    = "Team Check",
+    Default = AimbotSettings.TeamCheck,
+    Tooltip = "Skip teammates",
+})
+GbAimbot:AddToggle("AimbotAliveCheck", {
+    Text    = "Alive Check",
+    Default = AimbotSettings.AliveCheck,
+    Tooltip = "Skip dead players",
+})
+GbAimbot:AddToggle("AimbotWallCheck", {
+    Text    = "Wall Check",
+    Default = AimbotSettings.WallCheck,
+    Tooltip = "Skip players behind walls",
+})
+GbAimbot:AddDivider()
+GbAimbot:AddDropdown("AimbotLockPart", {
+    Values  = { "Head", "HumanoidRootPart", "UpperTorso", "Torso" },
+    Default = 1,
+    Text    = "Lock Part",
+    Tooltip = "Body part to aim at",
+})
+GbAimbot:AddDropdown("AimbotLockMode", {
+    Values  = { "CFrame (Silent)", "MouseMove" },
+    Default = 1,
+    Text    = "Lock Mode",
+    Tooltip = "CFrame = silent aim; MouseMove = moves cursor",
+})
+GbAimbot:AddSlider("AimbotSensitivity", {
+    Text     = "Smoothness",
+    Default  = 0,
+    Min      = 0,
+    Max      = 1,
+    Rounding = 2,
+    Compact  = true,
+    Tooltip  = "0 = instant lock; higher = smoother (CFrame mode)",
+})
+GbAimbot:AddSlider("AimbotSensitivity2", {
+    Text     = "Mouse Sensitivity",
+    Default  = 35,
+    Min      = 1,
+    Max      = 100,
+    Rounding = 0,
+    Compact  = true,
+    Tooltip  = "Divisor for MouseMove mode speed",
+})
+
+-- RIGHT: FOV circle
+local GbFOV = Tabs.Aimbot:AddRightGroupbox("FOV Circle")
+GbFOV:AddToggle("FOVEnabled", {
+    Text    = "Enabled",
+    Default = AimbotSettings.FOV.Enabled,
+    Tooltip = "Use FOV circle to limit targeting range",
+})
+GbFOV:AddToggle("FOVVisible", {
+    Text    = "Visible",
+    Default = AimbotSettings.FOV.Visible,
+    Tooltip = "Show the FOV circle on screen",
+})
+local DepFOV = GbFOV:AddDependencyBox()
+DepFOV:AddSlider("FOVRadius", {
+    Text     = "Radius",
+    Default  = AimbotSettings.FOV.Radius,
+    Min      = 10,
+    Max      = 600,
+    Rounding = 0,
+    Compact  = true,
+    Tooltip  = "FOV circle radius in pixels",
+})
+DepFOV:AddSlider("FOVThickness", {
+    Text     = "Thickness",
+    Default  = AimbotSettings.FOV.Thickness,
+    Min      = 1,
+    Max      = 5,
+    Rounding = 0,
+    Compact  = true,
+    Tooltip  = "FOV circle line thickness",
+})
+DepFOV:AddToggle("FOVRainbow", {
+    Text    = "Rainbow",
+    Default = AimbotSettings.FOV.Rainbow,
+    Tooltip = "Rainbow color on FOV circle",
+})
+DepFOV:AddLabel("Circle Color"):AddColorPicker("FOVColor", {
+    Default = AimbotSettings.FOV.Color,
+    Title   = "FOV Circle Color",
+})
+DepFOV:AddLabel("Locked Color"):AddColorPicker("FOVLockedColor", {
+    Default = AimbotSettings.FOV.LockedColor,
+    Title   = "FOV Locked Color",
+})
+DepFOV:AddLabel("Outline Color"):AddColorPicker("FOVOutlineColor", {
+    Default = AimbotSettings.FOV.OutlineColor,
+    Title   = "FOV Outline Color",
+})
+DepFOV:SetupDependencies({ { Toggles.FOVEnabled, true } })
+
+-- ══════════════════════════════════════════
 -- TAB: VISUALS
 -- ══════════════════════════════════════════
 local GbRainbow = Tabs.Visuals:AddLeftGroupbox("Rainbow")
@@ -593,6 +881,34 @@ Options.ESPKeybind:OnClick(function()
     Settings.Enabled = Toggles.ESPEnabled.Value
 end)
 
+-- Aimbot callbacks
+Toggles.AimbotEnabled:OnChanged(function()    AimbotSettings.Enabled        = Toggles.AimbotEnabled.Value    end)
+Toggles.AimbotToggleMode:OnChanged(function() AimbotSettings.Toggle          = Toggles.AimbotToggleMode.Value end)
+Toggles.AimbotTeamCheck:OnChanged(function()  AimbotSettings.TeamCheck       = Toggles.AimbotTeamCheck.Value  end)
+Toggles.AimbotAliveCheck:OnChanged(function() AimbotSettings.AliveCheck      = Toggles.AimbotAliveCheck.Value end)
+Toggles.AimbotWallCheck:OnChanged(function()  AimbotSettings.WallCheck       = Toggles.AimbotWallCheck.Value  end)
+Options.AimbotLockPart:OnChanged(function()   AimbotSettings.LockPart        = Options.AimbotLockPart.Value   end)
+Options.AimbotLockMode:OnChanged(function()
+    AimbotSettings.LockMode = Options.AimbotLockMode.Value == "CFrame (Silent)" and 1 or 2
+end)
+Options.AimbotSensitivity:OnChanged(function()  AimbotSettings.Sensitivity  = Options.AimbotSensitivity.Value  end)
+Options.AimbotSensitivity2:OnChanged(function() AimbotSettings.Sensitivity2 = Options.AimbotSensitivity2.Value end)
+
+-- FOV callbacks
+Toggles.FOVEnabled:OnChanged(function()   AimbotSettings.FOV.Enabled      = Toggles.FOVEnabled.Value   end)
+Toggles.FOVVisible:OnChanged(function()   AimbotSettings.FOV.Visible      = Toggles.FOVVisible.Value   end)
+Toggles.FOVRainbow:OnChanged(function()   AimbotSettings.FOV.Rainbow      = Toggles.FOVRainbow.Value   end)
+Options.FOVRadius:OnChanged(function()    AimbotSettings.FOV.Radius       = Options.FOVRadius.Value    end)
+Options.FOVThickness:OnChanged(function() AimbotSettings.FOV.Thickness    = Options.FOVThickness.Value end)
+Options.FOVColor:OnChanged(function()     AimbotSettings.FOV.Color        = Options.FOVColor.Value     end)
+Options.FOVLockedColor:OnChanged(function()  AimbotSettings.FOV.LockedColor  = Options.FOVLockedColor.Value  end)
+Options.FOVOutlineColor:OnChanged(function() AimbotSettings.FOV.OutlineColor = Options.FOVOutlineColor.Value end)
+
+Options.AimbotKey:OnClick(function()
+    _aimbotRunning = not _aimbotRunning
+    if not _aimbotRunning then _aimbotCancelLock() end
+end)
+
 -- ══════════════════════════════════════════
 -- WATERMARK
 -- ══════════════════════════════════════════
@@ -665,6 +981,11 @@ end)
 
 Library:OnUnload(function()
     _wmConn:Disconnect()
+    for _, c in pairs(_aimbotConns) do pcall(function() c:Disconnect() end) end
+    pcall(function() FOVCircle:Remove() end)
+    pcall(function() FOVCircleOutline:Remove() end)
+    _aimbotCancelLock()
+    UserInputService.MouseDeltaSensitivity = 1
     for player in pairs(ESPObjects) do
         RemoveESP(player)
     end
@@ -683,4 +1004,4 @@ getgenv().UniversalESP = {
 
 SaveManager:LoadAutoloadConfig()
 Notify("Universal ESP Pro Enhanced", "Loaded! Press End to toggle menu.", 5)
-print("[Universal ESP Pro Enhanced v3.5] Loaded successfully.")
+print("[Universal ESP Pro Enhanced v3.6] Loaded successfully.")
