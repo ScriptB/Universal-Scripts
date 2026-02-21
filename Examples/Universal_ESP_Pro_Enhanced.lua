@@ -386,6 +386,9 @@ local function UpdateESP(e)
     end
     
     -- Distance and visibility checks
+    local Camera = workspace.CurrentCamera
+    if not Camera then return end
+    
     local distance = GetDistance(hrp.Position, Camera.CFrame.Position)
     e.Distance = distance
     
