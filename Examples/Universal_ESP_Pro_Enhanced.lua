@@ -641,11 +641,11 @@ GbAimbot:AddToggle("AimbotEnabled", {
     Tooltip = "Master aimbot toggle",
 })
 GbAimbot:AddLabel("Trigger Key"):AddKeyPicker("AimbotKey", {
-    Default         = "MouseButton2",
+    Default         = "RightControl",
     SyncToggleState = false,
     Mode            = "Hold",
     Text            = "Aim",
-    Tooltip         = "Hold this key to activate aimbot",
+    Tooltip         = "Hold/press this key to activate aimbot (default: RCtrl; RMB handled automatically)",
 })
 GbAimbot:AddDivider()
 GbAimbot:AddToggle("AimbotToggleMode", {
@@ -904,9 +904,11 @@ Options.FOVColor:OnChanged(function()     AimbotSettings.FOV.Color        = Opti
 Options.FOVLockedColor:OnChanged(function()  AimbotSettings.FOV.LockedColor  = Options.FOVLockedColor.Value  end)
 Options.FOVOutlineColor:OnChanged(function() AimbotSettings.FOV.OutlineColor = Options.FOVOutlineColor.Value end)
 
-Options.AimbotKey:OnClick(function()
-    _aimbotRunning = not _aimbotRunning
-    if not _aimbotRunning then _aimbotCancelLock() end
+Options.AimbotKey:OnChanged(function()
+    local kc = Options.AimbotKey.Value
+    if kc and kc ~= Enum.KeyCode.Unknown then
+        AimbotSettings.TriggerKey = kc
+    end
 end)
 
 -- ══════════════════════════════════════════
