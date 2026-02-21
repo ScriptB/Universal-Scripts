@@ -26,8 +26,6 @@ local function SafeWarn(...)
 end
 
 -- Ensure essential functions exist
-if not getgenv().mousemoverel then getgenv().mousemoverel = function(x,y) end end
-if not getgenv().mousemove then getgenv().mousemove = function(x,y) end end
 if not getgenv().setclipboard then getgenv().setclipboard = function(s) end end
 if not getgenv().Drawing then 
     getgenv().Drawing = { new = function(t) return {Visible = false, Remove = function() end} end } 
@@ -698,7 +696,7 @@ end
 local function predict(player)
     if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = player.Character.HumanoidRootPart
-        local velocity = hrp.Velocity
+        local velocity = hrp.AssemblyLinearVelocity
         local predictedPosition = hrp.Position + (velocity * AimbotSettings.Prediction)
         return predictedPosition
     end
@@ -722,6 +720,10 @@ local function getBestBodyPart(char)
            char:FindFirstChild("HumanoidRootPart") or 
            char:FindFirstChild("Torso") or 
            char:FindFirstChild("UpperTorso")
+end
+
+local function smoothCFrame(current, target)
+    return current:Lerp(target, AimbotSettings.Sensitivity)
 end
 
 -- Third Person Mouse Aimbot Function
@@ -1030,7 +1032,6 @@ pcall(function() RunService:UnbindFromRenderStep("UniversalAimbot") end)
 RunService:BindToRenderStep("UniversalAimbot", Enum.RenderPriority.Last.Value, SafeAimbotUpdate)
 
 _aimbotConns.inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
     if not AimbotSettings.Enabled then return end
     
     if not _lastEnabledState then
