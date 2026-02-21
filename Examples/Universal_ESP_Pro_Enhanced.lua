@@ -1,6 +1,7 @@
 -- Universal ESP Pro Enhanced v3.0
 -- UI: VapeV4 Library | Full ESP | Config System
 -- Toggle GUI: RightShift (VapeV4 default)
+-- Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/main/Examples/Universal_ESP_Pro_Enhanced.lua", true))()
 
 repeat task.wait() until game:IsLoaded()
 
