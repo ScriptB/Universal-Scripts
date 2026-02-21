@@ -439,10 +439,11 @@ local function AimbotStep()
     end
 end
 
--- Silent Aim: hook raycasts so bullets redirect to nearest target
--- Store originals as bound methods to call correctly
-local _origFPORWW = workspace.FindPartOnRayWithWhitelist
-local _origFPOR   = workspace.FindPartOnRay
+-- Silent Aim: hook legacy raycasts (FindPartOnRay / FindPartOnRayWithWhitelist)
+-- These methods were deprecated but many games still use them.
+-- We pcall all assignments so missing methods never crash the script.
+local _origFPORWW = rawget(workspace, "FindPartOnRayWithWhitelist")
+local _origFPOR   = rawget(workspace, "FindPartOnRay")
 local _saHooked   = false
 
 local function GetSilentTarget()
@@ -452,35 +453,48 @@ end
 
 local function HookSilentAim()
     if _saHooked then return end
-    _saHooked = true
-    workspace.FindPartOnRayWithWhitelist = function(self, ray, whitelist, ...)
-        if AimbotSettings.SilentAim then
-            local ok, target = pcall(GetSilentTarget)
-            if ok and target then
-                local dir    = (target.Position - ray.Origin).Unit
-                local newRay = Ray.new(ray.Origin, dir * ray.Direction.Magnitude)
-                return _origFPORWW(self, newRay, whitelist, ...)
+
+    if _origFPORWW then
+        local ok = pcall(function()
+            workspace.FindPartOnRayWithWhitelist = function(self, ray, whitelist, ...)
+                if AimbotSettings.SilentAim then
+                    local sok, target = pcall(GetSilentTarget)
+                    if sok and target then
+                        local dir    = (target.Position - ray.Origin).Unit
+                        local newRay = Ray.new(ray.Origin, dir * ray.Direction.Magnitude)
+                        return _origFPORWW(self, newRay, whitelist, ...)
+                    end
+                end
+                return _origFPORWW(self, ray, whitelist, ...)
             end
-        end
-        return _origFPORWW(self, ray, whitelist, ...)
+        end)
+        if ok then _saHooked = true end
     end
-    workspace.FindPartOnRay = function(self, ray, ...)
-        if AimbotSettings.SilentAim then
-            local ok, target = pcall(GetSilentTarget)
-            if ok and target then
-                local dir    = (target.Position - ray.Origin).Unit
-                local newRay = Ray.new(ray.Origin, dir * ray.Direction.Magnitude)
-                return _origFPOR(self, newRay, ...)
+
+    if _origFPOR then
+        local ok = pcall(function()
+            workspace.FindPartOnRay = function(self, ray, ...)
+                if AimbotSettings.SilentAim then
+                    local sok, target = pcall(GetSilentTarget)
+                    if sok and target then
+                        local dir    = (target.Position - ray.Origin).Unit
+                        local newRay = Ray.new(ray.Origin, dir * ray.Direction.Magnitude)
+                        return _origFPOR(self, newRay, ...)
+                    end
+                end
+                return _origFPOR(self, ray, ...)
             end
-        end
-        return _origFPOR(self, ray, ...)
+        end)
+        if ok then _saHooked = true end
     end
 end
 
 local function UnhookSilentAim()
     if not _saHooked then return end
-    workspace.FindPartOnRayWithWhitelist = _origFPORWW
-    workspace.FindPartOnRay              = _origFPOR
+    pcall(function()
+        if _origFPORWW then workspace.FindPartOnRayWithWhitelist = _origFPORWW end
+        if _origFPOR   then workspace.FindPartOnRay              = _origFPOR   end
+    end)
     _saHooked = false
 end
 
