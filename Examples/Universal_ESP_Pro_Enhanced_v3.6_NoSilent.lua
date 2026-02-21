@@ -337,21 +337,21 @@ local function GetClosestTarget()
         local guiInset = game:GetService("GuiService"):GetGuiInset()
         center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
     else
-        -- In 3rd person, calculate enhanced center accounting for camera displacement
+        -- In 3rd person, use direct mouse location with bias correction for weapon displacement
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         local guiInset = game:GetService("GuiService"):GetGuiInset()
         screenCenter = screenCenter - (guiInset / 2)
         
-        -- Check if mouse is significantly displaced from screen center
-        local displacement = (mouseLoc - screenCenter).Magnitude
-        local maxReasonableDisplacement = math.min(Camera.ViewportSize.X, Camera.ViewportSize.Y) * 0.3
+        -- Apply immediate bias correction toward screen center for extreme displacements
+        local displacement = mouseLoc - screenCenter
+        local distanceFactor = displacement.Magnitude / (Camera.ViewportSize.X * 0.4)
         
-        if displacement > maxReasonableDisplacement then
-            -- Mouse is displaced, likely due to weapon offset - use interpolated center
-            local weight = math.min(displacement / maxReasonableDisplacement, 2) * 0.5
-            center = screenCenter:Lerp(mouseLoc, weight)
+        if distanceFactor > 1 then
+            -- Apply gentle correction toward center without smoothing delays
+            local correctionStrength = math.min((distanceFactor - 1) * 0.3, 0.4)
+            center = mouseLoc - (displacement * correctionStrength)
         else
-            -- Normal case - use mouse location
+            -- Direct mouse tracking
             center = mouseLoc
         end
     end
@@ -863,21 +863,21 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         local guiInset = game:GetService("GuiService"):GetGuiInset()
         fovCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2) - (guiInset / 2)
     else
-        -- In 3rd person, calculate enhanced center accounting for camera displacement
+        -- In 3rd person, use direct mouse location with bias correction for weapon displacement
         local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         local guiInset = game:GetService("GuiService"):GetGuiInset()
         screenCenter = screenCenter - (guiInset / 2)
         
-        -- Check if mouse is significantly displaced from screen center
-        local displacement = (mouseLoc - screenCenter).Magnitude
-        local maxReasonableDisplacement = math.min(Camera.ViewportSize.X, Camera.ViewportSize.Y) * 0.3
+        -- Apply immediate bias correction toward screen center for extreme displacements
+        local displacement = mouseLoc - screenCenter
+        local distanceFactor = displacement.Magnitude / (Camera.ViewportSize.X * 0.4)
         
-        if displacement > maxReasonableDisplacement then
-            -- Mouse is displaced, likely due to weapon offset - use interpolated center
-            local weight = math.min(displacement / maxReasonableDisplacement, 2) * 0.5
-            fovCenter = screenCenter:Lerp(mouseLoc, weight)
+        if distanceFactor > 1 then
+            -- Apply gentle correction toward center without smoothing delays
+            local correctionStrength = math.min((distanceFactor - 1) * 0.3, 0.4)
+            fovCenter = mouseLoc - (displacement * correctionStrength)
         else
-            -- Normal case - use mouse location
+            -- Direct mouse tracking
             fovCenter = mouseLoc
         end
     end
