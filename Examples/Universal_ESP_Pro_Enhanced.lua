@@ -1029,10 +1029,9 @@ end
 pcall(function() RunService:UnbindFromRenderStep("UniversalAimbot") end)
 RunService:BindToRenderStep("UniversalAimbot", Enum.RenderPriority.Last.Value, SafeAimbotUpdate)
 
-_aimbotConns.inputBegan = UserInputService.InputBegan:Connect(function(input)
-    if not AimbotSettings.Enabled then 
-        return 
-    end
+_aimbotConns.inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if not AimbotSettings.Enabled then return end
     
     if not _lastEnabledState then
         _lastEnabledState = true
@@ -1041,13 +1040,7 @@ _aimbotConns.inputBegan = UserInputService.InputBegan:Connect(function(input)
     local tk = AimbotSettings.TriggerKey
     local inputMatched = false
     
-    -- Check for right mouse button
-    if input.UserInputType == Enum.UserInputType.MouseButton2 and tk == Enum.UserInputType.MouseButton2 then
-        inputMatched = true
-    end
-    
-    -- Check for keyboard keybind
-    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == tk then
+    if input.UserInputType == tk or input.KeyCode == tk then
         inputMatched = true
     end
     
@@ -1066,19 +1059,13 @@ _aimbotConns.inputBegan = UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
-_aimbotConns.inputEnded = UserInputService.InputEnded:Connect(function(input)
+_aimbotConns.inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
     if AimbotSettings.Toggle or not AimbotSettings.Enabled then return end
     
     local tk = AimbotSettings.TriggerKey
     local inputMatched = false
     
-    -- Check for right mouse button release
-    if input.UserInputType == Enum.UserInputType.MouseButton2 and tk == Enum.UserInputType.MouseButton2 then
-        inputMatched = true
-    end
-    
-    -- Check for keyboard keybind release
-    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == tk then
+    if input.UserInputType == tk or input.KeyCode == tk then
         inputMatched = true
     end
     
@@ -1640,11 +1627,19 @@ Options.FOVOutlineColor:OnChanged(function() AimbotSettings.FOV.OutlineColor = O
 local function _syncAimbotKey()
     local kc = Options.AimbotKey.Value
     if kc then
-        -- Handle MB2 specially if it comes as a string
-        if kc == "MB2" then
-            AimbotSettings.TriggerKey = Enum.UserInputType.MouseButton2
-        elseif typeof(kc) == "EnumItem" then
+        if typeof(kc) == "EnumItem" then
             AimbotSettings.TriggerKey = kc
+        elseif type(kc) == "string" then
+            if kc == "MB1" then
+                AimbotSettings.TriggerKey = Enum.UserInputType.MouseButton1
+            elseif kc == "MB2" then
+                AimbotSettings.TriggerKey = Enum.UserInputType.MouseButton2
+            else
+                local success, enumKey = pcall(function() return Enum.KeyCode[kc] end)
+                if success and enumKey then
+                    AimbotSettings.TriggerKey = enumKey
+                end
+            end
         end
     end
 end
