@@ -780,6 +780,11 @@ local function _aimbotUpdate()
     -- Ensure Settings exist
     if not AimbotSettings or not AimbotSettings.FOV then return end
     
+        local mousePos = Vector2.new(0, 0)
+    pcall(function() 
+        if UserInputService then mousePos = UserInputService:GetMouseLocation() end 
+    end)
+    
     -- Self-contained logger to prevent upvalue errors
     local function LogError(msg, err)
         pcall(warn, "[Aimbot]", msg, err)
