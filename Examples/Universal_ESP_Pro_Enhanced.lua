@@ -609,9 +609,15 @@ task.delay(10, function()
     end
 end)
 
--- NotificationArea: bottom-right
-Library.NotificationArea.Position = UDim2.new(1, -310, 1, -210)
-Library.NotificationArea.AnchorPoint = Vector2.new(0, 1)
+-- NotificationArea: bottom-right, grows upward
+Library.NotificationArea.AnchorPoint = Vector2.new(1, 1)
+Library.NotificationArea.Position    = UDim2.new(1, -10, 1, -10)
+Library.NotificationArea.Size        = UDim2.new(0, 300, 0, 600)
+-- Make the list layout stack from the bottom upward
+local _notifLayout = Library.NotificationArea:FindFirstChildOfClass("UIListLayout")
+if _notifLayout then
+    _notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+end
 
 local _frameTimer   = tick()
 local _frameCounter = 0
