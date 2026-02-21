@@ -1,4 +1,4 @@
--- Universal ESP Pro Enhanced v3.6
+-- Universal ESP Pro Enhanced v3.7
 -- UI: LinoriaLib | Full ESP | Config System
 -- Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/main/Examples/Universal_ESP_Pro_Enhanced.lua", true))()
 
@@ -147,13 +147,16 @@ end
 local AimbotSettings = {
     Enabled      = false,
     SilentAim    = false,
+    LockTarget   = true,
+    CheckAlive   = true,
+    IgnoreWalls  = true,
     FOV          = 150,
-    Smoothness   = 10,
+    Sensitivity  = 0.5,
     HitPart      = "Head",
     TeamCheck    = true,
     ShowFOV      = true,
     FOVColor     = Color3.fromRGB(255, 255, 255),
-    Keybind      = "MouseButton2",
+    FOVThickness = 1,
 }
 
 -- ══════════════════════════════════════════
@@ -308,56 +311,142 @@ local function UpdateESP(e)
 end
 
 -- ══════════════════════════════════════════
--- AIMBOT CORE
+-- AIMBOT CORE  (AimHot v8-inspired)
 -- ══════════════════════════════════════════
 local UserInputService = game:GetService("UserInputService")
+local Mouse            = LocalPlayer:GetMouse()
 
 local FovCircle = NewDrawing("Circle", {
     Thickness    = 1,
     Color        = Color3.fromRGB(255, 255, 255),
-    Transparency = 1,
+    Transparency = 0.8,
     Filled       = false,
     Visible      = false,
 })
 
-local function GetClosestTarget()
-    local center   = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+-- Cached lock target so we don't re-scan every frame when LockTarget is on
+local _lockedTarget = nil
+local _lockedPlayer = nil
+
+local function IsAlive(char)
+    if not char then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+    if not hrp then return false end
+    if hum and hum.Health <= 0 then return false end
+    return char:IsDescendantOf(game)
+end
+
+local function IsVisible(char, part)
+    if AimbotSettings.IgnoreWalls then return true end
+    local myChar = LocalPlayer.Character
+    local origin = Camera.CFrame.Position
+    local dir    = (part.Position - origin)
+    local ray    = Ray.new(origin, dir)
+    local ignore = { myChar, Camera }
+    local hit    = workspace:FindPartOnRayWithIgnoreList(ray, ignore)
+    if hit == nil then return true end
+    return hit:IsDescendantOf(char)
+end
+
+local function GetClosestToMouse()
+    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
     local bestDist = AimbotSettings.FOV
-    local bestChar = nil
     local bestPart = nil
+    local bestPlr  = nil
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player == LocalPlayer then continue end
-        if AimbotSettings.TeamCheck and player.Team == LocalPlayer.Team then continue end
+        if AimbotSettings.TeamCheck
+            and player.Team ~= nil
+            and player.Team == LocalPlayer.Team
+            and not LocalPlayer.Neutral then continue end
         local char = player.Character
-        if not char then continue end
+        if not char or not char:IsDescendantOf(game) then continue end
+        if AimbotSettings.CheckAlive and not IsAlive(char) then continue end
         local part = char:FindFirstChild(AimbotSettings.HitPart)
-            or char:FindFirstChild("HumanoidRootPart")
-        if not part then continue end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum or hum.Health <= 0 then continue end
+                  or char:FindFirstChild("HumanoidRootPart")
+                  or char.PrimaryPart
+        if not part or not part:IsDescendantOf(game) then continue end
         local sv, onScreen = Camera:WorldToViewportPoint(part.Position)
-        if not onScreen then continue end
+        if not onScreen or sv.Z <= 0 then continue end
         local screenPos = Vector2.new(sv.X, sv.Y)
-        local dist = (screenPos - center).Magnitude
+        local dist = (screenPos - mousePos).Magnitude
         if dist < bestDist then
-            bestDist = dist
-            bestChar = char
-            bestPart = part
+            if IsVisible(char, part) then
+                bestDist = dist
+                bestPart = part
+                bestPlr  = player
+            end
         end
     end
-    return bestPart, bestChar
+    return bestPart, bestPlr
 end
 
--- Silent Aim: hook FindPartOnRayWithWhitelist so bullets redirect to target
+-- mousemoverel-based aim: moves the mouse delta toward the target
+local function AimAt(worldPos)
+    local screenPos = Camera:WorldToViewportPoint(worldPos)
+    local dx = (screenPos.X - Mouse.X) * AimbotSettings.Sensitivity
+    local dy = (screenPos.Y - Mouse.Y) * AimbotSettings.Sensitivity
+    mousemoverel(dx, dy)
+end
+
+local function AimbotStep()
+    if not AimbotSettings.Enabled then
+        _lockedTarget = nil
+        _lockedPlayer = nil
+        return
+    end
+
+    -- Validate existing lock
+    if AimbotSettings.LockTarget and _lockedTarget and _lockedPlayer then
+        local char = _lockedPlayer.Character
+        local valid = char
+            and char:IsDescendantOf(game)
+            and _lockedTarget:IsDescendantOf(game)
+            and _lockedPlayer.Parent ~= nil
+        if valid and AimbotSettings.CheckAlive and not IsAlive(char) then valid = false end
+        if valid and AimbotSettings.TeamCheck
+            and _lockedPlayer.Team ~= nil
+            and _lockedPlayer.Team == LocalPlayer.Team
+            and not LocalPlayer.Neutral then valid = false end
+        if not valid then
+            _lockedTarget = nil
+            _lockedPlayer = nil
+        end
+    end
+
+    -- Acquire target
+    local target, plr
+    if AimbotSettings.LockTarget and _lockedTarget then
+        target = _lockedTarget
+        plr    = _lockedPlayer
+    else
+        target, plr = GetClosestToMouse()
+        if AimbotSettings.LockTarget then
+            _lockedTarget = target
+            _lockedPlayer = plr
+        end
+    end
+
+    if target then
+        AimAt(target:GetRenderCFrame().Position)
+    end
+end
+
+-- Silent Aim: hook raycasts so bullets redirect to nearest target
 local _origFPORWW = workspace.FindPartOnRayWithWhitelist
 local _origFPOR   = workspace.FindPartOnRay
-local _saActive   = false
+
+local function GetSilentTarget()
+    local part, _ = GetClosestToMouse()
+    return part
+end
 
 local function HookSilentAim()
     workspace.FindPartOnRayWithWhitelist = function(ws, ray, whitelist, ...)
-        if AimbotSettings.SilentAim and _saActive then
-            local target, _ = GetClosestTarget()
+        if AimbotSettings.SilentAim then
+            local target = GetSilentTarget()
             if target then
                 local dir    = (target.Position - ray.Origin).Unit
                 local newRay = Ray.new(ray.Origin, dir * ray.Direction.Magnitude)
@@ -367,8 +456,8 @@ local function HookSilentAim()
         return _origFPORWW(ws, ray, whitelist, ...)
     end
     workspace.FindPartOnRay = function(ws, ray, ...)
-        if AimbotSettings.SilentAim and _saActive then
-            local target, _ = GetClosestTarget()
+        if AimbotSettings.SilentAim then
+            local target = GetSilentTarget()
             if target then
                 local dir    = (target.Position - ray.Origin).Unit
                 local newRay = Ray.new(ray.Origin, dir * ray.Direction.Magnitude)
@@ -566,7 +655,7 @@ local GbAim = Tabs.Aimbot:AddLeftGroupbox("Aimbot")
 GbAim:AddToggle("AimbotEnabled", {
     Text    = "Enabled",
     Default = AimbotSettings.Enabled,
-    Tooltip = "Rotate camera toward nearest target within FOV",
+    Tooltip = "Move mouse toward nearest target within FOV (hold key)",
 })
 GbAim:AddLabel("Hold Key"):AddKeyPicker("AimbotKey", {
     Default = "MouseButton2",
@@ -580,20 +669,21 @@ DepAim:AddSlider("AimbotFOV", {
     Text     = "FOV",
     Default  = AimbotSettings.FOV,
     Min      = 10,
-    Max      = 500,
+    Max      = 800,
     Rounding = 0,
     Compact  = true,
     Suffix   = "px",
-    Tooltip  = "Screen-space radius in pixels to search for targets",
+    Tooltip  = "Mouse-distance radius to search for targets",
 })
-DepAim:AddSlider("AimbotSmooth", {
-    Text     = "Smoothness",
-    Default  = AimbotSettings.Smoothness,
+DepAim:AddSlider("AimbotSensitivity", {
+    Text     = "Sensitivity",
+    Default  = AimbotSettings.Sensitivity * 100,
     Min      = 1,
-    Max      = 50,
+    Max      = 100,
     Rounding = 0,
     Compact  = true,
-    Tooltip  = "Higher = slower/smoother camera movement",
+    Suffix   = "%",
+    Tooltip  = "Lower = smoother. Reduce if aimbot is wobbly",
 })
 DepAim:AddDropdown("AimbotHitPart", {
     Values  = { "Head", "HumanoidRootPart", "Torso", "UpperTorso" },
@@ -604,7 +694,22 @@ DepAim:AddDropdown("AimbotHitPart", {
 DepAim:AddToggle("AimbotTeamCheck", {
     Text    = "Team Check",
     Default = AimbotSettings.TeamCheck,
-    Tooltip = "Skip teammates when finding targets",
+    Tooltip = "Skip teammates",
+})
+DepAim:AddToggle("AimbotLockTarget", {
+    Text    = "Lock To Target",
+    Default = AimbotSettings.LockTarget,
+    Tooltip = "Stay locked on the same target until they die or leave FOV",
+})
+DepAim:AddToggle("AimbotCheckAlive", {
+    Text    = "Check Alive",
+    Default = AimbotSettings.CheckAlive,
+    Tooltip = "Skip dead players",
+})
+DepAim:AddToggle("AimbotIgnoreWalls", {
+    Text    = "Ignore Walls",
+    Default = AimbotSettings.IgnoreWalls,
+    Tooltip = "Aim through walls (off = wall check)",
 })
 DepAim:SetupDependencies({ { Toggles.AimbotEnabled, true } })
 
@@ -613,9 +718,17 @@ local GbFOV = Tabs.Aimbot:AddLeftGroupbox("FOV Circle")
 GbFOV:AddToggle("ShowFOV", {
     Text    = "Show FOV Circle",
     Default = AimbotSettings.ShowFOV,
-    Tooltip = "Draw a circle showing the aimbot FOV radius",
+    Tooltip = "Draw a circle around the mouse showing aimbot radius",
 })
 local DepFOV = GbFOV:AddDependencyBox()
+DepFOV:AddSlider("FOVThickness", {
+    Text     = "Thickness",
+    Default  = AimbotSettings.FOVThickness,
+    Min      = 1,
+    Max      = 5,
+    Rounding = 0,
+    Compact  = true,
+})
 DepFOV:AddLabel("Color"):AddColorPicker("FOVColor", {
     Default = AimbotSettings.FOVColor,
     Title   = "FOV Circle Color",
@@ -627,20 +740,20 @@ local GbSilent = Tabs.Aimbot:AddRightGroupbox("Silent Aim")
 GbSilent:AddToggle("SilentAim", {
     Text    = "Enabled",
     Default = AimbotSettings.SilentAim,
-    Tooltip = "Redirect bullets to target without moving camera — works in third person",
+    Tooltip = "Redirect bullets to target — no camera movement, works in 3rd person",
 })
 local DepSilent = GbSilent:AddDependencyBox()
-DepSilent:AddLabel("Silent aim hooks the ray-cast\nused for bullet detection.\nNo camera movement needed.", true)
+DepSilent:AddLabel("Hooks the bullet raycast.\nNo key needed — just shoot.", true)
 DepSilent:AddDivider()
-DepSilent:AddLabel("Works best with:\n- Third person games\n- Firearms with raycast", true)
+DepSilent:AddLabel("Best for:\n- Third person games\n- Raycast-based firearms", true)
 DepSilent:SetupDependencies({ { Toggles.SilentAim, true } })
 
-local GbAimInfo = Tabs.Aimbot:AddRightGroupbox("Info")
-GbAimInfo:AddLabel("Aimbot: hold key to lock\ncamera onto nearest target.", true)
+local GbAimInfo = Tabs.Aimbot:AddRightGroupbox("How It Works")
+GbAimInfo:AddLabel("Aimbot uses mousemoverel\n(moves your actual mouse).", true)
 GbAimInfo:AddDivider()
-GbAimInfo:AddLabel("Silent Aim: no key needed.\nJust shoot normally.", true)
+GbAimInfo:AddLabel("FOV = distance from mouse\nto target on screen.", true)
 GbAimInfo:AddDivider()
-GbAimInfo:AddLabel("Both can run together.", true)
+GbAimInfo:AddLabel("Lower sensitivity = smoother.\nBoth modes work together.", true)
 
 -- ══════════════════════════════════════════
 -- TAB: VISUALS
@@ -690,7 +803,7 @@ GbConfig:AddLabel("File: " .. CONFIG_FILE, true)
 
 local GbScriptInfo = Tabs.Config:AddRightGroupbox("About")
 GbScriptInfo:AddLabel("Universal ESP Pro Enhanced", true)
-GbScriptInfo:AddLabel("v3.5  |  LinoriaLib", true)
+GbScriptInfo:AddLabel("v3.7  |  LinoriaLib", true)
 GbScriptInfo:AddDivider()
 GbScriptInfo:AddLabel("Loadstring in script header.", true)
 GbScriptInfo:AddDivider()
@@ -774,14 +887,18 @@ Options.ESPKeybind:OnClick(function()
 end)
 
 -- Aimbot OnChanged
-Toggles.AimbotEnabled:OnChanged(function()  AimbotSettings.Enabled    = Toggles.AimbotEnabled.Value  end)
-Toggles.SilentAim:OnChanged(function()      AimbotSettings.SilentAim  = Toggles.SilentAim.Value      end)
-Toggles.AimbotTeamCheck:OnChanged(function() AimbotSettings.TeamCheck  = Toggles.AimbotTeamCheck.Value end)
-Toggles.ShowFOV:OnChanged(function()        AimbotSettings.ShowFOV    = Toggles.ShowFOV.Value         end)
-Options.AimbotFOV:OnChanged(function()      AimbotSettings.FOV        = Options.AimbotFOV.Value       end)
-Options.AimbotSmooth:OnChanged(function()   AimbotSettings.Smoothness  = Options.AimbotSmooth.Value    end)
-Options.AimbotHitPart:OnChanged(function()  AimbotSettings.HitPart    = Options.AimbotHitPart.Value   end)
-Options.FOVColor:OnChanged(function()       AimbotSettings.FOVColor   = Options.FOVColor.Value        end)
+Toggles.AimbotEnabled:OnChanged(function()    AimbotSettings.Enabled     = Toggles.AimbotEnabled.Value;    _lockedTarget = nil; _lockedPlayer = nil end)
+Toggles.SilentAim:OnChanged(function()        AimbotSettings.SilentAim   = Toggles.SilentAim.Value         end)
+Toggles.AimbotTeamCheck:OnChanged(function()  AimbotSettings.TeamCheck   = Toggles.AimbotTeamCheck.Value;  _lockedTarget = nil; _lockedPlayer = nil end)
+Toggles.AimbotLockTarget:OnChanged(function() AimbotSettings.LockTarget  = Toggles.AimbotLockTarget.Value; _lockedTarget = nil; _lockedPlayer = nil end)
+Toggles.AimbotCheckAlive:OnChanged(function() AimbotSettings.CheckAlive  = Toggles.AimbotCheckAlive.Value  end)
+Toggles.AimbotIgnoreWalls:OnChanged(function() AimbotSettings.IgnoreWalls = Toggles.AimbotIgnoreWalls.Value end)
+Toggles.ShowFOV:OnChanged(function()          AimbotSettings.ShowFOV     = Toggles.ShowFOV.Value           end)
+Options.AimbotFOV:OnChanged(function()        AimbotSettings.FOV         = Options.AimbotFOV.Value         end)
+Options.AimbotSensitivity:OnChanged(function() AimbotSettings.Sensitivity = Options.AimbotSensitivity.Value / 100 end)
+Options.AimbotHitPart:OnChanged(function()    AimbotSettings.HitPart     = Options.AimbotHitPart.Value;    _lockedTarget = nil; _lockedPlayer = nil end)
+Options.FOVThickness:OnChanged(function()     AimbotSettings.FOVThickness = Options.FOVThickness.Value     end)
+Options.FOVColor:OnChanged(function()         AimbotSettings.FOVColor    = Options.FOVColor.Value          end)
 
 -- ══════════════════════════════════════════
 -- WATERMARK
@@ -844,7 +961,7 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         return math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
     end)
     _ping = ok and p or _ping
-    Library:SetWatermark(("Universal ESP v3.6  |  %d fps  |  %dms  |  %d players"):format(
+    Library:SetWatermark(("Universal ESP v3.7  |  %d fps  |  %dms  |  %d players"):format(
         math.floor(_fps), _ping,
         math.max(0, #Players:GetPlayers() - 1)
     ))
@@ -852,27 +969,26 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         pcall(UpdateESP, e)
     end
 
-    -- FOV circle
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    -- FOV circle: follows mouse position
     if AimbotSettings.ShowFOV then
-        FovCircle.Position    = center
+        FovCircle.Position    = Vector2.new(Mouse.X, Mouse.Y)
         FovCircle.Radius      = AimbotSettings.FOV
         FovCircle.Color       = AimbotSettings.FOVColor
+        FovCircle.Thickness   = AimbotSettings.FOVThickness
         FovCircle.Visible     = true
     else
         FovCircle.Visible = false
     end
 
-    -- Aimbot (camera-based)
+    -- Aimbot (mousemoverel-based, runs on Heartbeat via pcall wrapper)
     local aimbotHeld = Options.AimbotKey and Options.AimbotKey:GetKeybindActive()
-    _saActive = aimbotHeld or false
-
-    if AimbotSettings.Enabled and aimbotHeld then
-        local target, _ = GetClosestTarget()
-        if target then
-            local targetCF  = CFrame.new(Camera.CFrame.Position, target.Position)
-            local smooth    = math.clamp(AimbotSettings.Smoothness, 1, 50)
-            Camera.CFrame   = Camera.CFrame:Lerp(targetCF, 1 / smooth)
+    if aimbotHeld then
+        pcall(AimbotStep)
+    else
+        -- Reset lock when key released so next press re-acquires
+        if AimbotSettings.LockTarget then
+            _lockedTarget = nil
+            _lockedPlayer = nil
         end
     end
 end)
@@ -899,4 +1015,4 @@ getgenv().UniversalESP = {
 
 SaveManager:LoadAutoloadConfig()
 Notify("Universal ESP Pro Enhanced", "Loaded! Press End to toggle menu.", 5)
-print("[Universal ESP Pro Enhanced v3.6] Loaded successfully.")
+print("[Universal ESP Pro Enhanced v3.7] Loaded successfully.")
