@@ -471,9 +471,9 @@ local FovCircle = NewDrawing("Circle", {
 })
 
 local TargetLine = NewDrawing("Line", {
-    Thickness    = 1,
-    Color        = Color3.fromRGB(255, 255, 255),
-    Transparency = 1,
+    Thickness    = 2,
+    Color        = Color3.fromRGB(0, 255, 0),
+    Transparency = 0,
     Visible      = false,
 })
 
@@ -1074,14 +1074,32 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         FovCircle.Visible = false
     end
     
-    -- Update Silent Aim target
-    local silentTarget, silentChar = GetClosestSilentTarget()
-    SilentAimState.Target = silentChar
-    SilentAimState.TargetPart = silentTarget
+    -- Silent Aim input detection  
+    local silentAimActive = false
+    if SilentAimSettings.Enabled then
+        -- Check for LeftMouseButton activation (default Silent Aim keybind)
+        if SilentAimSettings.Keybind == "LeftMouseButton" then
+            silentAimActive = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+        -- Add other keybind support if needed
+        elseif SilentAimSettings.Keybind == "RightMouseButton" then
+            silentAimActive = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+        end
+    end
     
-    -- Draw target line
-    if SilentAimSettings.ShowTargetLine and silentTarget then
-        local targetScreenPos = Camera:WorldToViewportPoint(silentTarget.Position)
+    -- Update Silent Aim target only when active
+    if silentAimActive then
+        local silentTarget, silentChar = GetClosestSilentTarget()
+        SilentAimState.Target = silentChar
+        SilentAimState.TargetPart = silentTarget
+    else
+        -- Clear target when not active
+        SilentAimState.Target = nil
+        SilentAimState.TargetPart = nil
+    end
+    
+    -- Draw target line only when Silent Aim is active and has target
+    if silentAimActive and SilentAimSettings.ShowTargetLine and SilentAimState.TargetPart then
+        local targetScreenPos = Camera:WorldToViewportPoint(SilentAimState.TargetPart.Position)
         TargetLine.From = mouseLoc
         TargetLine.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
         TargetLine.Color = SilentAimSettings.TargetLineColor
