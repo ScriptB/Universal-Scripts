@@ -1250,8 +1250,6 @@ local _wmConn = RunService.RenderStepped:Connect(function()
         TargetLine.Thickness = 2
         TargetLine.Transparency = 1
         TargetLine.Visible = true
-        -- Debug output
-        print("Target Line Should Be Visible:", TargetLine.Visible, "From:", TargetLine.From, "To:", TargetLine.To)
     else
         TargetLine.Visible = false
     end
