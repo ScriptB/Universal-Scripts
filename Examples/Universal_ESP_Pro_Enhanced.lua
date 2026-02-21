@@ -1,5 +1,5 @@
--- Universal ESP Pro Enhanced v3.2
--- UI: Orion Library | Full ESP | Config System
+-- Universal ESP Pro Enhanced v3.3
+-- UI: LinoriaLib | Full ESP | Config System
 -- Loadstring: loadstring(game:HttpGet("https://raw.githubusercontent.com/ScriptB/Universal-Scripts/main/Examples/Universal_ESP_Pro_Enhanced.lua", true))()
 
 repeat task.wait() until game:IsLoaded()
@@ -14,9 +14,12 @@ local Camera      = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 -- ══════════════════════════════════════════
--- LOAD ORION UI LIBRARY
+-- LOAD LINORIA UI LIBRARY
 -- ══════════════════════════════════════════
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
+local repo = "https://raw.githubusercontent.com/wally-rblx/LinoriaLib/main/"
+local Library    = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager  = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
 -- ══════════════════════════════════════════
 -- ESP SETTINGS
@@ -103,6 +106,7 @@ local function SaveConfig()
     end)
     if ok then
         print("[ESP] Config saved.")
+        Library:Notify("Config saved!", 3)
     else
         warn("[ESP] Save failed: " .. tostring(err))
     end
@@ -126,6 +130,9 @@ local function LoadConfig()
             end
         end
         print("[ESP] Config loaded.")
+        Library:Notify("Config loaded!", 3)
+    else
+        Library:Notify("No config found.", 3)
     end
 end
 
@@ -281,177 +288,189 @@ local function UpdateESP(e)
 end
 
 -- ══════════════════════════════════════════
--- BUILD ORION UI
+-- BUILD LINORIA UI
 -- ══════════════════════════════════════════
-local Window = OrionLib:MakeWindow({
-    Name        = "Universal ESP Pro Enhanced",
-    HidePremium = true,
-    SaveConfig  = false,
+local Window = Library:CreateWindow({
+    Title    = "Universal ESP Pro Enhanced",
+    Center   = true,
+    AutoShow = true,
 })
 
--- ── Tab: ESP ───────────────────────────────
-local TabESP = Window:MakeTab({ Name = "ESP", Icon = "rbxassetid://4483345998" })
+local Tabs = {
+    ESP     = Window:AddTab("ESP"),
+    Visuals = Window:AddTab("Visuals"),
+    Config  = Window:AddTab("Config"),
+    UI      = Window:AddTab("UI Settings"),
+}
 
-TabESP:AddToggle({
-    Name     = "ESP Enabled",
+-- ── ESP Tab ────────────────────────────────
+local GbMaster = Tabs.ESP:AddLeftGroupbox("Master")
+GbMaster:AddToggle("ESPEnabled", {
+    Text     = "ESP Enabled",
     Default  = Settings.Enabled,
     Callback = function(v) Settings.Enabled = v end,
 })
-TabESP:AddToggle({
-    Name     = "Team Check",
+GbMaster:AddToggle("TeamCheck", {
+    Text     = "Team Check",
     Default  = Settings.TeamCheck,
+    Tooltip  = "Hide ESP for teammates",
     Callback = function(v) Settings.TeamCheck = v end,
 })
-TabESP:AddToggle({
-    Name     = "Team Color",
+GbMaster:AddToggle("TeamColor", {
+    Text     = "Team Color",
     Default  = Settings.TeamColor,
+    Tooltip  = "Use team color for ESP elements",
     Callback = function(v) Settings.TeamColor = v end,
 })
-TabESP:AddSlider({
-    Name      = "Max Distance",
-    Min       = 100,
-    Max       = 5000,
-    Default   = Settings.MaxDist,
-    Increment = 50,
-    ValueName = "studs",
-    Callback  = function(v) Settings.MaxDist = v end,
+GbMaster:AddSlider("MaxDist", {
+    Text     = "Max Distance",
+    Default  = Settings.MaxDist,
+    Min      = 100,
+    Max      = 5000,
+    Rounding = 0,
+    Suffix   = " studs",
+    Callback = function(v) Settings.MaxDist = v end,
 })
 
-TabESP:AddLabel("── Box ESP ──")
-TabESP:AddToggle({
-    Name     = "Box Enabled",
+local GbBox = Tabs.ESP:AddRightGroupbox("Box ESP")
+GbBox:AddToggle("BoxEnabled", {
+    Text     = "Box Enabled",
     Default  = Settings.Box.Enabled,
     Callback = function(v) Settings.Box.Enabled = v end,
 })
-TabESP:AddSlider({
-    Name      = "Box Thickness",
-    Min       = 1,
-    Max       = 5,
-    Default   = Settings.Box.Thickness,
-    Increment = 1,
-    ValueName = "px",
-    Callback  = function(v) Settings.Box.Thickness = v end,
+GbBox:AddSlider("BoxThickness", {
+    Text     = "Thickness",
+    Default  = Settings.Box.Thickness,
+    Min      = 1,
+    Max      = 5,
+    Rounding = 0,
+    Callback = function(v) Settings.Box.Thickness = v end,
 })
-TabESP:AddColorpicker({
-    Name     = "Box Color",
+GbBox:AddLabel("Box Color"):AddColorPicker("BoxColor", {
     Default  = Settings.Box.Color,
     Callback = function(v) Settings.Box.Color = v end,
 })
 
-TabESP:AddLabel("── Tracer ESP ──")
-TabESP:AddToggle({
-    Name     = "Tracer Enabled",
+local GbTracer = Tabs.ESP:AddLeftGroupbox("Tracer ESP")
+GbTracer:AddToggle("TracerEnabled", {
+    Text     = "Tracer Enabled",
     Default  = Settings.Tracer.Enabled,
     Callback = function(v) Settings.Tracer.Enabled = v end,
 })
-TabESP:AddSlider({
-    Name      = "Tracer Thickness",
-    Min       = 1,
-    Max       = 5,
-    Default   = Settings.Tracer.Thickness,
-    Increment = 1,
-    ValueName = "px",
-    Callback  = function(v) Settings.Tracer.Thickness = v end,
+GbTracer:AddSlider("TracerThickness", {
+    Text     = "Thickness",
+    Default  = Settings.Tracer.Thickness,
+    Min      = 1,
+    Max      = 5,
+    Rounding = 0,
+    Callback = function(v) Settings.Tracer.Thickness = v end,
 })
-TabESP:AddColorpicker({
-    Name     = "Tracer Color",
+GbTracer:AddLabel("Tracer Color"):AddColorPicker("TracerColor", {
     Default  = Settings.Tracer.Color,
     Callback = function(v) Settings.Tracer.Color = v end,
 })
-TabESP:AddDropdown({
-    Name     = "Tracer Origin",
-    Default  = Settings.Tracer.Origin,
-    Options  = { "Bottom", "Center", "Top" },
+GbTracer:AddDropdown("TracerOrigin", {
+    Values   = { "Bottom", "Center", "Top" },
+    Default  = 1,
+    Text     = "Origin",
     Callback = function(v) Settings.Tracer.Origin = v end,
 })
 
-TabESP:AddLabel("── Name ESP ──")
-TabESP:AddToggle({
-    Name     = "Name Enabled",
+local GbName = Tabs.ESP:AddRightGroupbox("Name ESP")
+GbName:AddToggle("NameEnabled", {
+    Text     = "Name Enabled",
     Default  = Settings.Name.Enabled,
     Callback = function(v) Settings.Name.Enabled = v end,
 })
-TabESP:AddToggle({
-    Name     = "Show Distance",
+GbName:AddToggle("ShowDistance", {
+    Text     = "Show Distance",
     Default  = Settings.Name.ShowDistance,
     Callback = function(v) Settings.Name.ShowDistance = v end,
 })
-TabESP:AddToggle({
-    Name     = "Show Health in Name",
+GbName:AddToggle("ShowHealthName", {
+    Text     = "Show Health",
     Default  = Settings.Name.ShowHealth,
     Callback = function(v) Settings.Name.ShowHealth = v end,
 })
-TabESP:AddToggle({
-    Name     = "Name Outline",
+GbName:AddToggle("NameOutline", {
+    Text     = "Outline",
     Default  = Settings.Name.Outline,
     Callback = function(v) Settings.Name.Outline = v end,
 })
-TabESP:AddSlider({
-    Name      = "Name Size",
-    Min       = 10,
-    Max       = 24,
-    Default   = Settings.Name.Size,
-    Increment = 1,
-    ValueName = "pt",
-    Callback  = function(v) Settings.Name.Size = v end,
+GbName:AddSlider("NameSize", {
+    Text     = "Size",
+    Default  = Settings.Name.Size,
+    Min      = 10,
+    Max      = 24,
+    Rounding = 0,
+    Callback = function(v) Settings.Name.Size = v end,
 })
-TabESP:AddColorpicker({
-    Name     = "Name Color",
+GbName:AddLabel("Name Color"):AddColorPicker("NameColor", {
     Default  = Settings.Name.Color,
     Callback = function(v) Settings.Name.Color = v end,
 })
 
-TabESP:AddLabel("── Health Bar ──")
-TabESP:AddToggle({
-    Name     = "Health Bar Enabled",
+local GbHealth = Tabs.ESP:AddLeftGroupbox("Health Bar")
+GbHealth:AddToggle("HealthEnabled", {
+    Text     = "Health Bar Enabled",
     Default  = Settings.Health.Enabled,
     Callback = function(v) Settings.Health.Enabled = v end,
 })
-TabESP:AddToggle({
-    Name     = "Health Text",
+GbHealth:AddToggle("HealthText", {
+    Text     = "Health Text",
     Default  = Settings.Health.ShowText,
     Callback = function(v) Settings.Health.ShowText = v end,
 })
-TabESP:AddSlider({
-    Name      = "Health Bar Thickness",
-    Min       = 1,
-    Max       = 6,
-    Default   = Settings.Health.Thickness,
-    Increment = 1,
-    ValueName = "px",
-    Callback  = function(v) Settings.Health.Thickness = v end,
+GbHealth:AddSlider("HealthThickness", {
+    Text     = "Thickness",
+    Default  = Settings.Health.Thickness,
+    Min      = 1,
+    Max      = 6,
+    Rounding = 0,
+    Callback = function(v) Settings.Health.Thickness = v end,
 })
 
--- ── Tab: Visuals ───────────────────────────
-local TabVisuals = Window:MakeTab({ Name = "Visuals", Icon = "rbxassetid://4483345998" })
-
-TabVisuals:AddToggle({
-    Name     = "Rainbow Mode",
+-- ── Visuals Tab ────────────────────────────
+local GbRainbow = Tabs.Visuals:AddLeftGroupbox("Rainbow")
+GbRainbow:AddToggle("RainbowEnabled", {
+    Text     = "Rainbow Mode",
     Default  = Settings.Rainbow.Enabled,
+    Tooltip  = "Cycles all ESP colors through rainbow",
     Callback = function(v) Settings.Rainbow.Enabled = v end,
 })
-TabVisuals:AddSlider({
-    Name      = "Rainbow Speed",
-    Min       = 1,
-    Max       = 10,
-    Default   = Settings.Rainbow.Speed,
-    Increment = 1,
-    ValueName = "x",
-    Callback  = function(v) Settings.Rainbow.Speed = v end,
+GbRainbow:AddSlider("RainbowSpeed", {
+    Text     = "Speed",
+    Default  = Settings.Rainbow.Speed,
+    Min      = 1,
+    Max      = 10,
+    Rounding = 0,
+    Callback = function(v) Settings.Rainbow.Speed = v end,
 })
 
--- ── Tab: Config ────────────────────────────
-local TabConfig = Window:MakeTab({ Name = "Config", Icon = "rbxassetid://4483345998" })
+-- ── Config Tab ─────────────────────────────
+local GbConfig = Tabs.Config:AddLeftGroupbox("Configuration")
+GbConfig:AddButton({ Text = "Save Config", Func = SaveConfig })
+GbConfig:AddButton({ Text = "Load Config", Func = LoadConfig })
+GbConfig:AddLabel("File: UniversalESP_Config.json", true)
 
-TabConfig:AddButton({
-    Name     = "Save Config",
-    Callback = SaveConfig,
+-- ── UI Settings Tab ────────────────────────
+local GbMenu = Tabs.UI:AddLeftGroupbox("Menu")
+GbMenu:AddButton("Unload", function() Library:Unload() end)
+GbMenu:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
+    Default = "End",
+    NoUI    = true,
+    Text    = "Menu keybind",
 })
-TabConfig:AddButton({
-    Name     = "Load Config",
-    Callback = LoadConfig,
-})
-TabConfig:AddLabel("File: UniversalESP_Config.json")
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+ThemeManager:SetFolder("UniversalESP")
+SaveManager:SetFolder("UniversalESP")
+ThemeManager:ApplyToTab(Tabs.UI)
+SaveManager:BuildConfigSection(Tabs.UI)
 
 -- ══════════════════════════════════════════
 -- ESP RUNTIME
@@ -489,10 +508,8 @@ getgenv().UniversalESP = {
         for player in pairs(ESPObjects) do
             RemoveESP(player)
         end
+        Library:Unload()
     end,
 }
 
--- REQUIRED: Orion must be initialized last
-OrionLib:Init()
-
-print("[Universal ESP Pro Enhanced v3.2] Loaded successfully.")
+print("[Universal ESP Pro Enhanced v3.3] Loaded successfully.")
