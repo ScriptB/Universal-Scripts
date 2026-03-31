@@ -106,7 +106,7 @@ local Theme = {
 
 -- Built-in theme presets (switchable at runtime)
 local Themes = {
-    Default = Theme,  -- reference
+    Default = (function() local t={} for k,v in pairs(Theme) do t[k]=v end return t end)(),  -- snapshot
     Ocean = {
         Background  = Color3.fromRGB(6,  14,  22),
         Panel       = Color3.fromRGB(10, 20,  34),
@@ -174,6 +174,41 @@ local Themes = {
         Transparent = Color3.fromRGB(0,   0,   0),
         TitleLeft   = Color3.fromRGB(28,  14,  26),
         TitleRight  = Color3.fromRGB(40,  16,  36),
+    },
+
+    Raycast = {
+        Background  = Color3.fromRGB(15,  15,  20),
+        Panel       = Color3.fromRGB(24,  25,  34),
+        PanelAlt    = Color3.fromRGB(31,  33,  48),
+        PanelDeep   = Color3.fromRGB(22,  24,  37),
+        Element     = Color3.fromRGB(20,  22,  36),
+        ElementHov  = Color3.fromRGB(32,  35,  56),
+        ElementAct  = Color3.fromRGB(42,  45,  65),
+        Accent      = Color3.fromRGB(255, 46,  99),
+        AccentDim   = Color3.fromRGB(224, 38,  88),
+        AccentGlow  = Color3.fromRGB(0,   229, 168),
+        Violet      = Color3.fromRGB(108, 99,  255),
+        VioletDim   = Color3.fromRGB(90,  82,  224),
+        Gold        = Color3.fromRGB(255, 176, 32),
+        Text        = Color3.fromRGB(245, 247, 255),
+        SubText     = Color3.fromRGB(184, 190, 214),
+        MutedText   = Color3.fromRGB(122, 128, 153),
+        Border      = Color3.fromRGB(42,  45,  61),
+        BorderBright= Color3.fromRGB(47,  51,  74),
+        ToggleOff   = Color3.fromRGB(42,  45,  61),
+        ToggleOn    = Color3.fromRGB(255, 46,  99),
+        SliderTrack = Color3.fromRGB(35,  37,  54),
+        SliderFill  = Color3.fromRGB(255, 46,  99),
+        SliderKnob  = Color3.fromRGB(245, 247, 255),
+        Danger      = Color3.fromRGB(255, 59,  59),
+        Success     = Color3.fromRGB(0,   230, 118),
+        Warning     = Color3.fromRGB(255, 176, 32),
+        Info        = Color3.fromRGB(108, 99,  255),
+        White       = Color3.fromRGB(255, 255, 255),
+        Black       = Color3.fromRGB(0,   0,   0),
+        Transparent = Color3.fromRGB(0,   0,   0),
+        TitleLeft   = Color3.fromRGB(22,  24,  37),
+        TitleRight  = Color3.fromRGB(31,  33,  48),
     },
 }
 
@@ -378,10 +413,66 @@ end
 function Library:SetTheme(name)
     local t = Themes[name]
     if not t then return end
-    for k, v in pairs(t) do
-        Theme[k] = v
+
+    -- Build reverse lookup: "R,G,B" → themeKey  (before mutating Theme)
+    local function c2s(c)
+        return math.floor(c.R*255+0.5)..","..math.floor(c.G*255+0.5)..","..math.floor(c.B*255+0.5)
     end
-    -- fire theme changed callbacks
+    local oldMap = {}
+    for k, v in pairs(Theme) do
+        local s = c2s(v)
+        if not oldMap[s] then oldMap[s] = k end
+    end
+
+    -- Update active Theme table in-place
+    for k, v in pairs(t) do Theme[k] = v end
+
+    -- Walk every Instance in every open ScreenGui and remap colours
+    local props = { "BackgroundColor3", "TextColor3", "ImageColor3" }
+    local function repaint(inst)
+        pcall(function()
+            for _, prop in ipairs(props) do
+                local ok, v = pcall(function() return inst[prop] end)
+                if ok and typeof(v) == "Color3" then
+                    local key = oldMap[c2s(v)]
+                    if key then pcall(function() inst[prop] = Theme[key] end) end
+                end
+            end
+            -- UIStroke.Color
+            local sk = inst:FindFirstChildOfClass("UIStroke")
+            if sk then
+                local ok, v = pcall(function() return sk.Color end)
+                if ok then
+                    local key = oldMap[c2s(v)]
+                    if key then pcall(function() sk.Color = Theme[key] end) end
+                end
+            end
+            -- UIGradient.Color (remap each keypoint)
+            local gd = inst:FindFirstChildOfClass("UIGradient")
+            if gd then
+                pcall(function()
+                    local kps = gd.Color.Keypoints
+                    local changed, newKps = false, {}
+                    for i, kp in ipairs(kps) do
+                        local key = oldMap[c2s(kp.Value)]
+                        newKps[i] = ColorSequenceKeypoint.new(kp.Time, key and Theme[key] or kp.Value)
+                        if key then changed = true end
+                    end
+                    if changed then gd.Color = ColorSequence.new(newKps) end
+                end)
+            end
+        end)
+        for _, child in ipairs(inst:GetChildren()) do repaint(child) end
+    end
+
+    for _, w in ipairs(self._windows) do
+        pcall(function() repaint(w._sg) end)
+    end
+    if self._wmSG  then pcall(function() repaint(self._wmSG)  end) end
+    if self._kbSG  then pcall(function() repaint(self._kbSG)  end) end
+    -- (notifications are transient; skip repaint to avoid mid-animation flicker)
+
+    -- fire registered callbacks (e.g. dropdown to update label)
     if self._onThemeChanged then
         for _, fn in ipairs(self._onThemeChanged) do pcall(fn, name) end
     end
