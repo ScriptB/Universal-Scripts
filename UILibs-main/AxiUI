@@ -457,7 +457,11 @@ local function Draggable(frame, handle)
 
     -- Heartbeat loop: zero Roblox instance property reads.
     -- UIS:GetMouseLocation() is a C method call — fires no signals, cannot recurse.
-    -- The re-entrancy guard prevents a hooked __newindex from looping back in.
+    -- The write is wrapped in pcall so that if the executor's own __newindex hook
+    -- overflows its C stack, the error is caught here and not propagated.
+    -- task.spawn breaks synchronous re-entrancy: the write runs in a fresh
+    -- scheduler task so any hook that resumes our coroutine mid-write can't
+    -- loop back into this Heartbeat frame.
     RunService.Heartbeat:Connect(function()
         if not dragging or guard then return end
         local m  = UIS:GetMouseLocation()
@@ -465,8 +469,12 @@ local function Draggable(frame, handle)
         local nx = math.clamp(sp.X + d.X, 0, maxX)
         local ny = math.clamp(sp.Y + d.Y, 0, maxY)
         guard = true
-        frame.Position = UDim2.new(0, nx, 0, ny)
-        guard = false
+        task.spawn(function()
+            pcall(function()
+                frame.Position = UDim2.new(0, nx, 0, ny)
+            end)
+            guard = false
+        end)
     end)
 end
 
