@@ -413,52 +413,49 @@ local function Lerp(a, b, t)     return a + (b - a) * t end
 
 local function Draggable(frame, handle)
     handle = handle or frame
-    -- Normalise to pure offset coordinates one frame after parenting so that
-    -- AbsolutePosition is fully computed. AnchorPoint stays (0,0) forever so
-    -- Size tweens collapse downward and drag math is always pure pixel offsets.
+
+    -- Normalise to pure-offset / AnchorPoint(0,0) one frame after parenting so
+    -- AbsolutePosition is valid. This must happen once; never mutate again.
     task.defer(function()
         local abs = frame.AbsolutePosition
         frame.AnchorPoint = Vector2.new(0, 0)
         frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
     end)
 
-    local drag    = false
-    local sp      = Vector2.new()  -- frame top-left at drag start (pixels)
-    local ds      = Vector2.new()  -- mouse position at drag start (pixels)
-    local target  = nil            -- pending position to apply this RenderStepped
+    local dragging = false
+    local sp = Vector2.new()   -- frame pixel position at drag start
+    local ds = Vector2.new()   -- mouse pixel position at drag start
 
+    -- UIS.InputChanged and any property-read inside it can cause C-stack
+    -- overflows in hooked executor environments due to re-entrant signal
+    -- dispatch. We avoid it entirely.
+    --
+    -- Instead: InputBegan/Ended only flip a boolean and record start coords
+    -- (no Roblox property writes here). RenderStepped polls the mouse position
+    -- via UIS:GetMouseLocation() — a direct method call, not an event,
+    -- so it can never be re-entered.
     handle.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag   = true
-            sp     = Vector2.new(frame.Position.X.Offset, frame.Position.Y.Offset)
-            ds     = Vector2.new(i.Position.X, i.Position.Y)
-            target = nil
+            dragging = true
+            sp = Vector2.new(frame.Position.X.Offset, frame.Position.Y.Offset)
+            ds = UIS:GetMouseLocation()
         end
     end)
     handle.InputEnded:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag = false
+            dragging = false
         end
     end)
-    -- InputChanged only writes to a plain variable — no frame property writes here.
-    -- Writing frame.Position inside InputChanged causes a position-changed signal
-    -- which re-fires InputChanged in many executors, producing a C stack overflow.
-    UIS.InputChanged:Connect(function(i)
-        if not drag or i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-        local d  = Vector2.new(i.Position.X, i.Position.Y) - ds
+
+    RunService.RenderStepped:Connect(function()
+        if not dragging then return end
+        local mouse = UIS:GetMouseLocation()
+        local d  = mouse - ds
         local vp = workspace.CurrentCamera.ViewportSize
         local sz = frame.AbsoluteSize
-        target = Vector2.new(
-            math.clamp(sp.X + d.X, 0, vp.X - sz.X),
-            math.clamp(sp.Y + d.Y, 0, vp.Y - sz.Y)
-        )
-    end)
-    -- Apply the pending position once per frame, safely outside any input event.
-    RunService.RenderStepped:Connect(function()
-        if target then
-            frame.Position = UDim2.new(0, target.X, 0, target.Y)
-            target = nil
-        end
+        local nx = math.clamp(sp.X + d.X, 0, vp.X - sz.X)
+        local ny = math.clamp(sp.Y + d.Y, 0, vp.Y - sz.Y)
+        frame.Position = UDim2.new(0, nx, 0, ny)
     end)
 end
 
