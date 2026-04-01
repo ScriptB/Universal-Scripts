@@ -395,17 +395,19 @@ end
 local function Lerp(a, b, t)     return a + (b - a) * t end
 
 -- ── Draggable ─────────────────────────────────────────────────
--- Pure 3-signal pattern — identical to Orion, PPHUD, and every
--- major executor-tested library.  No Heartbeat, no task.spawn,
--- no task.wait, no loops, no coroutines.
+-- drag: RenderStepped:Wait() yields the coroutine
+-- until the next render step — an event-based suspend that never
+-- pushes C stack frames, unlike task.wait() which is a recursive
+-- C callback on hooked executors.
 --
---   handle.InputBegan    → snapshot mousePos + framePos, mark dragging
---   handle.InputChanged  → track which input object is the drag input
---   UIS.InputChanged     → when input == dragInput and dragging,
---                          compute delta and write frame.Position
---   input.Changed End    → clear dragging + dragInput
+-- Pattern (directly from Linoria's MakeDraggable):
+--   InputBegan  → record ObjPos (mouse offset within frame)
+--   while IsMouseButtonPressed do
+--       write frame.Position
+--       RenderStepped:Wait()   ← safe coroutine yield
+--   end
 --
--- setrawproperty bypasses __newindex hooks when available.
+-- setrawproperty is used when available to bypass __newindex hooks.
 local _rawSet
 do
     local ok, fn = pcall(function() return setrawproperty end)
@@ -419,56 +421,48 @@ local function _safeSetPos(f, p)
     end
 end
 
-local function Draggable(frame, handle)
-    handle = handle or frame
+-- Cutoff: if handle == frame, only the top 40px of the frame initiates a drag.
+-- If a dedicated handle (title bar) is passed, the full handle is the drag zone.
+local function Draggable(frame, handle, cutoff)
+    handle  = handle  or frame
+    -- When no separate handle, restrict drag zone to top bar (like Linoria's Cutoff)
+    cutoff  = cutoff  or (handle == frame and 40 or math.huge)
 
-    local dragging  = false
-    local dragInput = nil
-    local mousePos  = Vector3.new()
-    local framePos  = UDim2.new()
+    frame.Active  = true
+    handle.Active = true
 
-    -- 1. Drag start: snapshot position and mouse, watch for release.
     handle.InputBegan:Connect(function(input)
-        local t = input.UserInputType
-        if t ~= Enum.UserInputType.MouseButton1
-        and t ~= Enum.UserInputType.Touch then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 
-        dragging  = true
-        mousePos  = input.Position
-        framePos  = frame.Position
+        -- ObjPos: cursor offset from the frame's top-left corner (Linoria pattern)
+        local mouse  = UIS:GetMouseLocation()
+        local objPos = Vector2.new(
+            mouse.X - frame.AbsolutePosition.X,
+            mouse.Y - frame.AbsolutePosition.Y
+        )
 
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging  = false
-                dragInput = nil
+        -- Respect cutoff (Y within the drag zone)
+        if objPos.Y > cutoff then return end
+
+        -- Drive position each render step — RenderStepped:Wait() is a pure
+        -- coroutine yield; it suspends until the signal fires, never recurses.
+        while UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+            local m  = UIS:GetMouseLocation()
+            local nx = m.X - objPos.X + (frame.Size.X.Offset * frame.AnchorPoint.X)
+            local ny = m.Y - objPos.Y + (frame.Size.Y.Offset * frame.AnchorPoint.Y)
+
+            -- Viewport clamping
+            local cam = workspace.CurrentCamera
+            if cam then
+                local vp = cam.ViewportSize
+                local sz = frame.AbsoluteSize
+                nx = math.clamp(nx, 0, math.max(0, vp.X - sz.X))
+                ny = math.clamp(ny, 0, math.max(0, vp.Y - sz.Y))
             end
-        end)
-    end)
 
-    -- 2. Track the live input object for this drag.
-    handle.InputChanged:Connect(function(input)
-        local t = input.UserInputType
-        if t == Enum.UserInputType.MouseMovement
-        or t == Enum.UserInputType.Touch then
-            dragInput = input
+            _safeSetPos(frame, UDim2.new(0, nx, 0, ny))
+            RunService.RenderStepped:Wait()
         end
-    end)
-
-    -- 3. Write position — fires only when the tracked input moves.
-    UIS.InputChanged:Connect(function(input)
-        if not dragging or input ~= dragInput then return end
-        local delta = input.Position - mousePos
-        local nx    = framePos.X.Offset + delta.X
-        local ny    = framePos.Y.Offset + delta.Y
-        -- Viewport clamping
-        local cam = workspace.CurrentCamera
-        if cam then
-            local vp = cam.ViewportSize
-            local sz = frame.AbsoluteSize
-            nx = math.clamp(nx, 0, math.max(0, vp.X - sz.X))
-            ny = math.clamp(ny, 0, math.max(0, vp.Y - sz.Y))
-        end
-        _safeSetPos(frame, UDim2.new(framePos.X.Scale, nx, framePos.Y.Scale, ny))
     end)
 end
 
