@@ -2237,10 +2237,10 @@ function Library:CreateWindow(opts)
 
                 local function closePopup()
                     if popup then
-                        -- Fade out only (no position tween; popup is now sg-parented at absolute coords)
-                        Tween(popup, { BackgroundTransparency = 1 }, 0.12)
-                        Tween(arrow, { Rotation = 0 }, 0.12)
-                        task.delay(0.13, function() pcall(function() if popup then popup:Destroy(); popup = nil end end) end)
+                        -- Collapse to 0 height (ClipsDescendants hides items as it shrinks)
+                        Tween(popup, { Size = UDim2.new(0, popup.AbsoluteSize.X, 0, 0) }, 0.11, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+                        Tween(arrow, { Rotation = 0 }, 0.11)
+                        task.delay(0.12, function() pcall(function() if popup then popup:Destroy(); popup = nil end end) end)
                         isOpen = false
                     end
                 end
@@ -2250,10 +2250,11 @@ function Library:CreateWindow(opts)
                     local maxH = 160
                     -- Parent to sg so the ScrollingFrame column cannot clip the popup
                     local _bx = btn.AbsolutePosition.X
-                    local _by = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + 2
+                    local _by = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + 3
                     local _bw = btn.AbsoluteSize.X
                     popup = New("Frame", {
                         BackgroundColor3 = Theme.PanelAlt,
+                        BackgroundTransparency = 0,
                         BorderSizePixel  = 0,
                         Position         = UDim2.new(0, _bx, 0, _by),
                         Size             = UDim2.new(0, _bw, 0, 0),
@@ -2365,8 +2366,9 @@ function Library:CreateWindow(opts)
 
                     local rows = math.min(#obj._items, 6)
                     local totalH = yOff + rows * 27 + 6
-                    popup.Size = UDim2.new(0, _bw, 0, math.max(40, totalH))
-                    -- position is already set to absolute screen coords above
+                    local finalH = math.max(40, totalH)
+                    -- animate open: grow from 0 to full height (ClipsDescendants hides overflow)
+                    Tween(popup, { Size = UDim2.new(0, _bw, 0, finalH) }, 0.14, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
                 end
 
                 btn.MouseButton1Click:Connect(function()
@@ -2475,10 +2477,10 @@ function Library:CreateWindow(opts)
                     local _ry = row.AbsolutePosition.Y + row.AbsoluteSize.Y + 4
                     local _rw = row.AbsoluteSize.X
                     -- Flip above the row if the panel would fall off the bottom of the screen
-                    if _ry + 172 > sg.AbsoluteSize.Y then _ry = row.AbsolutePosition.Y - 172 - 4 end
+                    if _ry + 148 > sg.AbsoluteSize.Y then _ry = row.AbsolutePosition.Y - 148 - 4 end
                     panel = New("Frame", {
                         BackgroundColor3 = Theme.PanelAlt,
-                        Size             = UDim2.new(0, _rw, 0, 172),
+                        Size             = UDim2.new(0, _rw, 0, 148),
                         Position         = UDim2.new(0, _rx, 0, _ry),
                         BorderSizePixel  = 0,
                         ZIndex           = 10,
@@ -2488,10 +2490,38 @@ function Library:CreateWindow(opts)
                     Corner(panel, 8)
                     Stroke(panel, Theme.Border)
 
+                    -- Alpha slider (vertical, left side, 4px from panel edge)
+                    local alphaTrk = New("Frame", {
+                        BackgroundColor3 = Theme.SliderTrack,
+                        Size             = UDim2.new(0, 8, 0, 100),
+                        Position         = UDim2.new(0, 4, 0, 8),
+                        BorderSizePixel  = 0,
+                        ZIndex           = 21,
+                        ClipsDescendants = false,
+                        Parent           = panel,
+                    })
+                    Corner(alphaTrk, 4)
+                    -- top = opaque (white), bottom = transparent (dark)
+                    local alphaGradInst = Instance.new("UIGradient")
+                    alphaGradInst.Color = ColorSequence.new(Color3.new(1,1,1), Color3.new(0.15,0.15,0.15))
+                    alphaGradInst.Rotation = 90
+                    alphaGradInst.Parent = alphaTrk
+                    -- knob: horizontal bar wider than the track
+                    local alphaKnob = New("Frame", {
+                        BackgroundColor3 = Color3.new(1,1,1),
+                        Size             = UDim2.new(0, 14, 0, 4),
+                        AnchorPoint      = Vector2.new(0.5, 0.5),
+                        Position         = UDim2.new(0.5, 0, 1 - alpha, 0),
+                        ZIndex           = 22,
+                        Parent           = alphaTrk,
+                    })
+                    Corner(alphaKnob, 2)
+                    Stroke(alphaKnob, Color3.new(0,0,0), 1, 0, 1)
+
                     -- SV square (gradient simulation with two layered UIGradients)
                     local svSq = New("Frame", {
-                        Size             = UDim2.new(0, 130, 0, 100),
-                        Position         = UDim2.new(0, 8, 0, 8),
+                        Size             = UDim2.new(0, _rw - 56, 0, 100),
+                        Position         = UDim2.new(0, 20, 0, 8),
                         BorderSizePixel  = 0,
                         ZIndex           = 21,
                         Parent           = panel,
@@ -2546,8 +2576,8 @@ function Library:CreateWindow(opts)
                     -- Hue bar
                     local hueBar = New("Frame", {
                         BackgroundColor3 = Color3.new(1,0,0),
-                        Size             = UDim2.new(0, 14, 0, 100),
-                        Position         = UDim2.new(0, 146, 0, 8),
+                        Size             = UDim2.new(0, 12, 0, 100),
+                        Position         = UDim2.new(0, _rw - 30, 0, 8),
                         BorderSizePixel  = 0,
                         ZIndex           = 21,
                         Parent           = panel,
@@ -2578,7 +2608,7 @@ function Library:CreateWindow(opts)
                     })
                     Corner(hueCursor, 2)
 
-                    -- Hex / RGB input row
+                    -- Hex input (full-width bottom bar)
                     local hexBox = New("TextBox", {
                         Text             = string.format("#%02X%02X%02X",
                             math.floor(def.R*255), math.floor(def.G*255), math.floor(def.B*255)),
@@ -2586,8 +2616,8 @@ function Library:CreateWindow(opts)
                         TextSize         = 11,
                         TextColor3       = Theme.Text,
                         BackgroundColor3 = Theme.Element,
-                        Size             = UDim2.new(1, -115, 0, 22),
-                        Position         = UDim2.new(0, 8, 0, 116),
+                        Size             = UDim2.new(0, _rw - 38, 0, 22),
+                        Position         = UDim2.new(0, 20, 0, 116),
                         BorderSizePixel  = 0,
                         ZIndex           = 21,
                         ClearTextOnFocus = true,
@@ -2595,28 +2625,6 @@ function Library:CreateWindow(opts)
                     })
                     Corner(hexBox, 4)
                     Pad(hexBox, 0, 0, 5, 5)
-
-                    -- Alpha slider
-                    local alphaTrk = New("Frame", {
-                        BackgroundColor3 = Theme.SliderTrack,
-                        Size             = UDim2.new(0, 94, 0, 8),
-                        Position         = UDim2.new(0, hexBox.Size.X.Offset + 16, 0, 119),
-                        BorderSizePixel  = 0,
-                        ZIndex           = 21,
-                        Parent           = panel,
-                    })
-                    Corner(alphaTrk, 4)
-                    Gradient(alphaTrk, Color3.new(1,1,1), Color3.new(0,0,0), 0)
-                    local alphaKnob = New("Frame", {
-                        BackgroundColor3 = Color3.new(1,1,1),
-                        Size             = UDim2.new(0,12,0,12),
-                        AnchorPoint      = Vector2.new(0.5,0.5),
-                        Position         = UDim2.new(1 - alpha, 0, 0.5, 0),
-                        ZIndex           = 22,
-                        Parent           = alphaTrk,
-                    })
-                    Corner(alphaKnob, 6)
-                    Stroke(alphaKnob, Theme.Border, 1)
 
                     -- Update functions
                     local function updateHueMark()
@@ -2677,20 +2685,20 @@ function Library:CreateWindow(opts)
                         if i.UserInputType == Enum.UserInputType.MouseButton1 then hueDrag = false end
                     end)
 
-                    -- Alpha drag
+                    -- Alpha drag (vertical: top = opaque, bottom = transparent)
                     local alphaDrag = false
                     alphaTrk.InputBegan:Connect(function(i)
                         if i.UserInputType == Enum.UserInputType.MouseButton1 then
                             alphaDrag = true
-                            alpha = 1 - Clamp((i.Position.X - alphaTrk.AbsolutePosition.X) / alphaTrk.AbsoluteSize.X, 0, 1)
-                            Tween(alphaKnob, { Position = UDim2.new(1 - alpha, 0, 0.5, 0) }, 0.04)
+                            alpha = 1 - Clamp((i.Position.Y - alphaTrk.AbsolutePosition.Y) / alphaTrk.AbsoluteSize.Y, 0, 1)
+                            Tween(alphaKnob, { Position = UDim2.new(0.5, 0, 1 - alpha, 0) }, 0.04)
                             applyColor()
                         end
                     end)
                     Library:_connect(UIS.InputChanged, function(i)
                         if alphaDrag and i.UserInputType == Enum.UserInputType.MouseMovement then
-                            alpha = 1 - Clamp((i.Position.X - alphaTrk.AbsolutePosition.X) / alphaTrk.AbsoluteSize.X, 0, 1)
-                            Tween(alphaKnob, { Position = UDim2.new(1 - alpha, 0, 0.5, 0) }, 0.04)
+                            alpha = 1 - Clamp((i.Position.Y - alphaTrk.AbsolutePosition.Y) / alphaTrk.AbsoluteSize.Y, 0, 1)
+                            Tween(alphaKnob, { Position = UDim2.new(0.5, 0, 1 - alpha, 0) }, 0.04)
                             applyColor()
                         end
                     end)
