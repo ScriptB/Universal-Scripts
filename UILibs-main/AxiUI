@@ -30,14 +30,16 @@
 -- ══════════════════════════════════════════════════════════════
 
 -- ── Services ──────────────────────────────────────────────────
-local Players          = game:GetService("Players")
-local UIS              = game:GetService("UserInputService")
-local TweenService     = game:GetService("TweenService")
-local RunService       = game:GetService("RunService")
-local CoreGui          = game:GetService("CoreGui")
-local HttpService      = game:GetService("HttpService")
+local Players            = game:GetService("Players")
+local UIS                = game:GetService("UserInputService")
+local TweenService       = game:GetService("TweenService")
+local RunService         = game:GetService("RunService")
+local CoreGui            = game:GetService("CoreGui")
+local HttpService        = game:GetService("HttpService")
 local MarketplaceService = game:GetService("MarketplaceService")
-local TextService      = game:GetService("TextService")
+local TextService        = game:GetService("TextService")
+local SoundService       = game:GetService("SoundService")
+local Debris             = game:GetService("Debris")
 
 local LP = Players.LocalPlayer
 
@@ -210,6 +212,114 @@ local Themes = {
         TitleLeft   = Color3.fromRGB(22,  24,  37),
         TitleRight  = Color3.fromRGB(31,  33,  48),
     },
+
+    -- ── Carbon: obsidian monochrome / white-on-black professional
+    Carbon = {
+        Background  = Color3.fromRGB(10,  10,  10),
+        Panel       = Color3.fromRGB(18,  18,  18),
+        PanelAlt    = Color3.fromRGB(26,  26,  26),
+        PanelDeep   = Color3.fromRGB(13,  13,  13),
+        Element     = Color3.fromRGB(30,  30,  30),
+        ElementHov  = Color3.fromRGB(42,  42,  42),
+        ElementAct  = Color3.fromRGB(55,  55,  55),
+        Accent      = Color3.fromRGB(228, 228, 228),
+        AccentDim   = Color3.fromRGB(165, 165, 165),
+        AccentGlow  = Color3.fromRGB(255, 255, 255),
+        Violet      = Color3.fromRGB(140, 140, 255),
+        VioletDim   = Color3.fromRGB(90,  90,  200),
+        Gold        = Color3.fromRGB(255, 198, 60),
+        Text        = Color3.fromRGB(235, 235, 235),
+        SubText     = Color3.fromRGB(155, 155, 155),
+        MutedText   = Color3.fromRGB(88,  88,  88),
+        Border      = Color3.fromRGB(44,  44,  44),
+        BorderBright= Color3.fromRGB(62,  62,  62),
+        ToggleOff   = Color3.fromRGB(44,  44,  44),
+        ToggleOn    = Color3.fromRGB(228, 228, 228),
+        SliderTrack = Color3.fromRGB(26,  26,  26),
+        SliderFill  = Color3.fromRGB(228, 228, 228),
+        SliderKnob  = Color3.fromRGB(16,  16,  16),
+        Danger      = Color3.fromRGB(255, 65,  65),
+        Success     = Color3.fromRGB(60,  220, 110),
+        Warning     = Color3.fromRGB(255, 185, 35),
+        Info        = Color3.fromRGB(100, 185, 255),
+        White       = Color3.fromRGB(255, 255, 255),
+        Black       = Color3.fromRGB(0,   0,   0),
+        Transparent = Color3.fromRGB(0,   0,   0),
+        TitleLeft   = Color3.fromRGB(16,  16,  16),
+        TitleRight  = Color3.fromRGB(26,  26,  26),
+    },
+
+    -- ── Midnight: deep-space navy / periwinkle / star-glow
+    Midnight = {
+        Background  = Color3.fromRGB(4,   8,   22),
+        Panel       = Color3.fromRGB(8,   14,  34),
+        PanelAlt    = Color3.fromRGB(12,  20,  46),
+        PanelDeep   = Color3.fromRGB(6,   10,  26),
+        Element     = Color3.fromRGB(14,  24,  54),
+        ElementHov  = Color3.fromRGB(20,  34,  70),
+        ElementAct  = Color3.fromRGB(28,  46,  90),
+        Accent      = Color3.fromRGB(115, 155, 255),
+        AccentDim   = Color3.fromRGB(75,  105, 200),
+        AccentGlow  = Color3.fromRGB(160, 195, 255),
+        Violet      = Color3.fromRGB(165, 105, 255),
+        VioletDim   = Color3.fromRGB(110, 68,  195),
+        Gold        = Color3.fromRGB(255, 212, 80),
+        Text        = Color3.fromRGB(218, 228, 255),
+        SubText     = Color3.fromRGB(125, 145, 200),
+        MutedText   = Color3.fromRGB(65,  82,  130),
+        Border      = Color3.fromRGB(22,  36,  82),
+        BorderBright= Color3.fromRGB(34,  52,  112),
+        ToggleOff   = Color3.fromRGB(18,  30,  68),
+        ToggleOn    = Color3.fromRGB(115, 155, 255),
+        SliderTrack = Color3.fromRGB(12,  22,  52),
+        SliderFill  = Color3.fromRGB(115, 155, 255),
+        SliderKnob  = Color3.fromRGB(218, 228, 255),
+        Danger      = Color3.fromRGB(255, 72,  92),
+        Success     = Color3.fromRGB(58,  220, 140),
+        Warning     = Color3.fromRGB(255, 192, 52),
+        Info        = Color3.fromRGB(100, 182, 255),
+        White       = Color3.fromRGB(255, 255, 255),
+        Black       = Color3.fromRGB(0,   0,   0),
+        Transparent = Color3.fromRGB(0,   0,   0),
+        TitleLeft   = Color3.fromRGB(6,   12,  30),
+        TitleRight  = Color3.fromRGB(14,  24,  54),
+    },
+
+    -- ── Emerald: forest green / teal / warm amber
+    Emerald = {
+        Background  = Color3.fromRGB(6,   14,  10),
+        Panel       = Color3.fromRGB(10,  22,  16),
+        PanelAlt    = Color3.fromRGB(14,  30,  22),
+        PanelDeep   = Color3.fromRGB(8,   16,  12),
+        Element     = Color3.fromRGB(16,  36,  26),
+        ElementHov  = Color3.fromRGB(22,  48,  34),
+        ElementAct  = Color3.fromRGB(30,  62,  44),
+        Accent      = Color3.fromRGB(48,  218, 138),
+        AccentDim   = Color3.fromRGB(30,  152, 92),
+        AccentGlow  = Color3.fromRGB(88,  255, 168),
+        Violet      = Color3.fromRGB(96,  178, 255),
+        VioletDim   = Color3.fromRGB(58,  118, 200),
+        Gold        = Color3.fromRGB(255, 210, 58),
+        Text        = Color3.fromRGB(212, 240, 222),
+        SubText     = Color3.fromRGB(118, 162, 138),
+        MutedText   = Color3.fromRGB(62,  98,  78),
+        Border      = Color3.fromRGB(24,  54,  38),
+        BorderBright= Color3.fromRGB(36,  76,  54),
+        ToggleOff   = Color3.fromRGB(20,  46,  32),
+        ToggleOn    = Color3.fromRGB(48,  218, 138),
+        SliderTrack = Color3.fromRGB(12,  28,  20),
+        SliderFill  = Color3.fromRGB(48,  218, 138),
+        SliderKnob  = Color3.fromRGB(212, 240, 222),
+        Danger      = Color3.fromRGB(255, 72,  80),
+        Success     = Color3.fromRGB(48,  218, 138),
+        Warning     = Color3.fromRGB(255, 196, 50),
+        Info        = Color3.fromRGB(58,  182, 255),
+        White       = Color3.fromRGB(255, 255, 255),
+        Black       = Color3.fromRGB(0,   0,   0),
+        Transparent = Color3.fromRGB(0,   0,   0),
+        TitleLeft   = Color3.fromRGB(8,   18,  13),
+        TitleRight  = Color3.fromRGB(16,  34,  24),
+    },
 }
 
 -- ── Utility ───────────────────────────────────────────────────
@@ -339,6 +449,31 @@ local function MakeRipple(parent, x, y, col)
     task.delay(0.5, function() rip:Destroy() end)
 end
 
+-- ── Sound ─────────────────────────────────────────────────────
+-- Module-level sound config; Library.Sounds aliases this at runtime.
+-- Set any ID to 0 to silence that event. All IDs are rbxassetid numbers.
+local _sounds = {
+    Toggle  = 0,   -- played when a toggle changes state
+    Click   = 0,   -- played on button press
+    Notify  = 0,   -- played when a notification appears
+    Hover   = 0,   -- played on element hover (use sparingly)
+    Open    = 0,   -- played when the window is shown
+}
+
+local function PlaySound(id, vol, pitch)
+    if not id or id == 0 then return end
+    pcall(function()
+        local s = Instance.new("Sound")
+        s.SoundId          = "rbxassetid://" .. tostring(id)
+        s.Volume           = vol   or 0.5
+        s.PlaybackSpeed    = pitch or 1
+        s.RollOffMaxDistance = 0
+        s.Parent           = SoundService
+        s:Play()
+        Debris:AddItem(s, 3)
+    end)
+end
+
 -- ── GUI container ─────────────────────────────────────────────
 local function GetRoot()
     local ok, r = pcall(function()
@@ -375,15 +510,16 @@ end
 -- ═════════════════════════════════════════════════════════════
 local Library = {}
 Library.__index = Library
-Library._VERSION       = "2.0.0"
-Library._connections          = {}
-Library._windows              = {}
-Library._unloadFns            = {}
-Library._keybinds             = {}
+Library._VERSION               = "3.0.0"
+Library._connections           = {}
+Library._windows               = {}
+Library._unloadFns             = {}
+Library._keybinds              = {}
 Library._keybindListenersReady = false
-Library.Unloaded       = false
-Library._theme         = Theme   -- active theme reference
-Library._configFolder  = "AxiUI"
+Library.Unloaded               = false
+Library._theme                 = Theme      -- active theme reference
+Library._configFolder          = "AxiUI"
+Library.Sounds                 = _sounds   -- configure sound IDs here
 
 function Library:GetVersion() return self._VERSION end
 
@@ -599,6 +735,7 @@ function Library:Notify(opts)
     local ntype    = opts.Type     or "info"
     local actions  = opts.Actions  or {}
 
+    PlaySound(_sounds.Notify, 0.45, ntype == "error" and 0.88 or ntype == "success" and 1.1 or 1.0)
     local acol = ({
         info    = Theme.Accent,
         success = Theme.Success,
@@ -1049,15 +1186,15 @@ function Library:CreateWindow(opts)
         Name             = "Window",
         BackgroundColor3 = Theme.Background,
         Size             = UDim2.new(1, 0, 1, 0),
-        ClipsDescendants = true,
+        ClipsDescendants = false,   -- must be false: Roblox clips to rect, not UICorner
         Visible          = true,
         Parent           = shadowWrap,
     })
     Corner(win, 10)
-    Stroke(win, Theme.Border, 1)
+    local winStroke = Stroke(win, Theme.Border, 1)
 
-    -- Inner gradient, subtle depth
-    New("Frame", {
+    -- Inner gradient, subtle depth — corner-rounded so it doesn't poke out of win
+    local depthFrame = New("Frame", {
         BackgroundColor3       = Theme.PanelDeep,
         BackgroundTransparency = 0.7,
         Size                   = UDim2.new(1, 0, 0.5, 0),
@@ -1065,6 +1202,7 @@ function Library:CreateWindow(opts)
         ZIndex                 = 0,
         Parent                 = win,
     })
+    Corner(depthFrame, 10)  -- matches win radius; bottom half covers bottom corners below centre
 
     -- ── Title Bar ────────────────────────────────────────────
     local titleBar = New("Frame", {
@@ -1075,7 +1213,10 @@ function Library:CreateWindow(opts)
         ZIndex           = 4,
         Parent           = win,
     })
-    -- Gradient on title bar (win's ClipsDescendants handles corner clipping)
+    -- Round only the top corners of the title bar to match win's radius.
+    -- Bottom corners are hidden behind tabBar/content, so rounding all 4 is fine.
+    Corner(titleBar, 10)
+    -- Gradient sits inside titleBar, fully covered by it — no extra UICorner needed
     local tbGrad = New("Frame", {
         BackgroundColor3       = Theme.TitleRight,
         BackgroundTransparency = 0,
@@ -1146,11 +1287,9 @@ function Library:CreateWindow(opts)
     closeBtn.MouseEnter:Connect(function() Tween(closeBtn, { TextColor3 = Theme.Danger  }, 0.08) end)
     closeBtn.MouseLeave:Connect(function() Tween(closeBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     closeBtn.MouseButton1Click:Connect(function()
-        if minOnClose then
-            shadowWrap.Visible = false
-        else
-            shadowWrap.Visible = false
-        end
+        -- Always hide. For exploit UIs hide == close; Library:Unload() destroys.
+        sg.Enabled         = false
+        shadowWrap.Visible = false
         if onClose then pcall(onClose) end
     end)
 
@@ -1312,9 +1451,19 @@ function Library:CreateWindow(opts)
     local _tLock = false
     function Win:SetVisible(v)
         _vis = v
-        if v then sg.Enabled = true end
-        shadowWrap.Visible = v
-        if not v then sg.Enabled = false end
+        if v then
+            sg.Enabled         = true
+            shadowWrap.Visible = true
+            -- Accent–border flash: tells the user the UI snapped back into place
+            Tween(winStroke, { Color = Theme.Accent }, 0)
+            task.delay(0.08, function()
+                if _vis then Tween(winStroke, { Color = Theme.Border }, 0.5) end
+            end)
+            PlaySound(_sounds.Open, 0.4, 1.02)
+        else
+            shadowWrap.Visible = false
+            sg.Enabled         = false
+        end
     end
     function Win:Show()   self:SetVisible(true)  end
     function Win:Hide()   self:SetVisible(false) end
@@ -1651,6 +1800,7 @@ function Library:CreateWindow(opts)
                     local mx = UIS:GetMouseLocation().X - row.AbsolutePosition.X
                     local my = UIS:GetMouseLocation().Y - row.AbsolutePosition.Y
                     MakeRipple(row, mx, my, Theme.Accent)
+                    PlaySound(_sounds.Toggle, 0.4, obj.Value and 0.92 or 1.08)
                     obj.Value = not obj.Value
                     setVisual(obj.Value)
                     pcall(cb, obj.Value)
@@ -1705,6 +1855,7 @@ function Library:CreateWindow(opts)
                     local mx = UIS:GetMouseLocation().X - btn.AbsolutePosition.X
                     local my = UIS:GetMouseLocation().Y - btn.AbsolutePosition.Y
                     MakeRipple(btn, mx, my, color or Theme.Accent)
+                    PlaySound(_sounds.Click, 0.35, 1.0)
                     if dbl then
                         local now = tick()
                         if now - lastClick < 0.38 then
@@ -3061,40 +3212,244 @@ function Library:CreateWindow(opts)
     return Win
 end -- CreateWindow
 
--- End of Pass 2 — continued in Pass 3 below
+-- End of Passes 1-5 (SaveManager + ThemeManager)
 
--- ══════════════════════════════════════════════════════════════
---  PASS 3 — Global Cache · Constructor alias · Return
--- ══════════════════════════════════════════════════════════════
-
--- Initialise internal windows list
-Library._windows = Library._windows or {}
-
--- Convenience constructor so users can do:
---   local UI = loadstring(...)()
---   local Window = UI:CreateWindow({...})
--- OR
---   local UI = loadstring(...)
---   UI:CreateWindow({...})
--- Both work because Library IS the returned object.
-
--- Ensure Toggles / Options are accessible globally
+-- ============================================================
+--  PASS 3 -- Global cache (idempotent on re-run)
+-- ============================================================
 _env.Toggles = _env.Toggles or {}
-_env.Options = _env.Options or {}
+_env.Options  = _env.Options  or {}
 Toggles       = _env.Toggles
 Options       = _env.Options
+_env.AxiUI    = Library
 
--- Store library reference in global env for hot-reloading safety
-_env.AxiUI = Library
+-- ============================================================
+--  PASS 4 -- SaveManager
+--  Auto-save / multi-profile / delete / built-in UI builder
+-- ============================================================
+Library.SaveManager = {}
+local SM = Library.SaveManager
+SM._folder   = Library._configFolder
+SM._autoConn = nil
+SM._dirty    = false
 
--- ── Theme hot-patch: rebuild all open UI on theme change ──────
-local _themeCallbacks = Library._themeCallbacks or {}
-Library._themeCallbacks = _themeCallbacks
-local _origSetTheme = Library.SetTheme
-function Library:SetTheme(name)
-    _origSetTheme(self, name)
-    for _, fn in ipairs(_themeCallbacks) do pcall(fn, Theme) end
+function SM:SetFolder(path)
+    self._folder = path
+    Library:SetConfigFolder(path)
 end
 
--- ── Final export ──────────────────────────────────────────────
+function SM:Save(name)
+    local data = {}
+    for idx, obj in pairs(Toggles) do
+        data["t_" .. idx] = obj.Value
+    end
+    for idx, obj in pairs(Options) do
+        local v = obj.Value
+        if typeof(v) == "Color3" then
+            v = { __col = true, r = v.R, g = v.G, b = v.B }
+        end
+        data["o_" .. idx] = v
+    end
+    SafeWrite(self._folder .. "/" .. (name or "default") .. ".json", SafeJSON(data))
+    self._dirty = false
+end
+
+function SM:Load(name)
+    local raw = SafeRead(self._folder .. "/" .. (name or "default") .. ".json")
+    if not raw then return false end
+    local data = SafeParse(raw)
+    for k, v in pairs(data) do
+        local idx = k:match("^t_(.+)$")
+        if idx and Toggles[idx] then
+            pcall(function() Toggles[idx]:SetValue(v == true or v == "true") end)
+        end
+        idx = k:match("^o_(.+)$")
+        if idx and Options[idx] then
+            pcall(function()
+                if type(v) == "table" and v.__col then
+                    Options[idx]:SetValue(Color3.new(v.r, v.g, v.b))
+                else
+                    Options[idx]:SetValue(v)
+                end
+            end)
+        end
+    end
+    return true
+end
+
+function SM:Delete(name)
+    pcall(function()
+        if typeof(delfile) == "function" then
+            delfile(self._folder .. "/" .. (name or "default") .. ".json")
+        end
+    end)
+end
+
+function SM:List()
+    local out = {}
+    pcall(function()
+        if typeof(listfiles) == "function" then
+            for _, f in ipairs(listfiles(self._folder)) do
+                local n = f:match("([^/\\]+)%.json$")
+                if n then table.insert(out, n) end
+            end
+        end
+    end)
+    return out
+end
+
+-- AutoSave every <interval>s; only writes when dirty.
+-- Pass 0 or nil to stop.  Marks dirty on any Toggle/Option change.
+function SM:AutoSave(interval, profileName)
+    if self._autoConn then
+        pcall(function() self._autoConn:Disconnect() end)
+        self._autoConn = nil
+    end
+    if not interval or interval <= 0 then return end
+    local elapsed = 0
+    self._autoConn = Library:_connect(RunService.Heartbeat, function(dt)
+        elapsed = elapsed + dt
+        if elapsed >= interval then
+            elapsed = 0
+            if self._dirty then
+                pcall(function() self:Save(profileName or "autoload") end)
+            end
+        end
+    end)
+    for _, obj in pairs(Toggles) do
+        pcall(function() if obj.OnChanged then obj:OnChanged(function() self._dirty = true end) end end)
+    end
+    for _, obj in pairs(Options) do
+        pcall(function() if obj.OnChanged then obj:OnChanged(function() self._dirty = true end) end end)
+    end
+end
+
+-- Drop-in UI builder: call with any groupbox to add save/load controls
+function SM:BuildUI(groupbox)
+    if not groupbox then return end
+    groupbox:AddInput("SM_ProfileName", { Text = "Profile Name", Default = "autoload" })
+    groupbox:AddButton({ Text = "Save", Func = function()
+        local n = (Options.SM_ProfileName and Options.SM_ProfileName.Value) or "autoload"
+        self:Save(n)
+        Library:Notify({ Title = "Saved", Content = n, Type = "success", Duration = 2 })
+    end })
+    groupbox:AddButton({ Text = "Load", Func = function()
+        local n = (Options.SM_ProfileName and Options.SM_ProfileName.Value) or "autoload"
+        local ok = self:Load(n)
+        Library:Notify({
+            Title    = ok and "Config Loaded" or "Not Found",
+            Content  = n,
+            Type     = ok and "info" or "error",
+            Duration = 2,
+        })
+    end })
+    groupbox:AddButton({ Text = "Delete", Func = function()
+        local n = (Options.SM_ProfileName and Options.SM_ProfileName.Value) or "autoload"
+        if n == "autoload" then
+            Library:Notify({ Title = "Protected", Content = "Cannot delete autoload", Type = "error", Duration = 2 })
+        else
+            self:Delete(n)
+            Library:Notify({ Title = "Deleted", Content = n, Type = "warning", Duration = 2 })
+        end
+    end })
+    groupbox:AddSlider("SM_AutoInterval", {
+        Text = "Auto-save interval (s, 0=off)",
+        Min = 0, Max = 300, Default = 0, Rounding = 0,
+        Callback = function(v) self:AutoSave(v > 0 and v or nil, "autoload") end,
+    })
+end
+
+-- ============================================================
+--  PASS 5 -- ThemeManager
+--  Apply / custom presets / export/import JSON / built-in UI
+-- ============================================================
+Library.ThemeManager = {}
+local TM = Library.ThemeManager
+TM._current   = "Default"
+TM._listeners = {}
+
+function TM:Apply(name)
+    if not Themes[name] then return end
+    self._current = name
+    Library:SetTheme(name)
+    for _, fn in ipairs(self._listeners) do pcall(fn, name) end
+end
+
+function TM:GetCurrent() return self._current end
+function TM:GetNames()   return Library:GetThemeNames() end
+
+-- Register a custom preset; missing keys inherit from Default
+function TM:AddCustom(name, definition)
+    local full = {}
+    for k, v in pairs(Themes.Default) do full[k] = v end
+    for k, v in pairs(definition)     do full[k] = v end
+    Themes[name] = full
+end
+
+function TM:OnChanged(fn)
+    table.insert(self._listeners, fn)
+    Library:OnThemeChanged(fn)
+end
+
+-- Export the current live Theme as a JSON string
+function TM:Export()
+    local t = {}
+    for k, v in pairs(Theme) do
+        t[k] = {
+            r = math.floor(v.R * 255 + 0.5),
+            g = math.floor(v.G * 255 + 0.5),
+            b = math.floor(v.B * 255 + 0.5),
+        }
+    end
+    return SafeJSON(t)
+end
+
+-- Parse a JSON string into a preset (optionally apply immediately)
+function TM:Import(name, json, apply)
+    local data = SafeParse(json)
+    local def  = {}
+    for k, v in pairs(data) do
+        if type(v) == "table" and type(v.r) == "number" then
+            def[k] = Color3.fromRGB(v.r, v.g, v.b)
+        end
+    end
+    self:AddCustom(name, def)
+    if apply then self:Apply(name) end
+    return def
+end
+
+-- Write current theme JSON to file (executor writefile)
+function TM:ExportToFile(filename)
+    local path = (filename or ("AxiUI_theme_" .. self._current)) .. ".json"
+    SafeWrite(path, self:Export())
+    Library:Notify({ Title = "Theme Exported", Content = path, Type = "success", Duration = 3 })
+end
+
+-- Load a theme JSON file, register it, and apply
+function TM:ImportFromFile(filename, name, apply)
+    local raw = SafeRead(filename)
+    if not raw then
+        Library:Notify({ Title = "Import Failed", Content = "File not found", Type = "error", Duration = 3 })
+        return
+    end
+    local friendly = name or (filename:match("([^/\\]+)%.json$") or "Imported")
+    self:Import(friendly, raw, apply ~= false)
+    Library:Notify({ Title = "Theme Imported", Content = friendly, Type = "success", Duration = 3 })
+end
+
+-- Drop-in UI builder: call with any groupbox to add theme controls
+function TM:BuildUI(groupbox)
+    if not groupbox then return end
+    groupbox:AddDropdown("TM_ThemePicker", {
+        Text     = "Active Theme",
+        Values   = self:GetNames(),
+        Default  = self._current,
+        Callback = function(v) self:Apply(v) end,
+    })
+    groupbox:AddButton({ Text = "Export Theme to File", Func = function()
+        self:ExportToFile()
+    end })
+end
+
+-- Final export
 return Library
