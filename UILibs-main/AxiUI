@@ -1216,6 +1216,8 @@ function Library:CreateWindow(opts)
     local winIcon   = opts.Icon
     local onClose   = opts.CloseCallback
     local minOnClose= opts.MinimiseOnClose or false
+    local draggable = opts.Draggable ~= false
+    local winPos    = opts.Position or (center and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0, 60, 0, 60))
 
     -- ── ScreenGui ────────────────────────────────────────────
     local sg = New("ScreenGui", {
@@ -1232,7 +1234,7 @@ function Library:CreateWindow(opts)
     local shadowWrap = New("Frame", {
         BackgroundTransparency = 1,
         AnchorPoint  = center and Vector2.new(0.5, 0.5) or Vector2.new(0, 0),
-        Position     = center and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0, 60, 0, 60),
+        Position     = winPos,
         Size         = winSize,
         Parent       = sg,
     })
@@ -1390,7 +1392,9 @@ function Library:CreateWindow(opts)
         end
     end)
 
-    Draggable(shadowWrap, titleBar)
+    if draggable then
+        Draggable(shadowWrap, titleBar)
+    end
 
     -- ── Tab bar ──────────────────────────────────────────────
     local tabBar = New("Frame", {
