@@ -1137,7 +1137,7 @@ function Library:CreateWindow(opts)
     opts = opts or {}
     local title     = opts.Title    or "AxiUI"
     local sub       = opts.SubTitle or ""
-    local toggleKey = opts.ToggleKey or Enum.KeyCode.RightShift
+    local _tKey     = { v = opts.ToggleKey or Enum.KeyCode.RightShift }
     local winSize   = opts.Size     or UDim2.new(0, 600, 0, 420)
     local center    = opts.Center   ~= false
     local autoShow  = opts.AutoShow ~= false
@@ -1288,8 +1288,8 @@ function Library:CreateWindow(opts)
     closeBtn.MouseLeave:Connect(function() Tween(closeBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     closeBtn.MouseButton1Click:Connect(function()
         -- Always hide. For exploit UIs hide == close; Library:Unload() destroys.
-        sg.Enabled         = false
-        shadowWrap.Visible = false
+        -- Call SetVisible so _vis stays in sync; direct sg/shadowWrap writes skip it.
+        Win:SetVisible(false)
         if onClose then pcall(onClose) end
     end)
 
@@ -1473,6 +1473,13 @@ function Library:CreateWindow(opts)
         self:SetVisible(not _vis)
         task.delay(0.15, function() _tLock = false end)
     end
+    -- Allow external code (e.g. rebind picker) to change which key fires Toggle.
+    function Win:SetToggleKey(k) if k then _tKey.v = k end end
+    -- Wire the toggle key — intentionally ignores gameProcessedEvent so the
+    -- menu can be dismissed even when a widget inside it has focus.
+    UIS.InputBegan:Connect(function(i)
+        if i.KeyCode == _tKey.v then Win:Toggle() end
+    end)
 
     -- ── AddTab ───────────────────────────────────────────────
     function Win:AddTab(name, icon)
@@ -2228,7 +2235,8 @@ function Library:CreateWindow(opts)
 
                 local function closePopup()
                     if popup then
-                        Tween(popup, { Position = UDim2.new(0, 0, 0, 20), BackgroundTransparency = 1 }, 0.12)
+                        -- Fade out only (no position tween; popup is now sg-parented at absolute coords)
+                        Tween(popup, { BackgroundTransparency = 1 }, 0.12)
                         Tween(arrow, { Rotation = 0 }, 0.12)
                         task.delay(0.13, function() pcall(function() if popup then popup:Destroy(); popup = nil end end) end)
                         isOpen = false
@@ -2238,14 +2246,18 @@ function Library:CreateWindow(opts)
                 local function buildPopup()
                     if popup then popup:Destroy(); popup = nil end
                     local maxH = 160
+                    -- Parent to sg so the ScrollingFrame column cannot clip the popup
+                    local _bx = btn.AbsolutePosition.X
+                    local _by = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + 2
+                    local _bw = btn.AbsoluteSize.X
                     popup = New("Frame", {
                         BackgroundColor3 = Theme.PanelAlt,
                         BorderSizePixel  = 0,
-                        Position         = UDim2.new(0, 0, 0, 20),
-                        Size             = UDim2.new(1, 0, 0, 0),
-                        ZIndex           = 15,
+                        Position         = UDim2.new(0, _bx, 0, _by),
+                        Size             = UDim2.new(0, _bw, 0, 0),
+                        ZIndex           = 10,
                         ClipsDescendants = true,
-                        Parent           = wrap,
+                        Parent           = sg,
                     })
                     Corner(popup, 6)
                     Stroke(popup, Theme.Border)
@@ -2351,9 +2363,8 @@ function Library:CreateWindow(opts)
 
                     local rows = math.min(#obj._items, 6)
                     local totalH = yOff + rows * 27 + 6
-                    popup.Size = UDim2.new(1, 0, 0, math.max(40, totalH))
-                    -- animate in
-                    popup.Position = UDim2.new(0, 0, 0, 20)
+                    popup.Size = UDim2.new(0, _bw, 0, math.max(40, totalH))
+                    -- position is already set to absolute screen coords above
                 end
 
                 btn.MouseButton1Click:Connect(function()
@@ -2457,14 +2468,20 @@ function Library:CreateWindow(opts)
 
                 local function buildPanel()
                     if panel then panel:Destroy(); panel = nil end
+                    -- Parent to sg (ScreenGui) so the ScrollingFrame column cannot clip it
+                    local _rx = row.AbsolutePosition.X
+                    local _ry = row.AbsolutePosition.Y + row.AbsoluteSize.Y + 4
+                    local _rw = row.AbsoluteSize.X
+                    -- Flip above the row if the panel would fall off the bottom of the screen
+                    if _ry + 172 > sg.AbsoluteSize.Y then _ry = row.AbsolutePosition.Y - 172 - 4 end
                     panel = New("Frame", {
                         BackgroundColor3 = Theme.PanelAlt,
-                        Size             = UDim2.new(1, 0, 0, 172),
-                        Position         = UDim2.new(0, 0, 1, 4),
+                        Size             = UDim2.new(0, _rw, 0, 172),
+                        Position         = UDim2.new(0, _rx, 0, _ry),
                         BorderSizePixel  = 0,
-                        ZIndex           = 20,
+                        ZIndex           = 10,
                         ClipsDescendants = false,
-                        Parent           = row,
+                        Parent           = sg,
                     })
                     Corner(panel, 8)
                     Stroke(panel, Theme.Border)
@@ -2696,12 +2713,36 @@ function Library:CreateWindow(opts)
                     updateHueMark(); updateSVMark()
                 end
 
+                local _cpOutsideConn
+                local function _closePanelExternal()
+                    panelOpen = false
+                    if panel then panel:Destroy(); panel = nil end
+                    Tween(row, { BackgroundColor3 = Theme.Element }, 0.08)
+                    if _cpOutsideConn then _cpOutsideConn:Disconnect(); _cpOutsideConn = nil end
+                end
+
                 row.MouseButton1Click:Connect(function()
                     panelOpen = not panelOpen
                     if panelOpen then
                         buildPanel()
                         Tween(row, { BackgroundColor3 = Theme.ElementAct }, 0.08)
+                        -- Close when user clicks outside the picker panel
+                        _cpOutsideConn = UIS.InputBegan:Connect(function(i, gp)
+                            if gp then return end
+                            if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+                            if not panel then
+                                if _cpOutsideConn then _cpOutsideConn:Disconnect(); _cpOutsideConn = nil end
+                                return
+                            end
+                            local px, py = panel.AbsolutePosition.X, panel.AbsolutePosition.Y
+                            local pw, ph = panel.AbsoluteSize.X, panel.AbsoluteSize.Y
+                            local mx, my = i.Position.X, i.Position.Y
+                            if mx < px or mx > px + pw or my < py or my > py + ph then
+                                _closePanelExternal()
+                            end
+                        end)
                     else
+                        if _cpOutsideConn then _cpOutsideConn:Disconnect(); _cpOutsideConn = nil end
                         if panel then panel:Destroy(); panel = nil end
                         Tween(row, { BackgroundColor3 = Theme.Element }, 0.08)
                     end
