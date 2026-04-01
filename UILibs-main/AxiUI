@@ -5,18 +5,25 @@
 -- ══════════════════════════════════════════════════════════════
 
 -- ── Services ──────────────────────────────────────────────────
-local Players            = game:GetService("Players")
-local UIS                = game:GetService("UserInputService")
-local TweenService       = game:GetService("TweenService")
-local RunService         = game:GetService("RunService")
-local CoreGui            = game:GetService("CoreGui")
-local HttpService        = game:GetService("HttpService")
-local MarketplaceService = game:GetService("MarketplaceService")
-local TextService        = game:GetService("TextService")
-local SoundService       = game:GetService("SoundService")
-local Debris             = game:GetService("Debris")
+-- Use pcall for every GetService so that a blocked or missing service
+-- in the executor environment does not crash the entire script on load.
+local function _svc(name)
+    local ok, s = pcall(function() return game:GetService(name) end)
+    return ok and s or nil
+end
 
-local LP = Players.LocalPlayer
+local Players            = _svc("Players")
+local UIS                = _svc("UserInputService")
+local TweenService       = _svc("TweenService")
+local RunService         = _svc("RunService")
+local CoreGui            = _svc("CoreGui")
+local HttpService        = _svc("HttpService")
+local MarketplaceService = _svc("MarketplaceService")
+local TextService        = _svc("TextService")   -- unused at runtime but kept for compat
+local SoundService       = _svc("SoundService")
+local Debris             = _svc("Debris")
+
+local LP = Players and Players.LocalPlayer or nil
 
 -- ── Global state tables ───────────────────────────────────────
 local _env = (typeof(getgenv) == "function" and getgenv()) or _G
@@ -299,6 +306,7 @@ local Themes = {
 
 -- ── Utility ───────────────────────────────────────────────────
 local function Tween(obj, props, t, style, dir)
+    if not TweenService then return end
     local tw = TweenService:Create(obj, TweenInfo.new(
         t     or 0.12,
         style or Enum.EasingStyle.Quart,
@@ -469,27 +477,29 @@ local function Draggable(frame, handle)
         -- safe against recursive resume.  task.wait() yields to the
         -- scheduler; the resume happens outside signal dispatch.
         task.spawn(function()
-    while state == "dragging" do
-        task.wait()
-        if state ~= "dragging" then break end
+            while state == "dragging" do
+                task.wait()
+                if state ~= "dragging" then break end
 
-        local ok, mouse = pcall(UIS.GetMouseLocation, UIS)
-        if not ok then break end
+                local ok, mouse = pcall(UIS.GetMouseLocation, UIS)
+                if not ok then break end
 
-        local cam = workspace.CurrentCamera
-        if cam then
-            local vp = cam.ViewportSize
+                local cam = workspace.CurrentCamera
+                if cam then
+                    local vp = cam.ViewportSize
 
-            local maxX = math.max(0, vp.X - sizeX)
-            local maxY = math.max(0, vp.Y - sizeY)
+                    local maxX = math.max(0, vp.X - sizeX)
+                    local maxY = math.max(0, vp.Y - sizeY)
 
-            local nx = math.clamp(startOfsX + (mouse.X - anchorX), 0, maxX)
-            local ny = math.clamp(startOfsY + (mouse.Y - anchorY), 0, maxY)
+                    local nx = math.clamp(startOfsX + (mouse.X - anchorX), 0, maxX)
+                    local ny = math.clamp(startOfsY + (mouse.Y - anchorY), 0, maxY)
 
-            pcall(_safeSetPos, frame, UDim2.new(0, nx, 0, ny))
-        end
-    end
-end)
+                    pcall(_safeSetPos, frame, UDim2.new(0, nx, 0, ny))
+                end
+            end
+        end)
+    end)
+end
 
 local function MakeRipple(parent, x, y, col)
     -- Fast CSS-style ripple on click
@@ -529,9 +539,10 @@ local function PlaySound(id, vol, pitch)
         s.Volume           = vol   or 0.5
         s.PlaybackSpeed    = pitch or 1
         s.RollOffMaxDistance = 0
-        s.Parent           = SoundService
+        if SoundService then s.Parent = SoundService end
         s:Play()
-        Debris:AddItem(s, 3)
+        if Debris then Debris:AddItem(s, 3)
+        else task.delay(3, function() pcall(function() s:Destroy() end) end) end
     end)
 end
 
@@ -541,7 +552,10 @@ local function GetRoot()
         if typeof(gethui) == "function" then return gethui() end
         return CoreGui
     end)
-    return ok and r or CoreGui
+    -- Final fallback: game.CoreGui accessed directly (some executors allow this)
+    if ok and r then return r end
+    local ok2, cg = pcall(function() return game.CoreGui end)
+    return ok2 and cg or game:GetService("CoreGui")
 end
 
 -- ── Config helpers (uses writefile / readfile if available) ───
@@ -558,10 +572,12 @@ local function SafeRead(path)
     return ok and d or nil
 end
 local function SafeJSON(t)
+    if not HttpService then return "{}" end
     local ok, s = pcall(function() return HttpService:JSONEncode(t) end)
     return ok and s or "{}"
 end
 local function SafeParse(s)
+    if not HttpService then return {} end
     local ok, t = pcall(function() return HttpService:JSONDecode(s) end)
     return ok and t or {}
 end
@@ -3460,6 +3476,7 @@ function SM:AutoSave(interval, profileName)
         self._autoConn = nil
     end
     if not interval or interval <= 0 then return end
+    if not RunService then return end
     local elapsed = 0
     self._autoConn = Library:_connect(RunService.Heartbeat, function(dt)
         elapsed = elapsed + dt
