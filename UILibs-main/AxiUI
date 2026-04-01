@@ -1049,7 +1049,7 @@ function Library:CreateWindow(opts)
         Name             = "Window",
         BackgroundColor3 = Theme.Background,
         Size             = UDim2.new(1, 0, 1, 0),
-        ClipsDescendants = false,
+        ClipsDescendants = true,
         Visible          = true,
         Parent           = shadowWrap,
     })
@@ -1069,41 +1069,22 @@ function Library:CreateWindow(opts)
     -- ── Title Bar ────────────────────────────────────────────
     local titleBar = New("Frame", {
         Name             = "TitleBar",
-        BackgroundColor3 = Theme.Panel,
+        BackgroundColor3 = Theme.TitleLeft,
         Size             = UDim2.new(1, 0, 0, 42),
         BorderSizePixel  = 0,
         ZIndex           = 4,
         Parent           = win,
     })
-    New("UICorner", { CornerRadius = UDim.new(0, 10), Parent = titleBar })
-    -- Fill bottom half to square off the bottom of title bar
-    New("Frame", {
-        BackgroundColor3 = Theme.Panel,
-        Size             = UDim2.new(1, 0, 0.5, 0),
-        Position         = UDim2.new(0, 0, 0.5, 0),
-        BorderSizePixel  = 0,
-        ZIndex           = 3,
-        Parent           = titleBar,
-    })
-    -- Gradient on title bar
+    -- Gradient on title bar (win's ClipsDescendants handles corner clipping)
     local tbGrad = New("Frame", {
-        BackgroundColor3 = Theme.TitleRight,
+        BackgroundColor3       = Theme.TitleRight,
         BackgroundTransparency = 0,
-        Size             = UDim2.new(1, 0, 1, 0),
-        BorderSizePixel  = 0,
-        ZIndex           = 2,
-        Parent           = titleBar,
+        Size                   = UDim2.new(1, 0, 1, 0),
+        BorderSizePixel        = 0,
+        ZIndex                 = 2,
+        Parent                 = titleBar,
     })
     Gradient(tbGrad, Theme.TitleLeft, Theme.TitleRight, 0)
-    New("UICorner", { CornerRadius = UDim.new(0, 10), Parent = tbGrad })
-    New("Frame", {
-        BackgroundColor3 = Theme.TitleRight,
-        Size             = UDim2.new(1, 0, 0.5, 0),
-        Position         = UDim2.new(0, 0, 0.5, 0),
-        BorderSizePixel  = 0,
-        ZIndex           = 2,
-        Parent           = tbGrad,
-    })
 
     -- Accent line under title bar
     New("Frame", {
@@ -1174,27 +1155,18 @@ function Library:CreateWindow(opts)
     end)
 
     local minimised = false
+    local collapsedSize = UDim2.new(winSize.X.Scale, winSize.X.Offset, 0, 42)
     minBtn.MouseEnter:Connect(function() Tween(minBtn, { TextColor3 = Theme.Gold }, 0.08) end)
     minBtn.MouseLeave:Connect(function() Tween(minBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     minBtn.MouseButton1Click:Connect(function()
         minimised = not minimised
-        -- collapse everything below title bar
-        Tween(win, {
-            Size = minimised
-                and UDim2.new(1, 0, 0, 42)
-                or  UDim2.new(1, 0, 1, 0)
+        -- Tween shadowWrap (not win) so the shadow image collapses with the window
+        Tween(shadowWrap, {
+            Size = minimised and collapsedSize or winSize
         }, 0.2, Enum.EasingStyle.Quart)
     end)
 
     Draggable(shadowWrap, titleBar)
-
-    -- Toggle visibility keybind
-    self:_connect(UIS.InputBegan, function(inp, gp)
-        if gp then return end
-        if inp.KeyCode == toggleKey then
-            shadowWrap.Visible = not shadowWrap.Visible
-        end
-    end)
 
     -- ── Tab bar ──────────────────────────────────────────────
     local tabBar = New("Frame", {
@@ -1331,9 +1303,27 @@ function Library:CreateWindow(opts)
     Win._activeTab = nil
     Win._lib       = self
 
-    function Win:Show()   shadowWrap.Visible = true  end
-    function Win:Hide()   shadowWrap.Visible = false end
-    function Win:Toggle() shadowWrap.Visible = not shadowWrap.Visible end
+    -- Visibility: single-source-of-truth (_vis) + 150ms spam guard (_tLock)
+    -- SetVisible(false): hides frame then disables ScreenGui input gate
+    -- SetVisible(true):  re-enables ScreenGui then reveals frame
+    -- When hidden: sg.Enabled=false → nothing inside receives any input,
+    --   no MouseEnter, no focus, no layout recalculation — perfectly frozen.
+    local _vis   = autoShow
+    local _tLock = false
+    function Win:SetVisible(v)
+        _vis = v
+        if v then sg.Enabled = true end
+        shadowWrap.Visible = v
+        if not v then sg.Enabled = false end
+    end
+    function Win:Show()   self:SetVisible(true)  end
+    function Win:Hide()   self:SetVisible(false) end
+    function Win:Toggle()
+        if _tLock then return end
+        _tLock = true
+        self:SetVisible(not _vis)
+        task.delay(0.15, function() _tLock = false end)
+    end
 
     -- ── AddTab ───────────────────────────────────────────────
     function Win:AddTab(name, icon)
