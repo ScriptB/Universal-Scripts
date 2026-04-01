@@ -395,24 +395,17 @@ end
 local function Lerp(a, b, t)     return a + (b - a) * t end
 
 -- ── Draggable ─────────────────────────────────────────────────
--- Heartbeat drag — the only pattern proven safe across all executor
--- hook implementations:
+-- Pure 3-signal pattern — identical to Orion, PPHUD, and every
+-- major executor-tested library.  No Heartbeat, no task.spawn,
+-- no task.wait, no loops, no coroutines.
 --
---   InputBegan  → snapshots start state; creates Heartbeat + InputChanged
---                 connections; no property writes
---   InputChanged → ONLY writes two plain Lua number variables (curMouseX/Y);
---                 does NOT touch any Roblox Instance property
---   Heartbeat    → reads the two variables; writes frame.Position ONCE per
---                 frame from the top-level scheduler resumption; this is
---                 never inside any input-signal C call chain
---   input.Changed End → clears all connections
+--   handle.InputBegan    → snapshot mousePos + framePos, mark dragging
+--   handle.InputChanged  → track which input object is the drag input
+--   UIS.InputChanged     → when input == dragInput and dragging,
+--                          compute delta and write frame.Position
+--   input.Changed End    → clear dragging + dragInput
 --
--- task.spawn / task.wait are NOT used because several executors implement
--- task.wait() as a recursive C callback that overflows the stack on hot loops.
---
--- setrawproperty is used when available so the write bypasses __newindex
--- entirely.  The fallback (f.Position = p) is still safe on executors that
--- fire signals synchronously, because Heartbeat is not inside a signal chain.
+-- setrawproperty bypasses __newindex hooks when available.
 local _rawSet
 do
     local ok, fn = pcall(function() return setrawproperty end)
@@ -429,93 +422,53 @@ end
 local function Draggable(frame, handle)
     handle = handle or frame
 
-    -- Normalise to AnchorPoint(0,0) + pure-offset Position after first layout.
-    task.defer(function()
-        pcall(function()
-            local abs = frame.AbsolutePosition
-            frame.AnchorPoint = Vector2.new(0, 0)
-            _safeSetPos(frame, UDim2.new(0, abs.X, 0, abs.Y))
+    local dragging  = false
+    local dragInput = nil
+    local mousePos  = Vector3.new()
+    local framePos  = UDim2.new()
+
+    -- 1. Drag start: snapshot position and mouse, watch for release.
+    handle.InputBegan:Connect(function(input)
+        local t = input.UserInputType
+        if t ~= Enum.UserInputType.MouseButton1
+        and t ~= Enum.UserInputType.Touch then return end
+
+        dragging  = true
+        mousePos  = input.Position
+        framePos  = frame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging  = false
+                dragInput = nil
+            end
         end)
     end)
 
-    local dragging  = false
-    -- Running totals of frame offset at drag start
-    local startOfsX, startOfsY = 0, 0
-    -- Cached frame size (so Heartbeat never reads frame properties)
-    local sizeX, sizeY = 0, 0
-    -- Mouse anchor at drag start
-    local anchorX, anchorY = 0, 0
-    -- Latest mouse position — written ONLY by InputChanged, read by Heartbeat
-    local curMouseX, curMouseY = 0, 0
-
-    local heartConn, mouseConn, endConn
-
-    local function stopDrag()
-        dragging = false
-        if heartConn then heartConn:Disconnect(); heartConn = nil end
-        if mouseConn then mouseConn:Disconnect(); mouseConn = nil end
-    end
-
-    handle.InputBegan:Connect(function(input)
-        if dragging then return end
+    -- 2. Track the live input object for this drag.
+    handle.InputChanged:Connect(function(input)
         local t = input.UserInputType
-        if t ~= Enum.UserInputType.MouseButton1
-        and t ~= Enum.UserInputType.Touch then
-            return
+        if t == Enum.UserInputType.MouseMovement
+        or t == Enum.UserInputType.Touch then
+            dragInput = input
         end
+    end)
 
-        -- Snapshot everything needed.  After this point the Heartbeat reads
-        -- only plain Lua variables — zero Roblox property accesses.
-        local pos  = frame.Position
-        local sz   = frame.AbsoluteSize
-        startOfsX  = pos.X.Offset
-        startOfsY  = pos.Y.Offset
-        sizeX      = sz.X
-        sizeY      = sz.Y
-        local m    = UIS:GetMouseLocation()
-        anchorX    = m.X
-        anchorY    = m.Y
-        curMouseX  = m.X
-        curMouseY  = m.Y
-
-        dragging = true
-
-        -- Mouse tracking: just two variable assignments — no Instance writes.
-        if mouseConn then mouseConn:Disconnect() end
-        mouseConn = UIS.InputChanged:Connect(function(i)
-            local itype = i.UserInputType
-            if itype == Enum.UserInputType.MouseMovement
-            or itype == Enum.UserInputType.Touch then
-                curMouseX = i.Position.X
-                curMouseY = i.Position.Y
-            end
-        end)
-
-        -- Position write: once per Heartbeat frame, outside any signal chain.
-        if heartConn then heartConn:Disconnect() end
-        heartConn = RunService.Heartbeat:Connect(function()
-            if not dragging then
-                stopDrag()
-                return
-            end
-            local cam = workspace.CurrentCamera
-            if not cam then return end
-            local vp   = cam.ViewportSize
-            local maxX = math.max(0, vp.X - sizeX)
-            local maxY = math.max(0, vp.Y - sizeY)
-            local nx   = math.clamp(startOfsX + (curMouseX - anchorX), 0, maxX)
-            local ny   = math.clamp(startOfsY + (curMouseY - anchorY), 0, maxY)
-            _safeSetPos(frame, UDim2.new(0, nx, 0, ny))
-        end)
-
-        -- End drag when mouse / touch released.
-        if endConn then endConn:Disconnect() end
-        endConn = input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                stopDrag()
-                if endConn then endConn:Disconnect(); endConn = nil end
-            end
-        end)
+    -- 3. Write position — fires only when the tracked input moves.
+    UIS.InputChanged:Connect(function(input)
+        if not dragging or input ~= dragInput then return end
+        local delta = input.Position - mousePos
+        local nx    = framePos.X.Offset + delta.X
+        local ny    = framePos.Y.Offset + delta.Y
+        -- Viewport clamping
+        local cam = workspace.CurrentCamera
+        if cam then
+            local vp = cam.ViewportSize
+            local sz = frame.AbsoluteSize
+            nx = math.clamp(nx, 0, math.max(0, vp.X - sz.X))
+            ny = math.clamp(ny, 0, math.max(0, vp.Y - sz.Y))
+        end
+        _safeSetPos(frame, UDim2.new(framePos.X.Scale, nx, framePos.Y.Scale, ny))
     end)
 end
 
