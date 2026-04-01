@@ -387,70 +387,102 @@ end
 local function Lerp(a, b, t)     return a + (b - a) * t end
 
 -- ── Draggable ─────────────────────────────────────────────────
--- RenderStepped drag: input callbacks only toggle state; the Position
--- write lives in a per-frame RenderStepped loop so it never executes
--- inside an input-event stack frame, eliminating C-stack re-entry.
+-- State-machine drag.  Input callbacks ONLY toggle state and snapshot;
+-- the Position write lives in a task.spawn + task.wait() coroutine that
+-- resumes outside any signal / event stack frame.
+--
+-- Defence-in-depth:
+--   1. setrawproperty (if the executor exposes it) bypasses __newindex
+--      hooks entirely, so no hook chain can recurse.
+--   2. task.spawn + task.wait() resumes outside signal dispatch.
+--   3. A Lua coroutine cannot be re-entered while it is already running,
+--      so even if the write triggers a callback that tries to resume
+--      the same coroutine, it is a no-op.
+--   4. pcall around the write catches non-overflow errors.
+local _rawSet
+do
+    local ok, fn = pcall(function() return setrawproperty end)
+    if ok and typeof(fn) == "function" then _rawSet = fn end
+end
+local function _safeSetPos(f, p)
+    if _rawSet then
+        _rawSet(f, "Position", p)
+    else
+        f.Position = p
+    end
+end
+
 local function Draggable(frame, handle)
     handle = handle or frame
 
     -- Normalise to AnchorPoint(0,0) + pure-offset Position after first layout.
     task.defer(function()
-        local abs = frame.AbsolutePosition
-        frame.AnchorPoint = Vector2.new(0, 0)
-        frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
+        pcall(function()
+            local abs = frame.AbsolutePosition
+            frame.AnchorPoint = Vector2.new(0, 0)
+            _safeSetPos(frame, UDim2.new(0, abs.X, 0, abs.Y))
+        end)
     end)
 
-    local dragging   = false
-    local dragInput
-    local startMouse
-    local startPos
-    local dragConn
+    local state   = "idle"   -- "idle" | "dragging"
+    local endConn = nil
 
     local function stopDrag()
-        dragging = false
-        dragInput = nil
-        if dragConn then
-            dragConn:Disconnect()
-            dragConn = nil
+        state = "idle"
+        if endConn then
+            pcall(function() endConn:Disconnect() end)
+            endConn = nil
         end
     end
 
     handle.InputBegan:Connect(function(input)
-        if dragging then return end
+        if state ~= "idle" then return end
         local t = input.UserInputType
-        if t ~= Enum.UserInputType.MouseButton1 and t ~= Enum.UserInputType.Touch then
+        if t ~= Enum.UserInputType.MouseButton1
+        and t ~= Enum.UserInputType.Touch then
             return
         end
 
-        dragging   = true
-        dragInput  = input
-        startMouse = UIS:GetMouseLocation()
-        startPos   = frame.Position
+        -- Snapshot every frame property we need.  The hot loop reads NONE.
+        local pos       = frame.Position
+        local sz        = frame.AbsoluteSize
+        local startOfsX = pos.X.Offset
+        local startOfsY = pos.Y.Offset
+        local sizeX     = sz.X
+        local sizeY     = sz.Y
+        local anchor    = UIS:GetMouseLocation()
+        local anchorX   = anchor.X
+        local anchorY   = anchor.Y
 
-        if dragConn then dragConn:Disconnect() end
+        state = "dragging"
 
-        dragConn = RunService.RenderStepped:Connect(function()
-            if not dragging then return end
-
-            local mouse = UIS:GetMouseLocation()
-            local delta = mouse - startMouse
-
-            local cam = workspace.CurrentCamera
-            if not cam then return end
-
-            local vp = cam.ViewportSize
-            local sz = frame.AbsoluteSize
-            local nx = math.clamp(startPos.X.Offset + delta.X, 0, vp.X - sz.X)
-            local ny = math.clamp(startPos.Y.Offset + delta.Y, 0, vp.Y - sz.Y)
-
-            frame.Position = UDim2.new(0, nx, 0, ny)
-        end)
-
-        local endConn
+        -- End-of-input listener: flips state so the loop exits.
+        if endConn then pcall(function() endConn:Disconnect() end) end
         endConn = input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 stopDrag()
-                endConn:Disconnect()
+            end
+        end)
+
+        -- Drag loop in its own coroutine.
+        -- A running coroutine cannot be re-entered, so this is inherently
+        -- safe against recursive resume.  task.wait() yields to the
+        -- scheduler; the resume happens outside signal dispatch.
+        task.spawn(function()
+            while state == "dragging" do
+                task.wait()
+                if state ~= "dragging" then break end
+
+                local ok, mouse = pcall(UIS.GetMouseLocation, UIS)
+                if not ok then break end
+
+                local cam = workspace.CurrentCamera
+                if cam then
+                    local vp = cam.ViewportSize
+                    local nx = math.clamp(startOfsX + (mouse.X - anchorX), 0, vp.X - sizeX)
+                    local ny = math.clamp(startOfsY + (mouse.Y - anchorY), 0, vp.Y - sizeY)
+                    pcall(_safeSetPos, frame, UDim2.new(0, nx, 0, ny))
+                end
             end
         end)
     end)
@@ -560,6 +592,7 @@ function Library:OnUnload(fn)
 end
 
 function Library:Unload()
+    if self.Unloaded then return end
     self.Unloaded = true
     for _, fn in ipairs(self._unloadFns) do pcall(fn) end
     for _, c  in ipairs(self._connections) do pcall(function() c:Disconnect() end) end
@@ -1327,6 +1360,7 @@ function Library:CreateWindow(opts)
     closeBtn.MouseEnter:Connect(function() Tween(closeBtn, { TextColor3 = Theme.Danger  }, 0.08) end)
     closeBtn.MouseLeave:Connect(function() Tween(closeBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     closeBtn.MouseButton1Click:Connect(function()
+        if self.Unloaded then return end  -- guard double-click
         if onClose then pcall(onClose) end
         self:Unload()
     end)
@@ -1525,6 +1559,7 @@ function Library:CreateWindow(opts)
     function Win:Show()   self:SetVisible(true)  end
     function Win:Hide()   self:SetVisible(false) end
     function Win:Toggle()
+        if Library.Unloaded then return end
         if _tLock then return end
         _tLock = true
         self:SetVisible(not _vis)
@@ -1534,7 +1569,7 @@ function Library:CreateWindow(opts)
     function Win:SetToggleKey(k) if k then _tKey.v = k end end
     -- Wire the toggle key — intentionally ignores gameProcessedEvent so the
     -- menu can be dismissed even when a widget inside it has focus.
-    UIS.InputBegan:Connect(function(i)
+    self:_connect(UIS.InputBegan, function(i)
         if i.KeyCode == _tKey.v then Win:Toggle() end
     end)
 
@@ -2515,6 +2550,7 @@ function Library:CreateWindow(opts)
                 -- expanded panel
                 local panel = nil
                 local panelOpen = false
+                local _panelConns = {}  -- UIS connections created per-panel; cleaned on close
 
                 local function getColor()
                     return Color3.fromHSV(h2, s2, v2)
@@ -2528,6 +2564,9 @@ function Library:CreateWindow(opts)
                 end
 
                 local function buildPanel()
+                    -- Disconnect stale UIS connections from the previous panel
+                    for _, c in ipairs(_panelConns) do pcall(function() c:Disconnect() end) end
+                    _panelConns = {}
                     if panel then panel:Destroy(); panel = nil end
                     -- Parent to sg (ScreenGui) so the ScrollingFrame column cannot clip it
                     local _rx = row.AbsolutePosition.X
@@ -2712,10 +2751,10 @@ function Library:CreateWindow(opts)
                             updateSVMark(); updateHex(); applyColor()
                         end
                     end)
-                    Library:_connect(UIS.InputEnded, function(i)
+                    _panelConns[#_panelConns+1] = UIS.InputEnded:Connect(function(i)
                         if i.UserInputType == Enum.UserInputType.MouseButton1 then svDrag = false end
                     end)
-                    Library:_connect(UIS.InputChanged, function(i)
+                    _panelConns[#_panelConns+1] = UIS.InputChanged:Connect(function(i)
                         if svDrag and i.UserInputType == Enum.UserInputType.MouseMovement then
                             s2 = Clamp((i.Position.X - svSq.AbsolutePosition.X) / svSq.AbsoluteSize.X, 0, 1)
                             v2 = 1 - Clamp((i.Position.Y - svSq.AbsolutePosition.Y) / svSq.AbsoluteSize.Y, 0, 1)
@@ -2732,13 +2771,13 @@ function Library:CreateWindow(opts)
                             updateHueMark(); updateHex(); applyColor()
                         end
                     end)
-                    Library:_connect(UIS.InputChanged, function(i)
+                    _panelConns[#_panelConns+1] = UIS.InputChanged:Connect(function(i)
                         if hueDrag and i.UserInputType == Enum.UserInputType.MouseMovement then
                             h2 = Clamp((i.Position.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
                             updateHueMark(); updateHex(); applyColor()
                         end
                     end)
-                    Library:_connect(UIS.InputEnded, function(i)
+                    _panelConns[#_panelConns+1] = UIS.InputEnded:Connect(function(i)
                         if i.UserInputType == Enum.UserInputType.MouseButton1 then hueDrag = false end
                     end)
 
@@ -2752,14 +2791,14 @@ function Library:CreateWindow(opts)
                             applyColor()
                         end
                     end)
-                    Library:_connect(UIS.InputChanged, function(i)
+                    _panelConns[#_panelConns+1] = UIS.InputChanged:Connect(function(i)
                         if alphaDrag and i.UserInputType == Enum.UserInputType.MouseMovement then
                             alpha = 1 - Clamp((i.Position.Y - alphaTrk.AbsolutePosition.Y) / alphaTrk.AbsoluteSize.Y, 0, 1)
                             Tween(alphaKnob, { Position = UDim2.new(0.5, 0, 1 - alpha, 0) }, 0.04)
                             applyColor()
                         end
                     end)
-                    Library:_connect(UIS.InputEnded, function(i)
+                    _panelConns[#_panelConns+1] = UIS.InputEnded:Connect(function(i)
                         if i.UserInputType == Enum.UserInputType.MouseButton1 then alphaDrag = false end
                     end)
 
@@ -2783,6 +2822,8 @@ function Library:CreateWindow(opts)
                 local _cpOutsideConn
                 local function _closePanelExternal()
                     panelOpen = false
+                    for _, c in ipairs(_panelConns) do pcall(function() c:Disconnect() end) end
+                    _panelConns = {}
                     if panel then panel:Destroy(); panel = nil end
                     Tween(row, { BackgroundColor3 = Theme.Element }, 0.08)
                     if _cpOutsideConn then _cpOutsideConn:Disconnect(); _cpOutsideConn = nil end
@@ -2809,6 +2850,8 @@ function Library:CreateWindow(opts)
                             end
                         end)
                     else
+                        for _, c in ipairs(_panelConns) do pcall(function() c:Disconnect() end) end
+                        _panelConns = {}
                         if _cpOutsideConn then _cpOutsideConn:Disconnect(); _cpOutsideConn = nil end
                         if panel then panel:Destroy(); panel = nil end
                         Tween(row, { BackgroundColor3 = Theme.Element }, 0.08)
