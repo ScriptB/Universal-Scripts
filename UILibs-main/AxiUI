@@ -411,40 +411,60 @@ local function Round(v, dp)
 end
 local function Lerp(a, b, t)     return a + (b - a) * t end
 
-local _TS = game:GetService("TweenService")
-local _TI0 = TweenInfo.new(0)   -- instant tween; reused for every drag frame
+-- Draggable: uses a spawned while-loop with task.wait() to break out of all
+-- executor hook chains. No event connections write Position; no TweenService.
+-- setrawproperty (UNC standard) bypasses __newindex hooks entirely when available.
+-- Falls back to direct assignment wrapped in pcall as last resort.
+local _rawSet = typeof(setrawproperty) == "function" and setrawproperty or nil
+
+local function _safeSetPos(frame, pos)
+    if _rawSet then
+        _rawSet(frame, "Position", pos)
+    else
+        frame.Position = pos
+    end
+end
+
+local function _safeSetAnchor(frame, v)
+    if _rawSet then
+        _rawSet(frame, "AnchorPoint", v)
+    else
+        frame.AnchorPoint = v
+    end
+end
 
 local function Draggable(frame, handle)
     handle = handle or frame
 
     -- One-shot: normalise to AnchorPoint(0,0) + pure-offset Position.
-    -- Uses an instant tween so the writes go through the C++ engine, not Lua __newindex.
     task.defer(function()
-        local abs = frame.AbsolutePosition
-        _TS:Create(frame, _TI0, {
-            AnchorPoint = Vector2.new(0, 0),
-            Position    = UDim2.new(0, abs.X, 0, abs.Y),
-        }):Play()
+        pcall(function()
+            local abs = frame.AbsolutePosition
+            _safeSetAnchor(frame, Vector2.new(0, 0))
+            _safeSetPos(frame, UDim2.new(0, abs.X, 0, abs.Y))
+        end)
     end)
 
     local dragging = false
-    local sp    = Vector2.new()            -- frame pixel origin at drag start
-    local ds    = Vector2.new()            -- mouse pixel origin at drag start
-    local maxX  = 10000                    -- cached (viewport.X - frame.W)
-    local maxY  = 10000                    -- cached (viewport.Y - frame.H)
+    local sp    = Vector2.new()
+    local ds    = Vector2.new()
+    local maxX  = 10000
+    local maxY  = 10000
 
     handle.InputBegan:Connect(function(i)
         if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        local px = frame.Position.X.Offset
-        local py = frame.Position.Y.Offset
-        local fw = frame.AbsoluteSize.X
-        local fh = frame.AbsoluteSize.Y
-        local vp = workspace.CurrentCamera.ViewportSize
-        dragging = true
-        sp   = Vector2.new(px, py)
-        ds   = UIS:GetMouseLocation()
-        maxX = vp.X - fw
-        maxY = vp.Y - fh
+        pcall(function()
+            local px = frame.Position.X.Offset
+            local py = frame.Position.Y.Offset
+            local fw = frame.AbsoluteSize.X
+            local fh = frame.AbsoluteSize.Y
+            local vp = workspace.CurrentCamera.ViewportSize
+            sp   = Vector2.new(px, py)
+            ds   = UIS:GetMouseLocation()
+            maxX = vp.X - fw
+            maxY = vp.Y - fh
+            dragging = true
+        end)
     end)
 
     handle.InputEnded:Connect(function(i)
@@ -453,19 +473,22 @@ local function Draggable(frame, handle)
         end
     end)
 
-    -- Heartbeat: poll mouse, compute clamped position, apply via instant Tween.
-    -- TweenService:Create():Play() sets properties through the C++ engine
-    -- directly — it never triggers Lua __newindex hooks, so the executor's
-    -- hooked metamethod chain cannot recurse or overflow the C stack.
-    RunService.Heartbeat:Connect(function()
-        if not dragging then return end
-        local m  = UIS:GetMouseLocation()
-        local d  = m - ds
-        local nx = math.clamp(sp.X + d.X, 0, maxX)
-        local ny = math.clamp(sp.Y + d.Y, 0, maxY)
-        _TS:Create(frame, _TI0, {
-            Position = UDim2.new(0, nx, 0, ny)
-        }):Play()
+    -- Spawned while-loop: runs in its own coroutine, yields with task.wait()
+    -- between iterations. This fully unwinds the C call stack between each
+    -- Position write — no hook chain can accumulate stack depth across yields.
+    task.spawn(function()
+        while true do
+            task.wait()   -- yields; C stack fully unwinds every frame
+            if dragging then
+                local ok, m = pcall(UIS.GetMouseLocation, UIS)
+                if ok and m then
+                    local d  = m - ds
+                    local nx = math.clamp(sp.X + d.X, 0, maxX)
+                    local ny = math.clamp(sp.Y + d.Y, 0, maxY)
+                    pcall(_safeSetPos, frame, UDim2.new(0, nx, 0, ny))
+                end
+            end
+        end
     end)
 end
 
