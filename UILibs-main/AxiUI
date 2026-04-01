@@ -411,17 +411,20 @@ local function Round(v, dp)
 end
 local function Lerp(a, b, t)     return a + (b - a) * t end
 
+local _TS = game:GetService("TweenService")
+local _TI0 = TweenInfo.new(0)   -- instant tween; reused for every drag frame
+
 local function Draggable(frame, handle)
     handle = handle or frame
 
     -- One-shot: normalise to AnchorPoint(0,0) + pure-offset Position.
-    -- Wrapped in pcall so a hooked __newindex on these writes can't propagate.
+    -- Uses an instant tween so the writes go through the C++ engine, not Lua __newindex.
     task.defer(function()
-        pcall(function()
-            local abs = frame.AbsolutePosition
-            frame.AnchorPoint = Vector2.new(0, 0)
-            frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
-        end)
+        local abs = frame.AbsolutePosition
+        _TS:Create(frame, _TI0, {
+            AnchorPoint = Vector2.new(0, 0),
+            Position    = UDim2.new(0, abs.X, 0, abs.Y),
+        }):Play()
     end)
 
     local dragging = false
@@ -429,14 +432,9 @@ local function Draggable(frame, handle)
     local ds    = Vector2.new()            -- mouse pixel origin at drag start
     local maxX  = 10000                    -- cached (viewport.X - frame.W)
     local maxY  = 10000                    -- cached (viewport.Y - frame.H)
-    local guard = false                    -- re-entrancy guard for Position write
 
-    -- InputBegan: only flip state + cache all Roblox property reads here.
-    -- The hot loop (Heartbeat) must not read ANY instance properties.
     handle.InputBegan:Connect(function(i)
         if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        -- Read instance properties once, guarded. These reads are safe here
-        -- because InputBegan fires rarely (on click), not every frame.
         local px = frame.Position.X.Offset
         local py = frame.Position.Y.Offset
         local fw = frame.AbsoluteSize.X
@@ -455,26 +453,19 @@ local function Draggable(frame, handle)
         end
     end)
 
-    -- Heartbeat loop: zero Roblox instance property reads.
-    -- UIS:GetMouseLocation() is a C method call — fires no signals, cannot recurse.
-    -- The write is wrapped in pcall so that if the executor's own __newindex hook
-    -- overflows its C stack, the error is caught here and not propagated.
-    -- task.spawn breaks synchronous re-entrancy: the write runs in a fresh
-    -- scheduler task so any hook that resumes our coroutine mid-write can't
-    -- loop back into this Heartbeat frame.
+    -- Heartbeat: poll mouse, compute clamped position, apply via instant Tween.
+    -- TweenService:Create():Play() sets properties through the C++ engine
+    -- directly — it never triggers Lua __newindex hooks, so the executor's
+    -- hooked metamethod chain cannot recurse or overflow the C stack.
     RunService.Heartbeat:Connect(function()
-        if not dragging or guard then return end
+        if not dragging then return end
         local m  = UIS:GetMouseLocation()
         local d  = m - ds
         local nx = math.clamp(sp.X + d.X, 0, maxX)
         local ny = math.clamp(sp.Y + d.Y, 0, maxY)
-        guard = true
-        task.spawn(function()
-            pcall(function()
-                frame.Position = UDim2.new(0, nx, 0, ny)
-            end)
-            guard = false
-        end)
+        _TS:Create(frame, _TI0, {
+            Position = UDim2.new(0, nx, 0, ny)
+        }):Play()
     end)
 end
 
