@@ -416,7 +416,15 @@ local function Draggable(frame, handle)
     local drag, ds, sp = false, nil, nil
     handle.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag = true; ds = i.Position; sp = frame.Position
+            -- Always work in absolute-offset coordinates so clamp is straightforward.
+            -- Re-pin AnchorPoint to (0,0) using the real pixel position so that
+            -- any centred or post-minimize anchor state doesn't interfere.
+            local abs = frame.AbsolutePosition
+            frame.AnchorPoint = Vector2.new(0, 0)
+            frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
+            drag = true
+            ds = i.Position
+            sp = frame.Position
         end
     end)
     handle.InputEnded:Connect(function(i)
@@ -424,8 +432,13 @@ local function Draggable(frame, handle)
     end)
     UIS.InputChanged:Connect(function(i)
         if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
-            local d = i.Position - ds
-            frame.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
+            local d   = i.Position - ds
+            local vp  = workspace.CurrentCamera.ViewportSize
+            local fsz = frame.AbsoluteSize
+            -- Clamp so no edge of the frame can leave the screen.
+            local nx  = math.clamp(sp.X.Offset + d.X, 0, vp.X - fsz.X)
+            local ny  = math.clamp(sp.Y.Offset + d.Y, 0, vp.Y - fsz.Y)
+            frame.Position = UDim2.new(0, nx, 0, ny)
         end
     end)
 end
@@ -1296,22 +1309,31 @@ function Library:CreateWindow(opts)
     local _tabBar, _content
 
     local minimised = false
-    local collapsedSize = UDim2.new(winSize.X.Scale, winSize.X.Offset, 0, 42)
+    local collapsedSize = UDim2.new(0, winSize.X.Offset, 0, 42)
     minBtn.MouseEnter:Connect(function() Tween(minBtn, { TextColor3 = Theme.Gold }, 0.08) end)
     minBtn.MouseLeave:Connect(function() Tween(minBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     minBtn.MouseButton1Click:Connect(function()
         minimised = not minimised
+
+        -- Pin AnchorPoint to top-left using the actual screen position before
+        -- any size tween. Without this, frames with AnchorPoint (0.5, 0.5) expand
+        -- from the center, causing the title bar to drift off-screen.
+        local abs = shadowWrap.AbsolutePosition
+        shadowWrap.AnchorPoint = Vector2.new(0, 0)
+        shadowWrap.Position    = UDim2.new(0, abs.X, 0, abs.Y)
+
         if minimised then
-            -- Hide inner panels immediately so they don't show below the shrinking bar.
-            if _tabBar   then _tabBar.Visible   = false end
-            if _content  then _content.Visible  = false end
+            -- Hide inner panels immediately so they don't overflow the shrinking bar.
+            if _tabBar  then _tabBar.Visible  = false end
+            if _content then _content.Visible = false end
             Tween(shadowWrap, { Size = collapsedSize }, 0.18, Enum.EasingStyle.Quart)
         else
-            Tween(shadowWrap, { Size = winSize }, 0.2, Enum.EasingStyle.Quart)
+            local expandedSize = UDim2.new(0, winSize.X.Offset, 0, winSize.Y.Offset)
+            Tween(shadowWrap, { Size = expandedSize }, 0.2, Enum.EasingStyle.Quart)
             -- Restore panels only after the expand tween finishes to avoid a flash.
             task.delay(0.2, function()
-                if _tabBar   then _tabBar.Visible   = true end
-                if _content  then _content.Visible  = true end
+                if _tabBar  then _tabBar.Visible  = true end
+                if _content then _content.Visible = true end
             end)
         end
     end)
