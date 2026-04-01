@@ -414,48 +414,59 @@ local function Lerp(a, b, t)     return a + (b - a) * t end
 local function Draggable(frame, handle)
     handle = handle or frame
 
-    -- Normalise to pure-offset / AnchorPoint(0,0) one frame after parenting so
-    -- AbsolutePosition is valid. This must happen once; never mutate again.
+    -- One-shot: normalise to AnchorPoint(0,0) + pure-offset Position.
+    -- Wrapped in pcall so a hooked __newindex on these writes can't propagate.
     task.defer(function()
-        local abs = frame.AbsolutePosition
-        frame.AnchorPoint = Vector2.new(0, 0)
-        frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
+        pcall(function()
+            local abs = frame.AbsolutePosition
+            frame.AnchorPoint = Vector2.new(0, 0)
+            frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
+        end)
     end)
 
     local dragging = false
-    local sp = Vector2.new()   -- frame pixel position at drag start
-    local ds = Vector2.new()   -- mouse pixel position at drag start
+    local sp    = Vector2.new()            -- frame pixel origin at drag start
+    local ds    = Vector2.new()            -- mouse pixel origin at drag start
+    local maxX  = 10000                    -- cached (viewport.X - frame.W)
+    local maxY  = 10000                    -- cached (viewport.Y - frame.H)
+    local guard = false                    -- re-entrancy guard for Position write
 
-    -- UIS.InputChanged and any property-read inside it can cause C-stack
-    -- overflows in hooked executor environments due to re-entrant signal
-    -- dispatch. We avoid it entirely.
-    --
-    -- Instead: InputBegan/Ended only flip a boolean and record start coords
-    -- (no Roblox property writes here). RenderStepped polls the mouse position
-    -- via UIS:GetMouseLocation() — a direct method call, not an event,
-    -- so it can never be re-entered.
+    -- InputBegan: only flip state + cache all Roblox property reads here.
+    -- The hot loop (Heartbeat) must not read ANY instance properties.
     handle.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            sp = Vector2.new(frame.Position.X.Offset, frame.Position.Y.Offset)
-            ds = UIS:GetMouseLocation()
-        end
+        if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+        -- Read instance properties once, guarded. These reads are safe here
+        -- because InputBegan fires rarely (on click), not every frame.
+        local px = frame.Position.X.Offset
+        local py = frame.Position.Y.Offset
+        local fw = frame.AbsoluteSize.X
+        local fh = frame.AbsoluteSize.Y
+        local vp = workspace.CurrentCamera.ViewportSize
+        dragging = true
+        sp   = Vector2.new(px, py)
+        ds   = UIS:GetMouseLocation()
+        maxX = vp.X - fw
+        maxY = vp.Y - fh
     end)
+
     handle.InputEnded:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
 
-    RunService.RenderStepped:Connect(function()
-        if not dragging then return end
-        local mouse = UIS:GetMouseLocation()
-        local d  = mouse - ds
-        local vp = workspace.CurrentCamera.ViewportSize
-        local sz = frame.AbsoluteSize
-        local nx = math.clamp(sp.X + d.X, 0, vp.X - sz.X)
-        local ny = math.clamp(sp.Y + d.Y, 0, vp.Y - sz.Y)
+    -- Heartbeat loop: zero Roblox instance property reads.
+    -- UIS:GetMouseLocation() is a C method call — fires no signals, cannot recurse.
+    -- The re-entrancy guard prevents a hooked __newindex from looping back in.
+    RunService.Heartbeat:Connect(function()
+        if not dragging or guard then return end
+        local m  = UIS:GetMouseLocation()
+        local d  = m - ds
+        local nx = math.clamp(sp.X + d.X, 0, maxX)
+        local ny = math.clamp(sp.Y + d.Y, 0, maxY)
+        guard = true
         frame.Position = UDim2.new(0, nx, 0, ny)
+        guard = false
     end)
 end
 
