@@ -1,28 +1,3 @@
---[[
-╔══════════════════════════════════════════════════════════════════╗
-║                  AxiUI  ·  v2.0.0                                ║
-║          Professional Roblox Exploit UI Framework                ║
-║                                                                  ║
-║  Self-contained — no external URLs, no loadstring chains.        ║
-║                                                                  ║
-║  LOAD OPTIONS:                                                   ║
-║    A) getgenv cache (recommended for hubs):                      ║
-║         getgenv().AxiUI  →  after running this file once         ║
-║    B) HttpGet:                                                   ║
-║         loadstring(game:HttpGet("RAW_URL"))()                    ║
-║    C) File inject:                                               ║
-║         loadfile("AxiUI_Library.lua")()                          ║
-║                                                                  ║
-║  ELEMENTS:  Toggle · Button · Slider · Input · Dropdown          ║
-║             ColorPicker · Keybind · Label · Paragraph            ║
-║             Section · Divider · ProgressBar · Image              ║
-║             Tabbox · Multi-Dropdown · Searchable-Dropdown        ║
-║                                                                  ║
-║  FEATURES:  Intro animation · Draggable · Minimise · Resize     ║
-║             Notifications · Watermark · Keybind overlay          ║
-║             Theme presets · Config save/load · OnUnload          ║
-╚══════════════════════════════════════════════════════════════════╝
-]]
 
 -- ══════════════════════════════════════════════════════════════
 --  PASS 1 — Services · Theme · Utility · Root · Library Object
@@ -412,11 +387,9 @@ end
 local function Lerp(a, b, t)     return a + (b - a) * t end
 
 -- ── Draggable ─────────────────────────────────────────────────
--- Relay pattern: frame.InputChanged only STORES the InputObject;
--- the Position write happens in global UIS.InputChanged, keyed on
--- (input == lastInput). Writing Position may re-fire the frame's own
--- InputChanged, but that path only stores — it never writes Position,
--- so no recursion is possible.
+-- RenderStepped drag: input callbacks only toggle state; the Position
+-- write lives in a per-frame RenderStepped loop so it never executes
+-- inside an input-event stack frame, eliminating C-stack re-entry.
 local function Draggable(frame, handle)
     handle = handle or frame
 
@@ -427,44 +400,59 @@ local function Draggable(frame, handle)
         frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
     end)
 
-    local dragging  = false
-    local lastInput = nil           -- latest MouseMovement InputObject from frame
-    local startPos  = UDim2.new()   -- frame.Position at drag start
-    local startMouse = Vector3.new() -- input.Position at drag start
+    local dragging   = false
+    local dragInput
+    local startMouse
+    local startPos
+    local dragConn
 
-    -- 1. frame.InputBegan — record start state, listen for end on this input
+    local function stopDrag()
+        dragging = false
+        dragInput = nil
+        if dragConn then
+            dragConn:Disconnect()
+            dragConn = nil
+        end
+    end
+
     handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging   = true
-            startMouse = input.Position
-            startPos   = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
+        if dragging then return end
+        local t = input.UserInputType
+        if t ~= Enum.UserInputType.MouseButton1 and t ~= Enum.UserInputType.Touch then
+            return
         end
-    end)
 
-    -- 2. frame.InputChanged — ONLY store the InputObject, never write Position
-    handle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-            lastInput = input
-        end
-    end)
+        dragging   = true
+        dragInput  = input
+        startMouse = UIS:GetMouseLocation()
+        startPos   = frame.Position
 
-    -- 3. Global UIS.InputChanged — the ONLY place Position is written.
-    --    Acts only when (input == lastInput) so we know it belongs to our frame.
-    UIS.InputChanged:Connect(function(input)
-        if not dragging or input ~= lastInput then return end
-        local delta = input.Position - startMouse
-        local vp  = workspace.CurrentCamera.ViewportSize
-        local sz  = frame.AbsoluteSize
-        local nx  = math.clamp(startPos.X.Offset + delta.X, 0, vp.X - sz.X)
-        local ny  = math.clamp(startPos.Y.Offset + delta.Y, 0, vp.Y - sz.Y)
-        frame.Position = UDim2.new(0, nx, 0, ny)
+        if dragConn then dragConn:Disconnect() end
+
+        dragConn = RunService.RenderStepped:Connect(function()
+            if not dragging then return end
+
+            local mouse = UIS:GetMouseLocation()
+            local delta = mouse - startMouse
+
+            local cam = workspace.CurrentCamera
+            if not cam then return end
+
+            local vp = cam.ViewportSize
+            local sz = frame.AbsoluteSize
+            local nx = math.clamp(startPos.X.Offset + delta.X, 0, vp.X - sz.X)
+            local ny = math.clamp(startPos.Y.Offset + delta.Y, 0, vp.Y - sz.Y)
+
+            frame.Position = UDim2.new(0, nx, 0, ny)
+        end)
+
+        local endConn
+        endConn = input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                stopDrag()
+                endConn:Disconnect()
+            end
+        end)
     end)
 end
 
