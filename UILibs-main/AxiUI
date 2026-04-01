@@ -1287,11 +1287,13 @@ function Library:CreateWindow(opts)
     closeBtn.MouseEnter:Connect(function() Tween(closeBtn, { TextColor3 = Theme.Danger  }, 0.08) end)
     closeBtn.MouseLeave:Connect(function() Tween(closeBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     closeBtn.MouseButton1Click:Connect(function()
-        -- Always hide. For exploit UIs hide == close; Library:Unload() destroys.
-        -- Call SetVisible so _vis stays in sync; direct sg/shadowWrap writes skip it.
-        Win:SetVisible(false)
         if onClose then pcall(onClose) end
+        self:Unload()
     end)
+
+    -- Forward refs for tabBar + content — assigned when those frames are built below.
+    -- Needed so the minimize closure (defined here) can reference them.
+    local _tabBar, _content
 
     local minimised = false
     local collapsedSize = UDim2.new(winSize.X.Scale, winSize.X.Offset, 0, 42)
@@ -1299,10 +1301,19 @@ function Library:CreateWindow(opts)
     minBtn.MouseLeave:Connect(function() Tween(minBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     minBtn.MouseButton1Click:Connect(function()
         minimised = not minimised
-        -- Tween shadowWrap (not win) so the shadow image collapses with the window
-        Tween(shadowWrap, {
-            Size = minimised and collapsedSize or winSize
-        }, 0.2, Enum.EasingStyle.Quart)
+        if minimised then
+            -- Hide inner panels immediately so they don't show below the shrinking bar.
+            if _tabBar   then _tabBar.Visible   = false end
+            if _content  then _content.Visible  = false end
+            Tween(shadowWrap, { Size = collapsedSize }, 0.18, Enum.EasingStyle.Quart)
+        else
+            Tween(shadowWrap, { Size = winSize }, 0.2, Enum.EasingStyle.Quart)
+            -- Restore panels only after the expand tween finishes to avoid a flash.
+            task.delay(0.2, function()
+                if _tabBar   then _tabBar.Visible   = true end
+                if _content  then _content.Visible  = true end
+            end)
+        end
     end)
 
     Draggable(shadowWrap, titleBar)
@@ -1319,6 +1330,7 @@ function Library:CreateWindow(opts)
         ZIndex           = 3,
         Parent           = win,
     })
+    _tabBar = tabBar   -- expose to minimize closure
     -- subtle separator under tabbar
     New("Frame", {
         BackgroundColor3 = Theme.Border,
@@ -1353,6 +1365,7 @@ function Library:CreateWindow(opts)
         ZIndex           = 1,
         Parent           = win,
     })
+    _content = content   -- expose to minimize closure
 
     -- ── Intro splash ─────────────────────────────────────────
     if doIntro then
