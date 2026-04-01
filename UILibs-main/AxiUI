@@ -411,84 +411,60 @@ local function Round(v, dp)
 end
 local function Lerp(a, b, t)     return a + (b - a) * t end
 
--- Draggable: uses a spawned while-loop with task.wait() to break out of all
--- executor hook chains. No event connections write Position; no TweenService.
--- setrawproperty (UNC standard) bypasses __newindex hooks entirely when available.
--- Falls back to direct assignment wrapped in pcall as last resort.
-local _rawSet = typeof(setrawproperty) == "function" and setrawproperty or nil
-
-local function _safeSetPos(frame, pos)
-    if _rawSet then
-        _rawSet(frame, "Position", pos)
-    else
-        frame.Position = pos
-    end
-end
-
-local function _safeSetAnchor(frame, v)
-    if _rawSet then
-        _rawSet(frame, "AnchorPoint", v)
-    else
-        frame.AnchorPoint = v
-    end
-end
-
+-- ── Draggable ─────────────────────────────────────────────────
+-- Relay pattern: frame.InputChanged only STORES the InputObject;
+-- the Position write happens in global UIS.InputChanged, keyed on
+-- (input == lastInput). Writing Position may re-fire the frame's own
+-- InputChanged, but that path only stores — it never writes Position,
+-- so no recursion is possible.
 local function Draggable(frame, handle)
     handle = handle or frame
 
-    -- One-shot: normalise to AnchorPoint(0,0) + pure-offset Position.
+    -- Normalise to AnchorPoint(0,0) + pure-offset Position after first layout.
     task.defer(function()
-        pcall(function()
-            local abs = frame.AbsolutePosition
-            _safeSetAnchor(frame, Vector2.new(0, 0))
-            _safeSetPos(frame, UDim2.new(0, abs.X, 0, abs.Y))
-        end)
+        local abs = frame.AbsolutePosition
+        frame.AnchorPoint = Vector2.new(0, 0)
+        frame.Position    = UDim2.new(0, abs.X, 0, abs.Y)
     end)
 
-    local dragging = false
-    local sp    = Vector2.new()
-    local ds    = Vector2.new()
-    local maxX  = 10000
-    local maxY  = 10000
+    local dragging  = false
+    local lastInput = nil           -- latest MouseMovement InputObject from frame
+    local startPos  = UDim2.new()   -- frame.Position at drag start
+    local startMouse = Vector3.new() -- input.Position at drag start
 
-    handle.InputBegan:Connect(function(i)
-        if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        pcall(function()
-            local px = frame.Position.X.Offset
-            local py = frame.Position.Y.Offset
-            local fw = frame.AbsoluteSize.X
-            local fh = frame.AbsoluteSize.Y
-            local vp = workspace.CurrentCamera.ViewportSize
-            sp   = Vector2.new(px, py)
-            ds   = UIS:GetMouseLocation()
-            maxX = vp.X - fw
-            maxY = vp.Y - fh
-            dragging = true
-        end)
-    end)
-
-    handle.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    -- Spawned while-loop: runs in its own coroutine, yields with task.wait()
-    -- between iterations. This fully unwinds the C call stack between each
-    -- Position write — no hook chain can accumulate stack depth across yields.
-    task.spawn(function()
-        while true do
-            task.wait()   -- yields; C stack fully unwinds every frame
-            if dragging then
-                local ok, m = pcall(UIS.GetMouseLocation, UIS)
-                if ok and m then
-                    local d  = m - ds
-                    local nx = math.clamp(sp.X + d.X, 0, maxX)
-                    local ny = math.clamp(sp.Y + d.Y, 0, maxY)
-                    pcall(_safeSetPos, frame, UDim2.new(0, nx, 0, ny))
+    -- 1. frame.InputBegan — record start state, listen for end on this input
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging   = true
+            startMouse = input.Position
+            startPos   = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
                 end
-            end
+            end)
         end
+    end)
+
+    -- 2. frame.InputChanged — ONLY store the InputObject, never write Position
+    handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+            lastInput = input
+        end
+    end)
+
+    -- 3. Global UIS.InputChanged — the ONLY place Position is written.
+    --    Acts only when (input == lastInput) so we know it belongs to our frame.
+    UIS.InputChanged:Connect(function(input)
+        if not dragging or input ~= lastInput then return end
+        local delta = input.Position - startMouse
+        local vp  = workspace.CurrentCamera.ViewportSize
+        local sz  = frame.AbsoluteSize
+        local nx  = math.clamp(startPos.X.Offset + delta.X, 0, vp.X - sz.X)
+        local ny  = math.clamp(startPos.Y.Offset + delta.Y, 0, vp.Y - sz.Y)
+        frame.Position = UDim2.new(0, nx, 0, ny)
     end)
 end
 
