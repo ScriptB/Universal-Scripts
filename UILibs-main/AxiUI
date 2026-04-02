@@ -1562,7 +1562,10 @@ function Library:CreateWindow(opts)
     closeBtn.MouseLeave:Connect(function() Tween(closeBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     closeBtn.MouseButton1Click:Connect(function()
         if self.Unloaded then return end  -- guard double-click
-        if onClose then pcall(onClose) end
+        if onClose then
+            local ok, result = pcall(onClose)
+            if ok and result == false then return end   -- callback returned false → cancel close
+        end
         self:Unload()
     end)
 
