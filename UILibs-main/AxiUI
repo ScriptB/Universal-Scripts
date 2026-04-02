@@ -378,21 +378,25 @@ local function Gradient(p, a, b, rot)
     })
 end
 
-local function GradientT(p, a_col, b_col, rot)
-    -- Transparency gradient
-    return New("UIGradient", {
-        Color       = ColorSequence.new(a_col, b_col),
-        Rotation    = rot or 0,
-        Parent      = p,
-    })
-end
-
 local function Clamp(v, lo, hi)  return math.max(lo, math.min(hi, v)) end
 local function Round(v, dp)
     if (dp or 0) == 0 then return math.floor(v + 0.5) end
     local f = 10 ^ dp; return math.floor(v * f + 0.5) / f
 end
 local function Lerp(a, b, t)     return a + (b - a) * t end
+
+-- Fire a primary callback + all OnChanged listeners in one call.
+-- Avoids repeating the same pcall(cb,...) + for-loop in every control.
+local function _fire(cb, cbs, ...)
+    pcall(cb, ...)
+    for _, f in ipairs(cbs) do pcall(f, ...) end
+end
+
+-- Standard MouseEnter/Leave hover tinting helper.
+local function _attachHover(guiObj, normalColor, hoverColor)
+    guiObj.MouseEnter:Connect(function() Tween(guiObj, { BackgroundColor3 = hoverColor or Theme.ElementHov }, 0.08) end)
+    guiObj.MouseLeave:Connect(function() Tween(guiObj, { BackgroundColor3 = normalColor or Theme.Element    }, 0.08) end)
+end
 
 -- ── Draggable ─────────────────────────────────────────────────
 -- Pure 3-signal Connect pattern — zero yields, zero loops.
@@ -431,11 +435,26 @@ local function Draggable(frame, handle, cutoff)
 
     local dragging  = false
     local dragInput = nil
-    -- Linoria-style: ObjPos = cursor offset from frame top-left at drag start
     local objPosX, objPosY = 0, 0
+    local normalized = false
 
     handle.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+           and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+        -- On first grab, collapse AnchorPoint → (0,0) and convert Scale-based
+        -- position into equivalent pixel offsets.  This guarantees the clamp
+        -- and all subsequent position writes use the same coord basis.
+        if not normalized then
+            local ap = frame.AnchorPoint
+            if ap.X ~= 0 or ap.Y ~= 0 then
+                local absX = frame.AbsolutePosition.X
+                local absY = frame.AbsolutePosition.Y
+                frame.AnchorPoint = Vector2.new(0, 0)
+                _safeSetPos(frame, UDim2.new(0, absX, 0, absY))
+            end
+            normalized = true
+        end
 
         local mouse = UIS:GetMouseLocation()
         local oX    = mouse.X - frame.AbsolutePosition.X
@@ -465,8 +484,10 @@ local function Draggable(frame, handle, cutoff)
     UIS.InputChanged:Connect(function(input)
         if not dragging or input ~= dragInput then return end
         local m  = UIS:GetMouseLocation()
-        local nx = m.X - objPosX + (frame.Size.X.Offset * frame.AnchorPoint.X)
-        local ny = m.Y - objPosY + (frame.Size.Y.Offset * frame.AnchorPoint.Y)
+        -- AnchorPoint is (0,0) after normalisation, so nx/ny are top-left coords.
+        local nx = m.X - objPosX
+        local ny = m.Y - objPosY
+        -- Clamp: keep entire window within screen borders.
         local cam = workspace.CurrentCamera
         if cam then
             local vp = cam.ViewportSize
@@ -674,6 +695,7 @@ function Library:SetTheme(name)
     end
     if self._wmSG  then pcall(function() repaintTree(self._wmSG)  end) end
     if self._kbSG  then pcall(function() repaintTree(self._kbSG)  end) end
+    if self._notifSG then pcall(function() repaintTree(self._notifSG) end) end
 
     -- fire registered callbacks (e.g. dropdown to update label)
     if self._onThemeChanged then
@@ -694,6 +716,14 @@ function Library:GetThemeNames()
     return n
 end
 
+function Library:GetTheme()
+    return Theme
+end
+
+function Library:GetThemeValue(key)
+    return Theme[key]
+end
+
 -- ── Config system ─────────────────────────────────────────────
 function Library:SetConfigFolder(name)
     self._configFolder = name
@@ -705,54 +735,17 @@ function Library:SetConfigFolder(name)
 end
 
 function Library:SaveConfig(name)
-    local data = {}
-    for idx, obj in pairs(Toggles) do
-        data["t_" .. idx] = obj.Value
-    end
-    for idx, obj in pairs(Options) do
-        local v = obj.Value
-        if type(v) == "userdata" then   -- Color3
-            v = { r = v.R, g = v.G, b = v.B }
-        end
-        data["o_" .. idx] = v
-    end
-    local path = self._configFolder .. "/" .. (name or "default") .. ".json"
-    SafeWrite(path, SafeJSON(data))
+    -- Delegate to SaveManager for consistent serialization (__col marker etc.)
+    if self.SaveManager then return self.SaveManager:Save(name) end
 end
 
 function Library:LoadConfig(name)
-    local path = self._configFolder .. "/" .. (name or "default") .. ".json"
-    local raw  = SafeRead(path)
-    if not raw then return end
-    local data = SafeParse(raw)
-    for k, v in pairs(data) do
-        local idx = k:match("^t_(.+)$")
-        if idx and Toggles[idx] then
-            Toggles[idx]:SetValue(v)
-        end
-        idx = k:match("^o_(.+)$")
-        if idx and Options[idx] then
-            local obj = Options[idx]
-            if type(v) == "table" and v.r then
-                obj:SetValue(Color3.new(v.r, v.g, v.b))
-            else
-                obj:SetValue(v)
-            end
-        end
-    end
+    if self.SaveManager then return self.SaveManager:Load(name) end
 end
 
 function Library:ListConfigs()
-    local list = {}
-    pcall(function()
-        if typeof(listfiles) == "function" then
-            for _, f in ipairs(listfiles(self._configFolder)) do
-                local n = f:match("([^/\\]+)%.json$")
-                if n then table.insert(list, n) end
-            end
-        end
-    end)
-    return list
+    if self.SaveManager then return self.SaveManager:List() end
+    return {}
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -967,6 +960,194 @@ function Library:Notify(opts)
         Tween(card, { BackgroundTransparency = 1, Position = UDim2.new(1, 10, 0, 0) }, 0.28, Enum.EasingStyle.Quart)
         task.delay(0.3, function() pcall(function() card:Destroy() end) end)
     end)
+end
+
+--[[
+    UI:Dialog({
+        Title    = "string",
+        Content  = "string",
+        Buttons  = {
+            { Text = "OK", Type = "accent", Callback = fn },
+            { Text = "Cancel", Type = "muted", Callback = fn },
+        },
+        CloseOnBackdrop = true,
+    })
+
+    Returns a dialog object with :Close().
+]]
+function Library:Dialog(opts)
+    opts = opts or {}
+    local title   = opts.Title or "Dialog"
+    local content = opts.Content or ""
+    local buttons = opts.Buttons or {
+        { Text = "OK", Type = "accent" },
+    }
+    local closeOnBackdrop = opts.CloseOnBackdrop ~= false
+
+    local sg = New("ScreenGui", {
+        Name           = "AxiUI_Dialog",
+        ResetOnSpawn   = false,
+        IgnoreGuiInset = true,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        DisplayOrder   = 10000,
+        Parent         = GetRoot(),
+    })
+
+    local backdrop = New("TextButton", {
+        Text                   = "",
+        AutoButtonColor        = false,
+        BackgroundColor3       = Theme.Black,
+        BackgroundTransparency = 1,
+        Size                   = UDim2.new(1, 0, 1, 0),
+        BorderSizePixel        = 0,
+        Parent                 = sg,
+    })
+
+    local card = New("Frame", {
+        BackgroundColor3       = Theme.Panel,
+        BackgroundTransparency = 1,
+        AnchorPoint            = Vector2.new(0.5, 0.5),
+        Position               = UDim2.new(0.5, 0, 0.5, 12),
+        Size                   = UDim2.new(0, 380, 0, 0),
+        AutomaticSize          = Enum.AutomaticSize.Y,
+        BorderSizePixel        = 0,
+        Active                 = true,
+        Parent                 = backdrop,
+    })
+    Corner(card, 10)
+    Stroke(card, Theme.Border, 1)
+
+    local top = New("Frame", {
+        BackgroundColor3 = Theme.PanelAlt,
+        Size             = UDim2.new(1, 0, 0, 36),
+        BorderSizePixel  = 0,
+        Parent           = card,
+    })
+    New("UICorner", { CornerRadius = UDim.new(0, 10), Parent = top })
+    New("Frame", {
+        BackgroundColor3 = Theme.PanelAlt,
+        Size             = UDim2.new(1, 0, 0.5, 0),
+        Position         = UDim2.new(0, 0, 0.5, 0),
+        BorderSizePixel  = 0,
+        Parent           = top,
+    })
+    New("TextLabel", {
+        Text             = title,
+        Font             = Enum.Font.GothamBold,
+        TextSize         = 13,
+        TextColor3       = Theme.Text,
+        TextXAlignment   = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position         = UDim2.new(0, 12, 0, 0),
+        Size             = UDim2.new(1, -24, 1, 0),
+        Parent           = top,
+    })
+
+    local body = New("Frame", {
+        BackgroundTransparency = 1,
+        Position         = UDim2.new(0, 0, 0, 36),
+        Size             = UDim2.new(1, 0, 0, 0),
+        AutomaticSize    = Enum.AutomaticSize.Y,
+        Parent           = card,
+    })
+    Pad(body, 10, 10, 12, 12)
+    List(body, 10)
+
+    New("TextLabel", {
+        Text             = content,
+        Font             = Enum.Font.Gotham,
+        TextSize         = 12,
+        TextColor3       = Theme.SubText,
+        TextXAlignment   = Enum.TextXAlignment.Left,
+        TextWrapped      = true,
+        BackgroundTransparency = 1,
+        Size             = UDim2.new(1, 0, 0, 0),
+        AutomaticSize    = Enum.AutomaticSize.Y,
+        Parent           = body,
+    })
+
+    local row = New("Frame", {
+        BackgroundTransparency = 1,
+        Size             = UDim2.new(1, 0, 0, 30),
+        Parent           = body,
+    })
+    List(row, 6, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Right)
+
+    local closed = false
+    local function closeDialog()
+        if closed then return end
+        closed = true
+        Tween(backdrop, { BackgroundTransparency = 1 }, 0.12)
+        Tween(card, {
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0.5, 0, 0.5, 12),
+        }, 0.14, Enum.EasingStyle.Quad)
+        task.delay(0.16, function() pcall(function() sg:Destroy() end) end)
+    end
+
+    for _, b in ipairs(buttons) do
+        local bType = b.Type or "accent"
+        local txtColor = (bType == "danger" and Theme.Danger)
+            or (bType == "warning" and Theme.Warning)
+            or (bType == "success" and Theme.Success)
+            or (bType == "muted" and Theme.SubText)
+            or Theme.Accent
+
+        local btn = New("TextButton", {
+            Text             = b.Text or "OK",
+            Font             = Enum.Font.GothamBold,
+            TextSize         = 12,
+            TextColor3       = txtColor,
+            BackgroundColor3 = Theme.Element,
+            Size             = UDim2.new(0, 0, 1, 0),
+            AutomaticSize    = Enum.AutomaticSize.X,
+            BorderSizePixel  = 0,
+            Parent           = row,
+        })
+        Corner(btn, 6)
+        Pad(btn, 0, 0, 10, 10)
+
+        _attachHover(btn)
+        btn.MouseButton1Click:Connect(function()
+            pcall(b.Callback or function() end)
+            closeDialog()
+        end)
+    end
+
+    if closeOnBackdrop then
+        backdrop.MouseButton1Click:Connect(closeDialog)
+    end
+
+    Tween(backdrop, { BackgroundTransparency = 0.45 }, 0.12)
+    Tween(card, {
+        BackgroundTransparency = 0,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+    }, 0.14, Enum.EasingStyle.Quad)
+
+    return { Close = closeDialog }
+end
+
+function Library:Confirm(opts)
+    opts = opts or {}
+    return self:Dialog({
+        Title   = opts.Title or "Confirm",
+        Content = opts.Content or "Are you sure?",
+        Buttons = {
+            { Text = opts.ConfirmText or "Confirm", Type = "accent", Callback = opts.OnConfirm },
+            { Text = opts.CancelText  or "Cancel",  Type = "muted",  Callback = opts.OnCancel  },
+        },
+        CloseOnBackdrop = opts.CloseOnBackdrop ~= false,
+    })
+end
+
+function Library:NotifySuccess(title, content, duration)
+    self:Notify({ Title = title or "Success", Content = content or "", Duration = duration or 4, Type = "success" })
+end
+function Library:NotifyWarning(title, content, duration)
+    self:Notify({ Title = title or "Warning", Content = content or "", Duration = duration or 4, Type = "warning" })
+end
+function Library:NotifyError(title, content, duration)
+    self:Notify({ Title = title or "Error", Content = content or "", Duration = duration or 4, Type = "error" })
 end
 
 -- ══════════════════════════════════════════════════════════════
@@ -1779,6 +1960,77 @@ function Library:CreateWindow(opts)
             go._wrap = wrap
             go._body = body
 
+            -- Common element lifecycle API used by controls.
+            local function _attachElementAPI(obj, container, setTextFn)
+                obj._container = container
+                function obj:SetVisible(v)
+                    if container then container.Visible = v ~= false end
+                    return self
+                end
+                function obj:Show()
+                    return self:SetVisible(true)
+                end
+                function obj:Hide()
+                    return self:SetVisible(false)
+                end
+                function obj:SetText(t)
+                    if setTextFn then pcall(setTextFn, tostring(t or "")) end
+                    return self
+                end
+                function obj:Remove()
+                    if container then
+                        pcall(function() container:Destroy() end)
+                        container = nil
+                        self._container = nil
+                    end
+                end
+                return obj
+            end
+
+            -- Tooltip helper: shows a floating popup near a "?" icon
+            local function _attachTooltip(parent, tipText, xOffset)
+                if not tipText then return end
+                xOffset = xOffset or -52
+                local tip = New("TextLabel", {
+                    Text             = " ? ",
+                    Font             = Enum.Font.GothamBold,
+                    TextSize         = 9,
+                    TextColor3       = Theme.MutedText,
+                    BackgroundColor3 = Theme.PanelAlt,
+                    Size             = UDim2.new(0, 16, 0, 16),
+                    AnchorPoint      = Vector2.new(1, 0.5),
+                    Position         = UDim2.new(1, xOffset, 0.5, 0),
+                    ZIndex           = 3,
+                    Parent           = parent,
+                })
+                Corner(tip, 4)
+                local popup
+                tip.MouseEnter:Connect(function()
+                    local _tx = tip.AbsolutePosition.X - 72
+                    local _ty = tip.AbsolutePosition.Y - 36
+                    popup = New("TextLabel", {
+                        Text                   = tipText,
+                        Font                   = Enum.Font.Gotham,
+                        TextSize               = 11,
+                        TextColor3             = Theme.Text,
+                        BackgroundColor3       = Theme.PanelAlt,
+                        BackgroundTransparency = 0,
+                        TextWrapped            = true,
+                        Size                   = UDim2.new(0, 160, 0, 0),
+                        AutomaticSize          = Enum.AutomaticSize.Y,
+                        Position               = UDim2.new(0, _tx, 0, _ty),
+                        ZIndex                 = 20,
+                        Parent                 = sg,
+                    })
+                    Corner(popup, 5)
+                    Stroke(popup, Theme.Border)
+                    Pad(popup, 5, 5, 8, 8)
+                end)
+                tip.MouseLeave:Connect(function()
+                    if popup then popup:Destroy(); popup = nil end
+                end)
+            end
+
             -- ──────────────────────────────────────────────────
             --  TOGGLE
             -- ──────────────────────────────────────────────────
@@ -1842,48 +2094,7 @@ function Library:CreateWindow(opts)
                 Corner(knob, 7)
 
                 -- tooltip
-                if tooltip then
-                    local tip = New("TextLabel", {
-                        Text             = " ? ",
-                        Font             = Enum.Font.GothamBold,
-                        TextSize         = 9,
-                        TextColor3       = Theme.MutedText,
-                        BackgroundColor3 = Theme.PanelAlt,
-                        Size             = UDim2.new(0, 16, 0, 16),
-                        AnchorPoint      = Vector2.new(1, 0.5),
-                        Position         = UDim2.new(1, -52, 0.5, 0),
-                        ZIndex           = 3,
-                        Parent           = row,
-                    })
-                    Corner(tip, 4)
-                    -- hover tooltip popup
-                    -- Parented to sg so the ScrollingFrame column cannot clip it
-                    local popup
-                    tip.MouseEnter:Connect(function()
-                        local _tx = tip.AbsolutePosition.X - 72   -- centre the 160px bubble on the tip icon
-                        local _ty = tip.AbsolutePosition.Y - 36    -- appear ~36px above the tip
-                        popup = New("TextLabel", {
-                            Text                   = tooltip,
-                            Font                   = Enum.Font.Gotham,
-                            TextSize               = 11,
-                            TextColor3             = Theme.Text,
-                            BackgroundColor3       = Theme.PanelAlt,
-                            BackgroundTransparency = 0,
-                            TextWrapped            = true,
-                            Size                   = UDim2.new(0, 160, 0, 0),
-                            AutomaticSize          = Enum.AutomaticSize.Y,
-                            Position               = UDim2.new(0, _tx, 0, _ty),
-                            ZIndex                 = 20,
-                            Parent                 = sg,
-                        })
-                        Corner(popup, 5)
-                        Stroke(popup, Theme.Border)
-                        Pad(popup, 5, 5, 8, 8)
-                    end)
-                    tip.MouseLeave:Connect(function()
-                        if popup then popup:Destroy(); popup = nil end
-                    end)
-                end
+                _attachTooltip(row, tooltip)
 
                 local function setVisual(v)
                     Tween(track, { BackgroundColor3 = v and Theme.ToggleOn or Theme.ToggleOff }, 0.14)
@@ -1904,19 +2115,18 @@ function Library:CreateWindow(opts)
                     PlaySound(_sounds.Toggle, 0.4, obj.Value and 0.92 or 1.08)
                     obj.Value = not obj.Value
                     setVisual(obj.Value)
-                    pcall(cb, obj.Value)
-                    for _, f in ipairs(obj._cbs) do pcall(f, obj.Value) end
+                    _fire(cb, obj._cbs, obj.Value)
                 end)
-                row.MouseEnter:Connect(function() Tween(row, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
-                row.MouseLeave:Connect(function() Tween(row, { BackgroundColor3 = Theme.Element    }, 0.08) end)
+                _attachHover(row)
 
                 function obj:SetValue(v)
                     self.Value = v; setVisual(v)
-                    pcall(cb, v)
-                    for _, f in ipairs(self._cbs) do pcall(f, v) end
+                    _fire(cb, self._cbs, v)
                 end
                 function obj:OnChanged(fn) table.insert(self._cbs, fn) end
                 function obj:GetValue()    return self.Value end
+                function obj:SetCallback(fn) cb = fn end
+                _attachElementAPI(obj, row)
                 return obj
             end
 
@@ -1949,8 +2159,8 @@ function Library:CreateWindow(opts)
                 Corner(btn, 6)
                 if color then Stroke(btn, color, 1, 0.6) end
 
-                btn.MouseEnter:Connect(function() Tween(btn, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
-                btn.MouseLeave:Connect(function() Tween(btn, { BackgroundColor3 = Theme.Element    }, 0.08) end)
+                _attachHover(btn)
+                _attachTooltip(btn, tip, -6)
 
                 btn.MouseButton1Click:Connect(function()
                     local mx = UIS:GetMouseLocation().X - btn.AbsolutePosition.X
@@ -2001,6 +2211,8 @@ function Library:CreateWindow(opts)
                     return sObj
                 end
 
+                function obj:SetCallback(fn) func = fn end
+                _attachElementAPI(obj, btn, function(t) btn.Text = t end)
                 return obj
             end
 
@@ -2016,6 +2228,7 @@ function Library:CreateWindow(opts)
                 local rounding= opts.Rounding or 0
                 local suffix  = opts.Suffix   or ""
                 local step    = opts.Step     -- optional snap-to step
+                local tooltip = opts.Tooltip
                 local cb      = opts.Callback or function() end
 
                 local obj = { Value = Round(default, rounding), _cbs = {} }
@@ -2035,6 +2248,7 @@ function Library:CreateWindow(opts)
                     Size             = UDim2.new(1, 0, 0, 46),
                     Parent           = body,
                 })
+                _attachTooltip(wrap, tooltip, -6)
 
                 -- top row: label + value
                 local topRow = New("Frame", {
@@ -2118,8 +2332,7 @@ function Library:CreateWindow(opts)
                     Tween(fill,  { Size = UDim2.new(r, 0, 1, 0) }, 0.04)
                     Tween(knob,  { Position = UDim2.new(r, 0, 0.5, 0) }, 0.04)
                     valBox.Text = tostring(v) .. suffix
-                    pcall(cb, v)
-                    for _, f in ipairs(obj._cbs) do pcall(f, v) end
+                    _fire(cb, obj._cbs, v)
                 end
 
                 local dragging = false
@@ -2152,11 +2365,12 @@ function Library:CreateWindow(opts)
                     Tween(fill,  { Size = UDim2.new(r, 0, 1, 0) }, 0.1)
                     Tween(knob,  { Position = UDim2.new(r, 0, 0.5, 0) }, 0.1)
                     valBox.Text = tostring(self.Value) .. suffix
-                    pcall(cb, self.Value)
-                    for _, f in ipairs(self._cbs) do pcall(f, self.Value) end
+                    _fire(cb, self._cbs, self.Value)
                 end
                 function obj:OnChanged(fn) table.insert(self._cbs, fn) end
                 function obj:GetValue()    return self.Value end
+                function obj:SetCallback(fn) cb = fn end
+                _attachElementAPI(obj, wrap)
                 return obj
             end
 
@@ -2170,6 +2384,7 @@ function Library:CreateWindow(opts)
                 local finished  = opts.Finished    or false -- only fire on Enter
                 local ph        = opts.PlaceholderText or (numeric and "0" or "...")
                 local max_      = opts.MaxLength
+                local tooltip   = opts.Tooltip
                 local cb        = opts.Callback    or function() end
                 local def       = opts.Default     or ""
 
@@ -2181,6 +2396,7 @@ function Library:CreateWindow(opts)
                     Size             = UDim2.new(1, 0, 0, 50),
                     Parent           = body,
                 })
+                _attachTooltip(wrap, tooltip, -6)
                 New("TextLabel", {
                     Text             = text,
                     Font             = Enum.Font.Gotham,
@@ -2232,17 +2448,18 @@ function Library:CreateWindow(opts)
                     local v = box.Text
                     if numeric then v = tonumber(v) or obj.Value end
                     if not finished or enter then
-                        obj.Value = v; pcall(cb, v)
-                        for _, f in ipairs(obj._cbs) do pcall(f, v) end
+                        obj.Value = v; _fire(cb, obj._cbs, v)
                     end
                 end)
 
                 function obj:SetValue(v)
                     self.Value = v; box.Text = tostring(v)
-                    pcall(cb, v)
-                    for _, f in ipairs(self._cbs) do pcall(f, v) end
+                    _fire(cb, self._cbs, v)
                 end
                 function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                function obj:SetCallback(fn) cb = fn end
+                _attachElementAPI(obj, wrap)
                 return obj
             end
 
@@ -2256,6 +2473,7 @@ function Library:CreateWindow(opts)
                 local def    = opts.Default
                 local multi  = opts.Multi   or false
                 local search = opts.AllowSearch ~= false
+                local tooltip = opts.Tooltip
                 local cb     = opts.Callback or function() end
 
                 local obj  = { Value = multi and {} or def, _cbs = {}, _items = {} }
@@ -2275,6 +2493,7 @@ function Library:CreateWindow(opts)
                     ClipsDescendants = false,
                     Parent           = body,
                 })
+                _attachTooltip(wrap, tooltip, -6)
                 New("TextLabel", {
                     Text             = text,
                     Font             = Enum.Font.Gotham,
@@ -2326,8 +2545,10 @@ function Library:CreateWindow(opts)
                 -- dropdown popup
                 local popup     = nil
                 local isOpen    = false
+                local _ddOutsideConn = nil
 
                 local function closePopup()
+                    if _ddOutsideConn then _ddOutsideConn:Disconnect(); _ddOutsideConn = nil end
                     if popup then
                         -- Collapse to 0 height (ClipsDescendants hides items as it shrinks)
                         Tween(popup, { Size = UDim2.new(0, popup.AbsoluteSize.X, 0, 0) }, 0.11, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
@@ -2447,8 +2668,7 @@ function Library:CreateWindow(opts)
                                     closePopup()
                                 end
                                 btn.Text = getDisplayText()
-                                pcall(cb, obj.Value)
-                                for _, f in ipairs(obj._cbs) do pcall(f, obj.Value) end
+                                _fire(cb, obj._cbs, obj.Value)
                                 if multi then buildItems() end
                             end)
                             table.insert(itemBtns, ib)
@@ -2469,10 +2689,29 @@ function Library:CreateWindow(opts)
                         isOpen = true
                         buildPopup()
                         Tween(arrow, { Rotation = 180 }, 0.14)
+                        -- Close when user clicks outside the dropdown popup
+                        _ddOutsideConn = UIS.InputBegan:Connect(function(i, gp)
+                            if gp then return end
+                            if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+                            if not popup then
+                                if _ddOutsideConn then _ddOutsideConn:Disconnect(); _ddOutsideConn = nil end
+                                return
+                            end
+                            local mx, my = i.Position.X, i.Position.Y
+                            -- Skip if click is on the toggle button itself
+                            local bx, by = btn.AbsolutePosition.X, btn.AbsolutePosition.Y
+                            local bw, bh = btn.AbsoluteSize.X, btn.AbsoluteSize.Y
+                            if mx >= bx and mx <= bx + bw and my >= by and my <= by + bh then return end
+                            -- Close if click is outside the popup
+                            local px, py = popup.AbsolutePosition.X, popup.AbsolutePosition.Y
+                            local pw, ph = popup.AbsoluteSize.X, popup.AbsoluteSize.Y
+                            if mx < px or mx > px + pw or my < py or my > py + ph then
+                                closePopup()
+                            end
+                        end)
                     end
                 end)
-                btn.MouseEnter:Connect(function() Tween(btn, { BackgroundColor3 = Theme.ElementHov }, 0.08) end)
-                btn.MouseLeave:Connect(function() Tween(btn, { BackgroundColor3 = Theme.Element    }, 0.08) end)
+                _attachHover(btn)
 
                 function obj:SetValues(newVals)
                     self._items = {}
@@ -2490,10 +2729,17 @@ function Library:CreateWindow(opts)
                     if multi then self.Value = type(v)=="table" and v or {v}
                     else self.Value = v end
                     btn.Text = getDisplayText()
-                    pcall(cb, self.Value)
-                    for _, f in ipairs(self._cbs) do pcall(f, self.Value) end
+                    _fire(cb, self._cbs, self.Value)
                 end
                 function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                function obj:SetCallback(fn) cb = fn end
+                _attachElementAPI(obj, wrap)
+                local _baseRemove = obj.Remove
+                function obj:Remove()
+                    pcall(closePopup)
+                    _baseRemove(self)
+                end
                 return obj
             end
 
@@ -2559,8 +2805,7 @@ function Library:CreateWindow(opts)
                     local c = getColor()
                     obj.Value = c
                     swatch.BackgroundColor3 = c
-                    pcall(cb, c, alpha)
-                    for _, f in ipairs(obj._cbs) do pcall(f, c, alpha) end
+                    _fire(cb, obj._cbs, c, alpha)
                 end
 
                 local function buildPanel()
@@ -2612,7 +2857,7 @@ function Library:CreateWindow(opts)
                         Parent           = alphaTrk,
                     })
                     Corner(alphaKnob, 2)
-                    Stroke(alphaKnob, Color3.new(0,0,0), 1, 0, 1)
+                    Stroke(alphaKnob, Color3.new(0,0,0), 1, 0)
 
                     -- SV square (gradient simulation with two layered UIGradients)
                     local svSq = New("Frame", {
@@ -2667,7 +2912,7 @@ function Library:CreateWindow(opts)
                         Parent           = svSq,
                     })
                     Corner(svCursor, 5)
-                    Stroke(svCursor, Color3.new(0,0,0), 1, 0, 1.5)
+                    Stroke(svCursor, Color3.new(0,0,0), 1, 0)
 
                     -- Hue bar
                     local hueBar = New("Frame", {
@@ -2845,6 +3090,10 @@ function Library:CreateWindow(opts)
                             local px, py = panel.AbsolutePosition.X, panel.AbsolutePosition.Y
                             local pw, ph = panel.AbsoluteSize.X, panel.AbsoluteSize.Y
                             local mx, my = i.Position.X, i.Position.Y
+                            -- Skip if click landed on the row itself (let row.MouseButton1Click handle toggle)
+                            local rx, ry = row.AbsolutePosition.X, row.AbsolutePosition.Y
+                            local rw, rh = row.AbsoluteSize.X, row.AbsoluteSize.Y
+                            if mx >= rx and mx <= rx + rw and my >= ry and my <= ry + rh then return end
                             if mx < px or mx > px + pw or my < py or my > py + ph then
                                 _closePanelExternal()
                             end
@@ -2864,10 +3113,18 @@ function Library:CreateWindow(opts)
                     self.Value = c; swatch.BackgroundColor3 = c
                     h2, s2, v2 = Color3.toHSV(c)
                     if panelOpen then buildPanel() end
-                    pcall(cb, c, alpha)
-                    for _, f in ipairs(self._cbs) do pcall(f, c, alpha) end
+                    _fire(cb, self._cbs, c, alpha)
                 end
                 function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                function obj:GetAlpha()    return alpha end
+                function obj:SetCallback(fn) cb = fn end
+                _attachElementAPI(obj, row)
+                local _baseRemove = obj.Remove
+                function obj:Remove()
+                    pcall(_closePanelExternal)
+                    _baseRemove(self)
+                end
                 return obj
             end
 
@@ -2988,8 +3245,11 @@ function Library:CreateWindow(opts)
                 end
 
                 function obj:SetValue(k) obj.Value = k; keyLbl.Text = "[" .. keyName(k) .. "]" end
+                function obj:GetValue()    return self.Value end
                 function obj:GetState() return self.Enabled end
                 function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:SetCallback(fn) cb = fn end
+                _attachElementAPI(obj, row)
                 return obj
             end
 
@@ -3021,6 +3281,7 @@ function Library:CreateWindow(opts)
                 end
                 function obj:SetText(t) lbl.Text = t end
                 function obj:SetColor(c) lbl.TextColor3 = c end
+                _attachElementAPI(obj, lbl, function(t) lbl.Text = t end)
                 return obj
             end
 
@@ -3074,6 +3335,7 @@ function Library:CreateWindow(opts)
                 local obj = {}
                 function obj:SetTitle(t)   hdr.Text = (expanded and "▾  " or "▸  ") .. t end
                 function obj:SetContent(c) bodyLbl.Text = c end
+                _attachElementAPI(obj, wrap)
                 return obj
             end
 
@@ -3113,19 +3375,26 @@ function Library:CreateWindow(opts)
                     BorderSizePixel  = 0,
                     Parent           = wrap,
                 })
+                local lbl = wrap:FindFirstChildOfClass("TextLabel")
+                local obj = {}
+                _attachElementAPI(obj, wrap, function(t) if lbl then lbl.Text = t end end)
+                return obj
             end
 
             -- ──────────────────────────────────────────────────
             --  DIVIDER  (plain horizontal rule)
             -- ──────────────────────────────────────────────────
             function go:AddDivider()
-                New("Frame", {
+                local line = New("Frame", {
                     BackgroundColor3 = Theme.Border,
                     BackgroundTransparency = 0.4,
                     Size             = UDim2.new(1, 0, 0, 1),
                     BorderSizePixel  = 0,
                     Parent           = body,
                 })
+                local obj = {}
+                _attachElementAPI(obj, line)
+                return obj
             end
 
             -- ──────────────────────────────────────────────────
@@ -3198,10 +3467,11 @@ function Library:CreateWindow(opts)
                     local rel = (v - min_) / math.max(max_ - min_, 0.001)
                     Tween(fill, { Size = UDim2.new(rel, 0, 1, 0) }, 0.18, Enum.EasingStyle.Quart)
                     valLbl.Text = tostring(v) .. suffix
-                    pcall(cb, v)
-                    for _, f in ipairs(self._cbs) do pcall(f, v) end
+                    _fire(cb, self._cbs, v)
                 end
                 function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                _attachElementAPI(obj, wrap)
                 return obj
             end
 
@@ -3230,7 +3500,526 @@ function Library:CreateWindow(opts)
                     imgLabel.BackgroundTransparency = 1
                 end
                 function obj:SetColor(c) imgLabel.ImageColor3 = c end
+                _attachElementAPI(obj, imgLabel)
                 return obj
+            end
+
+            -- ──────────────────────────────────────────────────
+            --  SPACER  (adjustable height gap)
+            -- ──────────────────────────────────────────────────
+            function go:AddSpacer(height)
+                local sp = New("Frame", {
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, 0, 0, height or 8),
+                    Parent           = body,
+                })
+                local obj = {}
+                function obj:SetHeight(h) sp.Size = UDim2.new(1, 0, 0, h or 8) end
+                _attachElementAPI(obj, sp)
+                return obj
+            end
+
+            -- ──────────────────────────────────────────────────
+            --  STATUS INDICATOR  (colored dot + label text)
+            -- ──────────────────────────────────────────────────
+            function go:AddStatusIndicator(idx, opts)
+                opts = opts or {}
+                local text     = opts.Text    or idx
+                local defColor = opts.Color   or Theme.MutedText
+                local defText  = opts.Status  or "Inactive"
+
+                local obj = { Value = defText, _cbs = {} }
+                if idx then Options[idx] = obj end
+
+                local row = New("Frame", {
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, 0, 0, 22),
+                    Parent           = body,
+                })
+                local dot = New("Frame", {
+                    BackgroundColor3 = defColor,
+                    Size             = UDim2.new(0, 8, 0, 8),
+                    AnchorPoint      = Vector2.new(0, 0.5),
+                    Position         = UDim2.new(0, 2, 0.5, 0),
+                    BorderSizePixel  = 0,
+                    ZIndex           = 2,
+                    Parent           = row,
+                })
+                Corner(dot, 4)
+                local lbl = New("TextLabel", {
+                    Text             = text,
+                    Font             = Enum.Font.Gotham,
+                    TextSize         = 11,
+                    TextColor3       = Theme.SubText,
+                    TextXAlignment   = Enum.TextXAlignment.Left,
+                    BackgroundTransparency = 1,
+                    Position         = UDim2.new(0, 16, 0, 0),
+                    Size             = UDim2.new(0.5, -16, 1, 0),
+                    ZIndex           = 2,
+                    Parent           = row,
+                })
+                local statusLbl = New("TextLabel", {
+                    Text             = defText,
+                    Font             = Enum.Font.GothamBold,
+                    TextSize         = 11,
+                    TextColor3       = defColor,
+                    TextXAlignment   = Enum.TextXAlignment.Right,
+                    BackgroundTransparency = 1,
+                    Position         = UDim2.new(0.5, 0, 0, 0),
+                    Size             = UDim2.new(0.5, -4, 1, 0),
+                    ZIndex           = 2,
+                    Parent           = row,
+                })
+
+                function obj:SetStatus(statusText, color)
+                    self.Value = statusText or ""
+                    statusLbl.Text = statusText or ""
+                    if color then
+                        Tween(dot, { BackgroundColor3 = color }, 0.12)
+                        Tween(statusLbl, { TextColor3 = color }, 0.12)
+                    end
+                    _fire(function() end, self._cbs, statusText, color)
+                end
+                function obj:SetValue(v) self:SetStatus(v) end
+                function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                _attachElementAPI(obj, row, function(t) lbl.Text = t end)
+                return obj
+            end
+
+            -- ──────────────────────────────────────────────────
+            --  DEPENDS ON  (conditional visibility based on
+            --               another Toggle or Option value)
+            -- ──────────────────────────────────────────────────
+            function go:SetDependency(controlObj, toggleIdx, predicate)
+                -- controlObj: any widget returned by Add*
+                -- toggleIdx: string key in Toggles table
+                -- predicate: optional fn(value) → bool; defaults to truthiness
+                local pred = predicate or function(v) return v == true end
+                local function update()
+                    local src = Toggles[toggleIdx]
+                    if src then
+                        controlObj:SetVisible(pred(src.Value))
+                    end
+                end
+                update() -- apply immediately
+                local src = Toggles[toggleIdx]
+                if src and src.OnChanged then
+                    src:OnChanged(function() update() end)
+                end
+            end
+
+            -- ──────────────────────────────────────────────────
+            --  RADIO GROUP  (mutually exclusive options)
+            -- ──────────────────────────────────────────────────
+            function go:AddRadioGroup(idx, opts)
+                opts = opts or {}
+                local text    = opts.Text    or idx
+                local items   = opts.Items   or {}
+                local def     = opts.Default
+                local cb      = opts.Callback or function() end
+
+                local obj = { Value = def, _cbs = {} }
+                Options[idx] = obj
+
+                local wrap = New("Frame", {
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize    = Enum.AutomaticSize.Y,
+                    Parent           = body,
+                })
+                List(wrap, 3)
+
+                -- header label
+                if text and text ~= "" then
+                    New("TextLabel", {
+                        Text             = text,
+                        Font             = Enum.Font.Gotham,
+                        TextSize         = 12,
+                        TextColor3       = Theme.Text,
+                        TextXAlignment   = Enum.TextXAlignment.Left,
+                        BackgroundTransparency = 1,
+                        Size             = UDim2.new(1, 0, 0, 18),
+                        Parent           = wrap,
+                    })
+                end
+
+                local radioRows = {}
+                local function setVisual(selected)
+                    for _, rr in ipairs(radioRows) do
+                        local isSel = rr.value == selected
+                        Tween(rr.dot, {
+                            BackgroundColor3 = isSel and Theme.Accent or Theme.MutedText,
+                            Size = isSel and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 6, 0, 6),
+                        }, 0.12, Enum.EasingStyle.Back)
+                        Tween(rr.ring, {
+                            BackgroundColor3 = isSel and Theme.Accent or Theme.ToggleOff,
+                        }, 0.12)
+                        Tween(rr.lbl, { TextColor3 = isSel and Theme.Text or Theme.SubText }, 0.08)
+                    end
+                end
+
+                for _, item in ipairs(items) do
+                    local rRow = New("TextButton", {
+                        Text             = "",
+                        BackgroundColor3 = Theme.Element,
+                        Size             = UDim2.new(1, 0, 0, 26),
+                        BorderSizePixel  = 0,
+                        Parent           = wrap,
+                    })
+                    Corner(rRow, 5)
+                    _attachHover(rRow)
+
+                    local ring = New("Frame", {
+                        BackgroundColor3 = item == def and Theme.Accent or Theme.ToggleOff,
+                        Size             = UDim2.new(0, 16, 0, 16),
+                        AnchorPoint      = Vector2.new(0, 0.5),
+                        Position         = UDim2.new(0, 8, 0.5, 0),
+                        BorderSizePixel  = 0,
+                        ZIndex           = 2,
+                        Parent           = rRow,
+                    })
+                    Corner(ring, 8)
+                    Stroke(ring, Theme.Border, 1)
+
+                    local rdot = New("Frame", {
+                        BackgroundColor3 = item == def and Theme.Accent or Theme.MutedText,
+                        Size             = item == def and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 6, 0, 6),
+                        AnchorPoint      = Vector2.new(0.5, 0.5),
+                        Position         = UDim2.new(0.5, 0, 0.5, 0),
+                        BorderSizePixel  = 0,
+                        ZIndex           = 3,
+                        Parent           = ring,
+                    })
+                    Corner(rdot, 5)
+
+                    local rlbl = New("TextLabel", {
+                        Text             = tostring(item),
+                        Font             = Enum.Font.Gotham,
+                        TextSize         = 12,
+                        TextColor3       = item == def and Theme.Text or Theme.SubText,
+                        TextXAlignment   = Enum.TextXAlignment.Left,
+                        BackgroundTransparency = 1,
+                        Position         = UDim2.new(0, 30, 0, 0),
+                        Size             = UDim2.new(1, -34, 1, 0),
+                        ZIndex           = 2,
+                        Parent           = rRow,
+                    })
+
+                    table.insert(radioRows, { value = item, dot = rdot, ring = ring, lbl = rlbl, row = rRow })
+
+                    rRow.MouseButton1Click:Connect(function()
+                        if obj.Value == item then return end
+                        obj.Value = item
+                        setVisual(item)
+                        _fire(cb, obj._cbs, item)
+                    end)
+                end
+
+                setVisual(def)
+
+                function obj:SetValue(v)
+                    self.Value = v
+                    setVisual(v)
+                    _fire(cb, self._cbs, v)
+                end
+                function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                _attachElementAPI(obj, wrap)
+                return obj
+            end
+
+            -- ──────────────────────────────────────────────────
+            --  TEXT AREA  (multi-line text input)
+            -- ──────────────────────────────────────────────────
+            function go:AddTextArea(idx, opts)
+                opts = opts or {}
+                local text    = opts.Text         or idx
+                local def     = opts.Default      or ""
+                local ph      = opts.PlaceholderText or "..."
+                local maxLen  = opts.MaxLength
+                local height  = opts.Height       or 80
+                local cb      = opts.Callback     or function() end
+                local finished= opts.Finished     or false
+
+                local obj = { Value = def, _cbs = {} }
+                Options[idx] = obj
+
+                local wrap = New("Frame", {
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize    = Enum.AutomaticSize.Y,
+                    Parent           = body,
+                })
+                List(wrap, 3)
+
+                New("TextLabel", {
+                    Text             = text,
+                    Font             = Enum.Font.Gotham,
+                    TextSize         = 12,
+                    TextColor3       = Theme.Text,
+                    TextXAlignment   = Enum.TextXAlignment.Left,
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, 0, 0, 18),
+                    Parent           = wrap,
+                })
+
+                local boxFrame = New("ScrollingFrame", {
+                    BackgroundColor3       = Theme.Element,
+                    ScrollBarThickness     = 3,
+                    ScrollBarImageColor3   = Theme.Border,
+                    ScrollingDirection     = Enum.ScrollingDirection.Y,
+                    CanvasSize             = UDim2.new(0, 0, 0, 0),
+                    AutomaticCanvasSize    = Enum.AutomaticSize.Y,
+                    Size                   = UDim2.new(1, 0, 0, height),
+                    BorderSizePixel        = 0,
+                    Parent                 = wrap,
+                })
+                Corner(boxFrame, 5)
+                local bStroke = Stroke(boxFrame, Theme.Border, 1)
+
+                local box = New("TextBox", {
+                    Text             = def,
+                    PlaceholderText  = ph,
+                    PlaceholderColor3= Theme.MutedText,
+                    Font             = Enum.Font.Gotham,
+                    TextSize         = 12,
+                    TextColor3       = Theme.Text,
+                    TextXAlignment   = Enum.TextXAlignment.Left,
+                    TextYAlignment   = Enum.TextYAlignment.Top,
+                    TextWrapped      = true,
+                    MultiLine        = true,
+                    ClearTextOnFocus = false,
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize    = Enum.AutomaticSize.Y,
+                    Parent           = boxFrame,
+                })
+                Pad(box, 6, 6, 8, 8)
+
+                if maxLen then
+                    box:GetPropertyChangedSignal("Text"):Connect(function()
+                        if #box.Text > maxLen then
+                            box.Text = box.Text:sub(1, maxLen)
+                        end
+                    end)
+                end
+
+                box.Focused:Connect(function()
+                    Tween(bStroke, { Color = Theme.Accent }, 0.1)
+                end)
+                box.FocusLost:Connect(function(enter)
+                    Tween(bStroke, { Color = Theme.Border }, 0.1)
+                    if not finished or enter then
+                        obj.Value = box.Text
+                        _fire(cb, obj._cbs, box.Text)
+                    end
+                end)
+
+                function obj:SetValue(v)
+                    self.Value = tostring(v or ""); box.Text = self.Value
+                    _fire(cb, self._cbs, self.Value)
+                end
+                function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                _attachElementAPI(obj, wrap)
+                return obj
+            end
+
+            -- ──────────────────────────────────────────────────
+            --  NUMBER SPINNER  (+/- buttons flanking a value)
+            -- ──────────────────────────────────────────────────
+            function go:AddNumberSpinner(idx, opts)
+                opts = opts or {}
+                local text    = opts.Text    or idx
+                local min_    = opts.Min     or 0
+                local max_    = opts.Max     or 100
+                local default = opts.Default ~= nil and opts.Default or min_
+                local step    = opts.Step    or 1
+                local suffix  = opts.Suffix  or ""
+                local rounding= opts.Rounding or 0
+                local cb      = opts.Callback or function() end
+
+                local obj = { Value = Round(default, rounding), _cbs = {} }
+                Options[idx] = obj
+
+                local wrap = New("Frame", {
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, 0, 0, 30),
+                    Parent           = body,
+                })
+
+                New("TextLabel", {
+                    Text             = text,
+                    Font             = Enum.Font.Gotham,
+                    TextSize         = 12,
+                    TextColor3       = Theme.Text,
+                    TextXAlignment   = Enum.TextXAlignment.Left,
+                    BackgroundTransparency = 1,
+                    Size             = UDim2.new(1, -110, 1, 0),
+                    Parent           = wrap,
+                })
+
+                -- spinner container (right-aligned)
+                local spinWrap = New("Frame", {
+                    BackgroundColor3 = Theme.Element,
+                    AnchorPoint      = Vector2.new(1, 0.5),
+                    Position         = UDim2.new(1, 0, 0.5, 0),
+                    Size             = UDim2.new(0, 100, 0, 24),
+                    BorderSizePixel  = 0,
+                    Parent           = wrap,
+                })
+                Corner(spinWrap, 5)
+                Stroke(spinWrap, Theme.Border, 1)
+
+                local minusBtn = New("TextButton", {
+                    Text             = "–",
+                    Font             = Enum.Font.GothamBold,
+                    TextSize         = 14,
+                    TextColor3       = Theme.SubText,
+                    BackgroundColor3 = Theme.PanelAlt,
+                    Size             = UDim2.new(0, 24, 1, 0),
+                    BorderSizePixel  = 0,
+                    ZIndex           = 2,
+                    Parent           = spinWrap,
+                })
+                Corner(minusBtn, 5)
+
+                local valLbl = New("TextLabel", {
+                    Text             = tostring(obj.Value) .. suffix,
+                    Font             = Enum.Font.GothamBold,
+                    TextSize         = 12,
+                    TextColor3       = Theme.Accent,
+                    BackgroundTransparency = 1,
+                    AnchorPoint      = Vector2.new(0.5, 0),
+                    Position         = UDim2.new(0.5, 0, 0, 0),
+                    Size             = UDim2.new(1, -48, 1, 0),
+                    ZIndex           = 2,
+                    Parent           = spinWrap,
+                })
+
+                local plusBtn = New("TextButton", {
+                    Text             = "+",
+                    Font             = Enum.Font.GothamBold,
+                    TextSize         = 14,
+                    TextColor3       = Theme.SubText,
+                    BackgroundColor3 = Theme.PanelAlt,
+                    Size             = UDim2.new(0, 24, 1, 0),
+                    AnchorPoint      = Vector2.new(1, 0),
+                    Position         = UDim2.new(1, 0, 0, 0),
+                    BorderSizePixel  = 0,
+                    ZIndex           = 2,
+                    Parent           = spinWrap,
+                })
+                Corner(plusBtn, 5)
+
+                local function applyVal(v)
+                    v = Clamp(Round(v, rounding), min_, max_)
+                    obj.Value = v
+                    valLbl.Text = tostring(v) .. suffix
+                    _fire(cb, obj._cbs, v)
+                end
+
+                minusBtn.MouseButton1Click:Connect(function() applyVal(obj.Value - step) end)
+                plusBtn.MouseButton1Click:Connect(function()  applyVal(obj.Value + step)  end)
+                _attachHover(minusBtn, Theme.PanelAlt, Theme.ElementHov)
+                _attachHover(plusBtn,  Theme.PanelAlt, Theme.ElementHov)
+
+                -- scroll wheel
+                spinWrap.InputChanged:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseWheel then
+                        applyVal(obj.Value + (i.Position.Z > 0 and step or -step))
+                    end
+                end)
+
+                function obj:SetValue(v) applyVal(v) end
+                function obj:OnChanged(fn) table.insert(self._cbs, fn) end
+                function obj:GetValue()    return self.Value end
+                _attachElementAPI(obj, wrap)
+                return obj
+            end
+
+            -- ──────────────────────────────────────────────────
+            --  COMBO HELPERS  (inspired by multi-control widgets)
+            -- ──────────────────────────────────────────────────
+            function go:AddToggleKeybind(tIdx, kIdx, opts)
+                opts = opts or {}
+                local tOpts = opts.Toggle  or {}
+                local kOpts = opts.Keybind or {}
+                local t = self:AddToggle(tIdx, tOpts)
+                local k = self:AddKeybind(kIdx, kOpts)
+                return {
+                    Toggle  = t,
+                    Keybind = k,
+                    SetVisible = function(_, v)
+                        t:SetVisible(v)
+                        k:SetVisible(v)
+                    end,
+                    Remove = function(_)
+                        t:Remove()
+                        k:Remove()
+                    end,
+                }
+            end
+
+            function go:AddToggleColorPicker(tIdx, cIdx, opts)
+                opts = opts or {}
+                local tOpts = opts.Toggle      or {}
+                local cOpts = opts.ColorPicker or {}
+                local t = self:AddToggle(tIdx, tOpts)
+                local c = self:AddColorPicker(cIdx, cOpts)
+                return {
+                    Toggle      = t,
+                    ColorPicker = c,
+                    SetVisible = function(_, v)
+                        t:SetVisible(v)
+                        c:SetVisible(v)
+                    end,
+                    Remove = function(_)
+                        t:Remove()
+                        c:Remove()
+                    end,
+                }
+            end
+
+            function go:AddToggleSlider(tIdx, sIdx, opts)
+                opts = opts or {}
+                local tOpts = opts.Toggle or {}
+                local sOpts = opts.Slider or {}
+                local t = self:AddToggle(tIdx, tOpts)
+                local s = self:AddSlider(sIdx, sOpts)
+                return {
+                    Toggle = t,
+                    Slider = s,
+                    SetVisible = function(_, v)
+                        t:SetVisible(v)
+                        s:SetVisible(v)
+                    end,
+                    Remove = function(_)
+                        t:Remove()
+                        s:Remove()
+                    end,
+                }
+            end
+
+            function go:AddToggleDropdown(tIdx, dIdx, opts)
+                opts = opts or {}
+                local tOpts = opts.Toggle   or {}
+                local dOpts = opts.Dropdown or {}
+                local t = self:AddToggle(tIdx, tOpts)
+                local d = self:AddDropdown(dIdx, dOpts)
+                return {
+                    Toggle   = t,
+                    Dropdown = d,
+                    SetVisible = function(_, v)
+                        t:SetVisible(v)
+                        d:SetVisible(v)
+                    end,
+                    Remove = function(_)
+                        t:Remove()
+                        d:Remove()
+                    end,
+                }
             end
 
             -- expose groupbox api
@@ -3244,7 +4033,7 @@ function Library:CreateWindow(opts)
         function tab:AddFullGroupbox(name)   return _newGroupbox(name, tab._fullCol) end
 
         -- Tabbox (sub-tabs inside a column, like Linoria)
-        function tab:AddLeftTabbox()
+        local function _newTabbox(parentCol)
             local tbx = {}
             local innerTabs = {}
 
@@ -3253,7 +4042,7 @@ function Library:CreateWindow(opts)
                 Size             = UDim2.new(1, 0, 0, 0),
                 AutomaticSize    = Enum.AutomaticSize.Y,
                 BorderSizePixel  = 0,
-                Parent           = tab._leftCol,
+                Parent           = parentCol,
             })
             Corner(tWrap, 8)
             Stroke(tWrap, Theme.Border)
@@ -3352,7 +4141,10 @@ function Library:CreateWindow(opts)
             end
 
             return tbx
-        end  -- AddLeftTabbox
+        end  -- _newTabbox
+
+        function tab:AddLeftTabbox()  return _newTabbox(tab._leftCol)  end
+        function tab:AddRightTabbox() return _newTabbox(tab._rightCol) end
 
         setmetatable(tab, tab)
         return tab
@@ -3368,10 +4160,6 @@ end -- CreateWindow
 -- ============================================================
 --  PASS 3 -- Global cache (idempotent on re-run)
 -- ============================================================
-_env.Toggles = _env.Toggles or {}
-_env.Options  = _env.Options  or {}
-Toggles       = _env.Toggles
-Options       = _env.Options
 _env.AxiUI    = Library
 
 -- ============================================================
@@ -3479,15 +4267,61 @@ end
 -- Drop-in UI builder: call with any groupbox to add save/load controls
 function SM:BuildUI(groupbox)
     if not groupbox then return end
-    groupbox:AddInput("SM_ProfileName", { Text = "Profile Name", Default = "autoload" })
-    groupbox:AddButton({ Text = "Save", Func = function()
-        local n = (Options.SM_ProfileName and Options.SM_ProfileName.Value) or "autoload"
+    local profileInput = groupbox:AddInput("SM_ProfileName", {
+        Text = "Profile Name",
+        Default = "autoload",
+        PlaceholderText = "profile name",
+    })
+
+    local profileDD = groupbox:AddDropdown("SM_ProfileList", {
+        Text = "Saved Profiles",
+        Values = self:List(),
+        AllowSearch = true,
+        Default = nil,
+    })
+
+    local function getChosenName()
+        local typed = (profileInput and profileInput.Value and tostring(profileInput.Value):gsub("^%s+", ""):gsub("%s+$", "")) or ""
+        if typed ~= "" then return typed end
+        local picked = profileDD and profileDD.Value
+        if type(picked) == "string" and picked ~= "" then return picked end
+        return "autoload"
+    end
+
+    local function refreshProfiles(selectName)
+        local names = self:List()
+        table.sort(names, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
+        profileDD:SetValues(names)
+        if selectName and #names > 0 then
+            profileDD:SetValue(selectName)
+        end
+    end
+
+    profileDD:OnChanged(function(v)
+        if type(v) == "string" and v ~= "" then
+            profileInput:SetValue(v)
+        end
+    end)
+
+    groupbox:AddButton({ Text = "Refresh Profile List", Func = function()
+        refreshProfiles()
+        Library:Notify({ Title = "Profiles Refreshed", Content = "Updated profile list", Type = "info", Duration = 2 })
+    end })
+
+    groupbox:AddButton({ Text = "Save Profile", Func = function()
+        local n = getChosenName()
         self:Save(n)
+        refreshProfiles(n)
         Library:Notify({ Title = "Saved", Content = n, Type = "success", Duration = 2 })
     end })
-    groupbox:AddButton({ Text = "Load", Func = function()
-        local n = (Options.SM_ProfileName and Options.SM_ProfileName.Value) or "autoload"
+
+    groupbox:AddButton({ Text = "Load Profile", Func = function()
+        local n = getChosenName()
         local ok = self:Load(n)
+        if ok then
+            profileInput:SetValue(n)
+            profileDD:SetValue(n)
+        end
         Library:Notify({
             Title    = ok and "Config Loaded" or "Not Found",
             Content  = n,
@@ -3495,20 +4329,35 @@ function SM:BuildUI(groupbox)
             Duration = 2,
         })
     end })
-    groupbox:AddButton({ Text = "Delete", Func = function()
-        local n = (Options.SM_ProfileName and Options.SM_ProfileName.Value) or "autoload"
+
+    groupbox:AddButton({ Text = "Delete Profile", Func = function()
+        local n = getChosenName()
         if n == "autoload" then
             Library:Notify({ Title = "Protected", Content = "Cannot delete autoload", Type = "error", Duration = 2 })
-        else
-            self:Delete(n)
-            Library:Notify({ Title = "Deleted", Content = n, Type = "warning", Duration = 2 })
+            return
         end
+        Library:Confirm({
+            Title = "Delete Profile",
+            Content = "Delete profile '" .. tostring(n) .. "'?",
+            ConfirmText = "Delete",
+            CancelText = "Cancel",
+            OnConfirm = function()
+                self:Delete(n)
+                profileInput:SetValue("autoload")
+                refreshProfiles()
+                Library:Notify({ Title = "Deleted", Content = n, Type = "warning", Duration = 2 })
+            end,
+        })
     end })
+
+    groupbox:AddSection("Auto Save")
     groupbox:AddSlider("SM_AutoInterval", {
-        Text = "Auto-save interval (s, 0=off)",
+        Text = "Interval (seconds, 0 = off)",
         Min = 0, Max = 300, Default = 0, Rounding = 0,
         Callback = function(v) self:AutoSave(v > 0 and v or nil, "autoload") end,
     })
+
+    refreshProfiles("autoload")
 end
 
 -- ============================================================
@@ -3592,15 +4441,98 @@ end
 -- Drop-in UI builder: call with any groupbox to add theme controls
 function TM:BuildUI(groupbox)
     if not groupbox then return end
-    groupbox:AddDropdown("TM_ThemePicker", {
+
+    local themeDD = groupbox:AddDropdown("TM_ThemePicker", {
         Text     = "Active Theme",
         Values   = self:GetNames(),
         Default  = self._current,
+        AllowSearch = true,
         Callback = function(v) self:Apply(v) end,
     })
-    groupbox:AddButton({ Text = "Export Theme to File", Func = function()
-        self:ExportToFile()
+
+    local customNameInput = groupbox:AddInput("TM_CustomName", {
+        Text = "Custom Theme Name",
+        Default = "MyTheme",
+        PlaceholderText = "Custom preset name",
+    })
+
+    local fileInput = groupbox:AddInput("TM_FileName", {
+        Text = "Theme File",
+        Default = "AxiUI_theme.json",
+        PlaceholderText = "filename.json",
+    })
+
+    local importNameInput = groupbox:AddInput("TM_ImportName", {
+        Text = "Imported Theme Name",
+        Default = "Imported",
+        PlaceholderText = "Optional display name",
+    })
+
+    local function refreshThemes(selectName)
+        local names = self:GetNames()
+        table.sort(names, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
+        themeDD:SetValues(names)
+        if selectName and Themes[selectName] then
+            themeDD:SetValue(selectName)
+        elseif self._current and Themes[self._current] then
+            themeDD:SetValue(self._current)
+        end
+    end
+
+    groupbox:AddButton({ Text = "Refresh Theme List", Func = function()
+        refreshThemes()
+        Library:Notify({ Title = "Themes Refreshed", Content = "Updated theme list", Type = "info", Duration = 2 })
     end })
+
+    groupbox:AddButton({ Text = "Save Current As Custom", Func = function()
+        local n = (customNameInput.Value and tostring(customNameInput.Value):gsub("^%s+",""):gsub("%s+$",""))
+        if not n or n == "" then n = "MyTheme" end
+        local def = {}
+        for k, v in pairs(Theme) do def[k] = v end
+        self:AddCustom(n, def)
+        self:Apply(n)
+        refreshThemes(n)
+        Library:Notify({ Title = "Custom Theme Saved", Content = n, Type = "success", Duration = 2 })
+    end })
+
+    groupbox:AddButton({ Text = "Export Theme to File", Func = function()
+        local f = (fileInput.Value and tostring(fileInput.Value):gsub("^%s+",""):gsub("%s+$",""))
+        if not f or f == "" then f = "AxiUI_theme_" .. tostring(self._current or "Default") .. ".json" end
+        self:ExportToFile(f:gsub("%.json$", ""))
+    end })
+
+    groupbox:AddButton({ Text = "Import Theme From File", Func = function()
+        local f = (fileInput.Value and tostring(fileInput.Value):gsub("^%s+",""):gsub("%s+$",""))
+        if not f or f == "" then
+            Library:Notify({ Title = "Import Failed", Content = "Theme file is empty", Type = "error", Duration = 2 })
+            return
+        end
+        local n = (importNameInput.Value and tostring(importNameInput.Value):gsub("^%s+",""):gsub("%s+$",""))
+        if n == "" then n = nil end
+        self:ImportFromFile(f, n, true)
+        refreshThemes(n or self._current)
+    end })
+
+    groupbox:AddButton({ Text = "Copy Theme JSON", Func = function()
+        local raw = self:Export()
+        local ok = pcall(function()
+            if setclipboard then
+                setclipboard(raw)
+            elseif toclipboard then
+                toclipboard(raw)
+            else
+                error("clipboard unsupported")
+            end
+        end)
+        Library:Notify({
+            Title = ok and "Copied" or "Copy Failed",
+            Content = ok and "Theme JSON copied to clipboard" or "Clipboard function unavailable",
+            Type = ok and "success" or "warning",
+            Duration = 2,
+        })
+    end })
+
+    refreshThemes(self._current)
 end
 
 -- Final export
