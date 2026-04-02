@@ -433,37 +433,46 @@ local function Draggable(frame, handle, cutoff)
     frame.Active  = true
     handle.Active = true
 
+    -- Normalise AnchorPoint → (0,0) after the first layout pass so every
+    -- subsequent Position write is in plain pixel offsets.  task.defer runs
+    -- after the current resumption cycle but before next render, so
+    -- AbsolutePosition is valid.
+    local ready = false
+    task.defer(function()
+        local ap = frame.AnchorPoint
+        if ap.X ~= 0 or ap.Y ~= 0 then
+            local ax = frame.AbsolutePosition.X
+            local ay = frame.AbsolutePosition.Y
+            frame.AnchorPoint = Vector2.new(0, 0)
+            _safeSetPos(frame, UDim2.new(0, ax, 0, ay))
+        end
+        ready = true
+    end)
+
     local dragging  = false
     local dragInput = nil
-    local objPosX, objPosY = 0, 0
-    local normalized = false
+    -- Delta-based: record cursor start + frame start on press
+    local dragStartX, dragStartY   = 0, 0
+    local frameStartX, frameStartY = 0, 0
 
     handle.InputBegan:Connect(function(input)
+        if not ready then return end
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
            and input.UserInputType ~= Enum.UserInputType.Touch then return end
 
-        -- On first grab, collapse AnchorPoint → (0,0) and convert Scale-based
-        -- position into equivalent pixel offsets.  This guarantees the clamp
-        -- and all subsequent position writes use the same coord basis.
-        if not normalized then
-            local ap = frame.AnchorPoint
-            if ap.X ~= 0 or ap.Y ~= 0 then
-                local absX = frame.AbsolutePosition.X
-                local absY = frame.AbsolutePosition.Y
-                frame.AnchorPoint = Vector2.new(0, 0)
-                _safeSetPos(frame, UDim2.new(0, absX, 0, absY))
-            end
-            normalized = true
-        end
+        -- Use input.Position (same coord space for start & move → delta is
+        -- always correct regardless of GuiInset or IgnoreGuiInset).
+        local mX = input.Position.X
+        local mY = input.Position.Y
+        local fX = frame.AbsolutePosition.X
+        local fY = frame.AbsolutePosition.Y
+        if mY - fY > cutoff then return end
 
-        local mouse = UIS:GetMouseLocation()
-        local oX    = mouse.X - frame.AbsolutePosition.X
-        local oY    = mouse.Y - frame.AbsolutePosition.Y
-        if oY > cutoff then return end
-
-        objPosX  = oX
-        objPosY  = oY
-        dragging = true
+        dragStartX  = mX
+        dragStartY  = mY
+        frameStartX = fX
+        frameStartY = fY
+        dragging    = true
 
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
@@ -483,10 +492,11 @@ local function Draggable(frame, handle, cutoff)
 
     UIS.InputChanged:Connect(function(input)
         if not dragging or input ~= dragInput then return end
-        local m  = UIS:GetMouseLocation()
-        -- AnchorPoint is (0,0) after normalisation, so nx/ny are top-left coords.
-        local nx = m.X - objPosX
-        local ny = m.Y - objPosY
+        -- Delta from where the cursor started to where it is now.
+        -- input.Position is the same coord space as the InputBegan position,
+        -- so the delta is always accurate (inset cancels out).
+        local nx = frameStartX + (input.Position.X - dragStartX)
+        local ny = frameStartY + (input.Position.Y - dragStartY)
         -- Clamp: keep entire window within screen borders.
         local cam = workspace.CurrentCamera
         if cam then
