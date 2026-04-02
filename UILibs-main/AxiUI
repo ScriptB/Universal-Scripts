@@ -433,46 +433,35 @@ local function Draggable(frame, handle, cutoff)
     frame.Active  = true
     handle.Active = true
 
-    -- Normalise AnchorPoint → (0,0) after the first layout pass so every
-    -- subsequent Position write is in plain pixel offsets.  task.defer runs
-    -- after the current resumption cycle but before next render, so
-    -- AbsolutePosition is valid.
-    local ready = false
-    task.defer(function()
-        local ap = frame.AnchorPoint
-        if ap.X ~= 0 or ap.Y ~= 0 then
-            local ax = frame.AbsolutePosition.X
-            local ay = frame.AbsolutePosition.Y
-            frame.AnchorPoint = Vector2.new(0, 0)
-            _safeSetPos(frame, UDim2.new(0, ax, 0, ay))
-        end
-        ready = true
-    end)
-
+    -- Pure-delta drag.  We never modify AnchorPoint, never derive Position
+    -- from AbsolutePosition.  We just record the cursor + the frame's
+    -- *Position property* on press, then add the pixel delta to its Offset.
+    -- This is inset-proof and normalisation-free → zero jump guaranteed.
     local dragging  = false
     local dragInput = nil
-    -- Delta-based: record cursor start + frame start on press
-    local dragStartX, dragStartY   = 0, 0
-    local frameStartX, frameStartY = 0, 0
+    local dragStartMX,  dragStartMY  = 0, 0   -- cursor at press
+    local dragStartPos               = frame.Position  -- UDim2 snapshot
+    local dragStartAbsX, dragStartAbsY = 0, 0 -- absolute pos at press (for clamp math)
+    local dragStartAbsW, dragStartAbsH = 0, 0
 
     handle.InputBegan:Connect(function(input)
-        if not ready then return end
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
            and input.UserInputType ~= Enum.UserInputType.Touch then return end
 
-        -- Use input.Position (same coord space for start & move → delta is
-        -- always correct regardless of GuiInset or IgnoreGuiInset).
         local mX = input.Position.X
         local mY = input.Position.Y
-        local fX = frame.AbsolutePosition.X
-        local fY = frame.AbsolutePosition.Y
-        if mY - fY > cutoff then return end
+        -- cutoff: only allow grab from the top portion of the frame
+        local fAbsY = frame.AbsolutePosition.Y
+        if mY - fAbsY > cutoff then return end
 
-        dragStartX  = mX
-        dragStartY  = mY
-        frameStartX = fX
-        frameStartY = fY
-        dragging    = true
+        dragStartMX  = mX
+        dragStartMY  = mY
+        dragStartPos = frame.Position          -- snapshot the UDim2 property
+        dragStartAbsX = frame.AbsolutePosition.X
+        dragStartAbsY = fAbsY
+        dragStartAbsW = frame.AbsoluteSize.X
+        dragStartAbsH = frame.AbsoluteSize.Y
+        dragging = true
 
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
@@ -492,20 +481,28 @@ local function Draggable(frame, handle, cutoff)
 
     UIS.InputChanged:Connect(function(input)
         if not dragging or input ~= dragInput then return end
-        -- Delta from where the cursor started to where it is now.
-        -- input.Position is the same coord space as the InputBegan position,
-        -- so the delta is always accurate (inset cancels out).
-        local nx = frameStartX + (input.Position.X - dragStartX)
-        local ny = frameStartY + (input.Position.Y - dragStartY)
-        -- Clamp: keep entire window within screen borders.
+        -- Pure pixel delta between current cursor and press cursor.
+        local dx = input.Position.X - dragStartMX
+        local dy = input.Position.Y - dragStartMY
+        -- Clamp: project the delta onto the absolute coordinate space,
+        -- clamp to screen edges, then convert back to a clamped delta.
         local cam = workspace.CurrentCamera
         if cam then
             local vp = cam.ViewportSize
-            local sz = frame.AbsoluteSize
-            nx = math.clamp(nx, 0, math.max(0, vp.X - sz.X))
-            ny = math.clamp(ny, 0, math.max(0, vp.Y - sz.Y))
+            local tgtX = dragStartAbsX + dx
+            local tgtY = dragStartAbsY + dy
+            local cX = math.clamp(tgtX, 0, math.max(0, vp.X - dragStartAbsW))
+            local cY = math.clamp(tgtY, 0, math.max(0, vp.Y - dragStartAbsH))
+            dx = cX - dragStartAbsX
+            dy = cY - dragStartAbsY
         end
-        _safeSetPos(frame, UDim2.new(0, nx, 0, ny))
+        -- Apply the clamped delta to the *Offset* of the original Position,
+        -- preserving whatever Scale values were there.  If AnchorPoint is
+        -- (0,0) and Scale is 0 this is just plain pixel positioning.
+        _safeSetPos(frame, UDim2.new(
+            dragStartPos.X.Scale, dragStartPos.X.Offset + dx,
+            dragStartPos.Y.Scale, dragStartPos.Y.Offset + dy
+        ))
     end)
 end
 
@@ -1410,6 +1407,21 @@ function Library:CreateWindow(opts)
     local draggable = opts.Draggable ~= false
     local winPos    = opts.Position or (center and UDim2.new(0.5, 0, 0.5, 0) or UDim2.new(0, 60, 0, 60))
 
+    -- For draggable windows, pre-resolve to pixel offsets + AnchorPoint(0,0)
+    -- so the Draggable handler never has to normalise at runtime.
+    local _initAnchor = center and Vector2.new(0.5, 0.5) or Vector2.new(0, 0)
+    local _initPos    = winPos
+    if draggable then
+        local vp = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize)
+                   or Vector2.new(1920, 1080)
+        local pw = winSize.X.Scale * vp.X + winSize.X.Offset
+        local ph = winSize.Y.Scale * vp.Y + winSize.Y.Offset
+        local absX = winPos.X.Scale * vp.X + winPos.X.Offset - pw * _initAnchor.X
+        local absY = winPos.Y.Scale * vp.Y + winPos.Y.Offset - ph * _initAnchor.Y
+        _initAnchor = Vector2.new(0, 0)
+        _initPos    = UDim2.new(0, math.floor(absX), 0, math.floor(absY))
+    end
+
     -- ── ScreenGui ────────────────────────────────────────────
     local sg = New("ScreenGui", {
         Name           = "AxiUI_" .. title,
@@ -1424,8 +1436,8 @@ function Library:CreateWindow(opts)
     -- ── Drop shadow (image-based) ────────────────────────────
     local shadowWrap = New("Frame", {
         BackgroundTransparency = 1,
-        AnchorPoint  = center and Vector2.new(0.5, 0.5) or Vector2.new(0, 0),
-        Position     = winPos,
+        AnchorPoint  = _initAnchor,
+        Position     = _initPos,
         Size         = winSize,
         Parent       = sg,
     })
@@ -1564,7 +1576,7 @@ function Library:CreateWindow(opts)
     minBtn.MouseLeave:Connect(function() Tween(minBtn, { TextColor3 = Theme.MutedText }, 0.08) end)
     minBtn.MouseButton1Click:Connect(function()
         minimised = not minimised
-        -- shadowWrap.AnchorPoint is (0,0) after Draggable's task.defer normalise.
+        -- shadowWrap.AnchorPoint is (0,0) from creation (pre-resolved).
         -- Tweening Size with AnchorPoint (0,0) grows/shrinks downward only;
         -- the top-left corner (= title bar) never moves.
         if minimised then
