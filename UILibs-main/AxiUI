@@ -1,3 +1,429 @@
+-- ══════════════════════════════════════════════════════════════
+--  CUSTOM WIDGETS API (user controls)
+-- ══════════════════════════════════════════════════════════════
+local CustomWidgets = {}
+CustomWidgets._registry = {}
+
+function CustomWidgets:RegisterWidget(name, constructor)
+    self._registry[name] = constructor
+end
+
+function CustomWidgets:CreateWidget(name, ...)
+    local ctor = self._registry[name]
+    if ctor then
+        return ctor(...)
+    end
+    return nil
+end
+
+function CustomWidgets:GetWidgetNames()
+    local out = {}
+    for k in pairs(self._registry) do table.insert(out, k) end
+    return out
+end
+
+-- Attach CustomWidgets to Library
+Library.CustomWidgets = CustomWidgets
+-- ══════════════════════════════════════════════════════════════
+--  ADVANCED NOTIFICATIONS (queue, persistent, interactive)
+-- ══════════════════════════════════════════════════════════════
+local NotificationManager = {}
+NotificationManager._queue = {}
+NotificationManager._active = false
+
+function NotificationManager:Notify(opts)
+    table.insert(self._queue, opts)
+    self:ProcessQueue()
+end
+
+function NotificationManager:ProcessQueue()
+    if self._active or #self._queue == 0 then return end
+    self._active = true
+    local opts = table.remove(self._queue, 1)
+    Library:Notify(opts)
+    local duration = (opts and opts.Duration) or 4
+    task.delay(duration + 0.5, function()
+        self._active = false
+        self:ProcessQueue()
+    end)
+end
+
+function NotificationManager:NotifyPersistent(opts)
+    opts = opts or {}
+    opts.Duration = 1e6 -- effectively persistent
+    Library:Notify(opts)
+end
+
+function NotificationManager:ClearAll()
+    -- Destroys all notification cards
+    if Library._notifHolder then
+        for _, c in ipairs(Library._notifHolder:GetChildren()) do
+            if c:IsA("Frame") then c:Destroy() end
+        end
+    end
+    self._queue = {}
+    self._active = false
+end
+
+-- Attach NotificationManager to Library
+Library.NotificationManager = NotificationManager
+-- ══════════════════════════════════════════════════════════════
+--  LOCALIZATION (multi-language support)
+-- ══════════════════════════════════════════════════════════════
+local Localization = {}
+Localization._languages = {}
+Localization._current = "en"
+
+function Localization:RegisterLanguage(code, table)
+    self._languages[code] = table
+end
+
+function Localization:SetLanguage(code)
+    if self._languages[code] then
+        self._current = code
+    end
+end
+
+function Localization:Get(key)
+    local lang = self._languages[self._current] or {}
+    return lang[key] or key
+end
+
+function Localization:GetCurrent()
+    return self._current
+end
+
+function Localization:GetLanguages()
+    local out = {}
+    for k in pairs(self._languages) do table.insert(out, k) end
+    return out
+end
+
+-- Attach Localization to Library
+Library.Localization = Localization
+-- ══════════════════════════════════════════════════════════════
+--  PROFILE SYSTEM (multi-user settings)
+-- ══════════════════════════════════════════════════════════════
+local ProfileManager = {}
+ProfileManager._profileFolder = "AxiUI_Profiles"
+
+function ProfileManager:Init()
+    if typeof(makefolder) == "function" and not isfolder(self._profileFolder) then
+        makefolder(self._profileFolder)
+    end
+end
+
+function ProfileManager:SaveProfile(name, themeTable, settingsTable)
+    self:Init()
+    local path = self._profileFolder .. "/" .. name .. ".json"
+    local profile = { Theme = themeTable, Settings = settingsTable }
+    local data = HttpService and HttpService:JSONEncode(profile) or "{}"
+    if typeof(writefile) == "function" then writefile(path, data) end
+end
+
+function ProfileManager:LoadProfile(name)
+    self:Init()
+    local path = self._profileFolder .. "/" .. name .. ".json"
+    if typeof(readfile) == "function" and isfile(path) then
+        local data = readfile(path)
+        if HttpService then
+            local ok, t = pcall(function() return HttpService:JSONDecode(data) end)
+            if ok and type(t) == "table" then return t end
+        end
+    end
+    return nil
+end
+
+function ProfileManager:DeleteProfile(name)
+    self:Init()
+    local path = self._profileFolder .. "/" .. name .. ".json"
+    if typeof(delfile) == "function" and isfile(path) then delfile(path) end
+end
+
+function ProfileManager:ListProfiles()
+    self:Init()
+    if typeof(listfiles) == "function" then
+        local files = listfiles(self._profileFolder)
+        local out = {}
+        for _, f in ipairs(files) do
+            local n = f:match("([^/\\]+)%.json$")
+            if n then table.insert(out, n) end
+        end
+        return out
+    end
+    return {}
+end
+
+-- Attach ProfileManager to Library
+Library.ProfileManager = ProfileManager
+-- ══════════════════════════════════════════════════════════════
+--  UI SCALING (accessibility)
+-- ══════════════════════════════════════════════════════════════
+Library._uiScale = 1
+
+function Library:SetUIScale(scale)
+    self._uiScale = math.clamp(scale or 1, 0.5, 2)
+    -- Apply scale to all windows
+    for _, w in ipairs(self._windows) do
+        if w._sg then
+            local uiScale = w._sg:FindFirstChildOfClass("UIScale")
+            if not uiScale then
+                uiScale = Instance.new("UIScale")
+                uiScale.Parent = w._sg
+            end
+            uiScale.Scale = self._uiScale
+        end
+    end
+end
+
+function Library:GetUIScale()
+    return self._uiScale
+end
+-- ══════════════════════════════════════════════════════════════
+--  HOT RELOAD (reload UI, keep state)
+-- ══════════════════════════════════════════════════════════════
+function Library:ReloadUI()
+    -- Save current state
+    local state = Library.SettingsManager:CollectState()
+    local theme = {}
+    for k, v in pairs(Theme) do theme[k] = v end
+    -- Unload current UI
+    self:Unload()
+    -- Re-require or reload the script (user must provide loader)
+    -- This is a placeholder: user should reload their script here
+    -- Example: loadstring(readfile("AxiUI_Library.lua"))()
+    -- After reload, restore state and theme
+    -- Library.SettingsManager:RestoreState(state)
+    -- Library:SetTheme(theme)
+    -- For safety, just return state and theme for user to handle
+    return state, theme
+end
+-- ══════════════════════════════════════════════════════════════
+--  COMMAND PALETTE (searchable command bar)
+-- ══════════════════════════════════════════════════════════════
+local CommandPalette = {}
+CommandPalette._commands = {}
+
+function CommandPalette:RegisterCommand(name, desc, callback)
+    table.insert(self._commands, {Name = name, Desc = desc, Callback = callback})
+end
+
+function CommandPalette:Open()
+    -- Minimal implementation: opens a simple input box to search and run commands
+    local sg = New("ScreenGui", {
+        Name = "AxiUI_CommandPalette",
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        DisplayOrder = 10001,
+        Parent = GetRoot(),
+    })
+    local frame = New("Frame", {
+        BackgroundColor3 = Theme.Panel,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.2, 0),
+        Size = UDim2.new(0, 400, 0, 60),
+        Parent = sg,
+    })
+    Corner(frame, 8)
+    Stroke(frame, Theme.Border, 1)
+    local box = New("TextBox", {
+        Text = "",
+        PlaceholderText = "Type a command...",
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        TextColor3 = Theme.Text,
+        BackgroundColor3 = Theme.Element,
+        Size = UDim2.new(1, -20, 0, 28),
+        Position = UDim2.new(0, 10, 0, 10),
+        BorderSizePixel = 0,
+        Parent = frame,
+    })
+    Corner(box, 5)
+    local results = New("Frame", {
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 40),
+        Size = UDim2.new(1, -20, 0, 16),
+        Parent = frame,
+    })
+    local lbl = New("TextLabel", {
+        Text = "",
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        TextColor3 = Theme.SubText,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = results,
+    })
+    local function updateResults()
+        local q = box.Text:lower()
+        for _, cmd in ipairs(self._commands) do
+            if cmd.Name:lower():find(q, 1, true) or (cmd.Desc and cmd.Desc:lower():find(q, 1, true)) then
+                lbl.Text = cmd.Name .. " — " .. (cmd.Desc or "")
+                return cmd
+            end
+        end
+        lbl.Text = "No command found"
+        return nil
+    end
+    box:GetPropertyChangedSignal("Text"):Connect(updateResults)
+    box.FocusLost:Connect(function(enter)
+        if enter then
+            local cmd = updateResults()
+            if cmd then pcall(cmd.Callback) end
+            sg:Destroy()
+        end
+    end)
+    box.FocusLost:Connect(function() sg:Destroy() end)
+    box.Focus()
+end
+
+-- Attach CommandPalette to Library
+Library.CommandPalette = CommandPalette
+-- ══════════════════════════════════════════════════════════════
+--  UI PRESETS MANAGER (save/load/delete UI layouts)
+-- ══════════════════════════════════════════════════════════════
+local PresetsManager = {}
+PresetsManager._presetsFolder = "AxiUI_Presets"
+
+function PresetsManager:Init()
+    if typeof(makefolder) == "function" and not isfolder(self._presetsFolder) then
+        makefolder(self._presetsFolder)
+    end
+end
+
+function PresetsManager:SavePreset(name, themeTable, settingsTable)
+    self:Init()
+    local path = self._presetsFolder .. "/" .. name .. ".json"
+    local preset = { Theme = themeTable, Settings = settingsTable }
+    local data = HttpService and HttpService:JSONEncode(preset) or "{}"
+    if typeof(writefile) == "function" then writefile(path, data) end
+end
+
+function PresetsManager:LoadPreset(name)
+    self:Init()
+    local path = self._presetsFolder .. "/" .. name .. ".json"
+    if typeof(readfile) == "function" and isfile(path) then
+        local data = readfile(path)
+        if HttpService then
+            local ok, t = pcall(function() return HttpService:JSONDecode(data) end)
+            if ok and type(t) == "table" then return t end
+        end
+    end
+    return nil
+end
+
+function PresetsManager:DeletePreset(name)
+    self:Init()
+    local path = self._presetsFolder .. "/" .. name .. ".json"
+    if typeof(delfile) == "function" and isfile(path) then delfile(path) end
+end
+
+function PresetsManager:ListPresets()
+    self:Init()
+    if typeof(listfiles) == "function" then
+        local files = listfiles(self._presetsFolder)
+        local out = {}
+        for _, f in ipairs(files) do
+            local n = f:match("([^/\\]+)%.json$")
+            if n then table.insert(out, n) end
+        end
+        return out
+    end
+    return {}
+end
+
+-- Attach PresetsManager to Library
+Library.PresetsManager = PresetsManager
+-- ══════════════════════════════════════════════════════════════
+--  SETTINGS MANAGER (save/load/delete UI state)
+-- ══════════════════════════════════════════════════════════════
+local SettingsManager = {}
+SettingsManager._settingsFolder = "AxiUI_Settings"
+
+function SettingsManager:Init()
+    if typeof(makefolder) == "function" and not isfolder(self._settingsFolder) then
+        makefolder(self._settingsFolder)
+    end
+end
+
+function SettingsManager:SaveSettings(name, stateTable)
+    self:Init()
+    local path = self._settingsFolder .. "/" .. name .. ".json"
+    local data = HttpService and HttpService:JSONEncode(stateTable) or "{}"
+    if typeof(writefile) == "function" then writefile(path, data) end
+end
+
+function SettingsManager:LoadSettings(name)
+    self:Init()
+    local path = self._settingsFolder .. "/" .. name .. ".json"
+    if typeof(readfile) == "function" and isfile(path) then
+        local data = readfile(path)
+        if HttpService then
+            local ok, t = pcall(function() return HttpService:JSONDecode(data) end)
+            if ok and type(t) == "table" then return t end
+        end
+    end
+    return nil
+end
+
+function SettingsManager:DeleteSettings(name)
+    self:Init()
+    local path = self._settingsFolder .. "/" .. name .. ".json"
+    if typeof(delfile) == "function" and isfile(path) then delfile(path) end
+end
+
+function SettingsManager:ListSettings()
+    self:Init()
+    if typeof(listfiles) == "function" then
+        local files = listfiles(self._settingsFolder)
+        local out = {}
+        for _, f in ipairs(files) do
+            local n = f:match("([^/\\]+)%.json$")
+            if n then table.insert(out, n) end
+        end
+        return out
+    end
+    return {}
+end
+
+-- Helper: collect all UI state (Toggles, Options)
+function SettingsManager:CollectState()
+    local state = { Toggles = {}, Options = {} }
+    for k, v in pairs(Toggles) do
+        if type(v) == "table" and v.GetValue then
+            state.Toggles[k] = v:GetValue()
+        end
+    end
+    for k, v in pairs(Options) do
+        if type(v) == "table" and v.GetValue then
+            state.Options[k] = v:GetValue()
+        end
+    end
+    return state
+end
+
+-- Helper: restore all UI state
+function SettingsManager:RestoreState(state)
+    if not state then return end
+    if state.Toggles then
+        for k, v in pairs(state.Toggles) do
+            if Toggles[k] and Toggles[k].SetValue then
+                Toggles[k]:SetValue(v)
+            end
+        end
+    end
+    if state.Options then
+        for k, v in pairs(state.Options) do
+            if Options[k] and Options[k].SetValue then
+                Options[k]:SetValue(v)
+            end
+        end
+    end
+end
+
+-- Attach SettingsManager to Library
+Library.SettingsManager = SettingsManager
 
 -- ══════════════════════════════════════════════════════════════
 --  PASS 1 — Services · Theme · Utility · Root · Library Object
@@ -476,55 +902,393 @@ local function Draggable(frame, handle, cutoff)
         if t == Enum.UserInputType.MouseMovement
         or t == Enum.UserInputType.Touch then
             dragInput = input
-        end
-    end)
 
-    UIS.InputChanged:Connect(function(input)
-        if not dragging or input ~= dragInput then return end
-        -- Pure pixel delta between current cursor and press cursor.
-        local dx = input.Position.X - dragStartMX
-        local dy = input.Position.Y - dragStartMY
-        -- Clamp: project the delta onto the absolute coordinate space,
-        -- clamp to screen edges, then convert back to a clamped delta.
-        local cam = workspace.CurrentCamera
-        if cam then
-            local vp = cam.ViewportSize
-            local tgtX = dragStartAbsX + dx
-            local tgtY = dragStartAbsY + dy
-            local cX = math.clamp(tgtX, 0, math.max(0, vp.X - dragStartAbsW))
-            local cY = math.clamp(tgtY, 0, math.max(0, vp.Y - dragStartAbsH))
-            dx = cX - dragStartAbsX
-            dy = cY - dragStartAbsY
+    -- ══════════════════════════════════════════════════════════════
+    --  THEME MANAGER (save/load/delete custom themes)
+    -- ══════════════════════════════════════════════════════════════
+    local ThemeManager = {}
+    ThemeManager._themeFolder = "AxiUI_Themes"
+
+    function ThemeManager:Init()
+        if typeof(makefolder) == "function" and not isfolder(self._themeFolder) then
+            makefolder(self._themeFolder)
         end
-        -- Apply the clamped delta to the *Offset* of the original Position,
-        -- preserving whatever Scale values were there.  If AnchorPoint is
-        -- (0,0) and Scale is 0 this is just plain pixel positioning.
-        _safeSetPos(frame, UDim2.new(
-            dragStartPos.X.Scale, dragStartPos.X.Offset + dx,
-            dragStartPos.Y.Scale, dragStartPos.Y.Offset + dy
-        ))
+    end
+
+    function ThemeManager:SaveTheme(name, themeTable)
+        self:Init()
+        local path = self._themeFolder .. "/" .. name .. ".json"
+        local data = HttpService and HttpService:JSONEncode(themeTable) or "{}"
+        if typeof(writefile) == "function" then writefile(path, data) end
+    end
+
+    function ThemeManager:LoadTheme(name)
+        self:Init()
+        local path = self._themeFolder .. "/" .. name .. ".json"
+        if typeof(readfile) == "function" and isfile(path) then
+            local data = readfile(path)
+            if HttpService then
+                local ok, t = pcall(function() return HttpService:JSONDecode(data) end)
+                if ok and type(t) == "table" then return t end
+            end
+        end
+        return nil
+    end
+
+    function ThemeManager:DeleteTheme(name)
+        self:Init()
+        local path = self._themeFolder .. "/" .. name .. ".json"
+        if typeof(delfile) == "function" and isfile(path) then delfile(path) end
+    end
+
+    function ThemeManager:ListThemes()
+        self:Init()
+        if typeof(listfiles) == "function" then
+            local files = listfiles(self._themeFolder)
+            local out = {}
+            for _, f in ipairs(files) do
+                local n = f:match("([^/\\]+)%.json$")
+                if n then table.insert(out, n) end
+            end
+            return out
+        end
+        return {}
+    end
+
+    -- ══════════════════════════════════════════════════════════════
+    --  MANAGER MODULES (Theme, Settings, Presets, Profiles, etc.)
+    -- ══════════════════════════════════════════════════════════════
+
+--[[
+    ThemeManager: Save/load/delete custom themes
+    Provides robust error handling and clear documentation.
+]]
+
+local function safe_writefile(path, data)
+    local ok, err = pcall(function()
+        if typeof(writefile) == "function" then writefile(path, data) end
     end)
+    return ok
 end
 
-local function MakeRipple(parent, x, y, col)
-    -- Fast CSS-style ripple on click
-    local rip = New("Frame", {
-        BackgroundColor3    = col or Theme.White,
-        BackgroundTransparency = 0.7,
-        Size                = UDim2.new(0, 0, 0, 0),
-        AnchorPoint         = Vector2.new(0.5, 0.5),
-        Position            = UDim2.new(0, x, 0, y),
-        BorderSizePixel     = 0,
-        ZIndex              = 20,
-        Parent              = parent,
-    })
-    Corner(rip, 999)
-    local sz = math.max(parent.AbsoluteSize.X, parent.AbsoluteSize.Y) * 2.5
-    Tween(rip, { Size = UDim2.new(0, sz, 0, sz), BackgroundTransparency = 1 }, 0.45,
-        Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    task.delay(0.5, function() rip:Destroy() end)
+local function safe_readfile(path)
+    local ok, data = pcall(function()
+        if typeof(readfile) == "function" and isfile(path) then return readfile(path) end
+        return nil
+    end)
+    return ok and data or nil
 end
 
+local function safe_delfile(path)
+    pcall(function() if typeof(delfile) == "function" and isfile(path) then delfile(path) end end)
+end
+
+local function safe_listfiles(folder)
+    if typeof(listfiles) == "function" then
+        local ok, files = pcall(function() return listfiles(folder) end)
+        if ok and type(files) == "table" then return files end
+    end
+    return {}
+end
+
+--- ThemeManager: Handles saving, loading, deleting, and listing user themes.
+local ThemeManager = {}
+ThemeManager._themeFolder = "AxiUI_Themes"
+
+--- Ensures the theme folder exists.
+function ThemeManager:Init()
+    if typeof(makefolder) == "function" and not isfolder(self._themeFolder) then
+        makefolder(self._themeFolder)
+    end
+end
+
+--- Saves a theme table to disk as JSON.
+function ThemeManager:SaveTheme(name, themeTable)
+    self:Init()
+    local path = self._themeFolder .. "/" .. name .. ".json"
+    local data = HttpService and HttpService:JSONEncode(themeTable) or "{}"
+    safe_writefile(path, data)
+end
+
+--- Loads a theme table from disk.
+function ThemeManager:LoadTheme(name)
+    self:Init()
+    local path = self._themeFolder .. "/" .. name .. ".json"
+    local data = safe_readfile(path)
+    if data and HttpService then
+        local ok, t = pcall(function() return HttpService:JSONDecode(data) end)
+        if ok and type(t) == "table" then return t end
+    end
+    return nil
+end
+
+--- Deletes a saved theme file.
+function ThemeManager:DeleteTheme(name)
+    self:Init()
+    local path = self._themeFolder .. "/" .. name .. ".json"
+    safe_delfile(path)
+end
+
+--- Lists all saved theme names.
+function ThemeManager:ListThemes()
+    self:Init()
+    local files = safe_listfiles(self._themeFolder)
+    local out = {}
+    for _, f in ipairs(files) do
+        local n = f:match("([^/\\]+)%.json$")
+        if n then table.insert(out, n) end
+    end
+    return out
+end
+
+Library.Managers.Theme = ThemeManager
+
+    --[[
+        SettingsManager: Save/load/delete UI state (toggles, sliders, etc.)
+        Methods: Init, SaveSettings, LoadSettings, DeleteSettings, ListSettings, CollectState, RestoreState
+    ]]
+    local SettingsManager = {}
+    SettingsManager._settingsFolder = "AxiUI_Settings"
+    function SettingsManager:Init()
+        if typeof(makefolder) == "function" and not isfolder(self._settingsFolder) then makefolder(self._settingsFolder) end
+    end
+    function SettingsManager:SaveSettings(name, stateTable)
+        self:Init()
+        local path = self._settingsFolder .. "/" .. name .. ".json"
+        local data = HttpService and HttpService:JSONEncode(stateTable) or "{}"
+        if typeof(writefile) == "function" then writefile(path, data) end
+    end
+    function SettingsManager:LoadSettings(name)
+        self:Init()
+        local path = self._settingsFolder .. "/" .. name .. ".json"
+        if typeof(readfile) == "function" and isfile(path) then
+            local data = readfile(path)
+            if HttpService then local ok, t = pcall(function() return HttpService:JSONDecode(data) end) if ok and type(t) == "table" then return t end end
+        end
+        return nil
+    end
+    function SettingsManager:DeleteSettings(name)
+        self:Init()
+        local path = self._settingsFolder .. "/" .. name .. ".json"
+        if typeof(delfile) == "function" and isfile(path) then delfile(path) end
+    end
+    function SettingsManager:ListSettings()
+        self:Init()
+        if typeof(listfiles) == "function" then
+            local files = listfiles(self._settingsFolder)
+            local out = {}
+            for _, f in ipairs(files) do local n = f:match("([^/\\]+)%.json$") if n then table.insert(out, n) end end
+            return out
+        end
+        return {}
+    end
+    function SettingsManager:CollectState()
+        local state = { Toggles = {}, Options = {} }
+        for k, v in pairs(Toggles) do if type(v) == "table" and v.GetValue then state.Toggles[k] = v:GetValue() end end
+        for k, v in pairs(Options) do if type(v) == "table" and v.GetValue then state.Options[k] = v:GetValue() end end
+        return state
+    end
+    function SettingsManager:RestoreState(state)
+        if not state then return end
+        if state.Toggles then for k, v in pairs(state.Toggles) do if Toggles[k] and Toggles[k].SetValue then Toggles[k]:SetValue(v) end end end
+        if state.Options then for k, v in pairs(state.Options) do if Options[k] and Options[k].SetValue then Options[k]:SetValue(v) end end end
+    end
+    Library.Managers.Settings = SettingsManager
+
+    --[[
+        PresetsManager: Save/load/delete UI layouts (theme + settings)
+        Methods: Init, SavePreset, LoadPreset, DeletePreset, ListPresets
+    ]]
+    local PresetsManager = {}
+    PresetsManager._presetsFolder = "AxiUI_Presets"
+    function PresetsManager:Init()
+        if typeof(makefolder) == "function" and not isfolder(self._presetsFolder) then
+            makefolder(self._presetsFolder)
+        end
+    end
+    function PresetsManager:SavePreset(name, themeTable, settingsTable)
+        self:Init()
+        local path = self._presetsFolder .. "/" .. name .. ".json"
+        local preset = { Theme = themeTable, Settings = settingsTable }
+        local data = HttpService and HttpService:JSONEncode(preset) or "{}"
+        if typeof(writefile) == "function" then writefile(path, data) end
+    end
+    function PresetsManager:LoadPreset(name)
+        self:Init()
+        local path = self._presetsFolder .. "/" .. name .. ".json"
+        if typeof(readfile) == "function" and isfile(path) then
+            local data = readfile(path)
+            if HttpService then local ok, t = pcall(function() return HttpService:JSONDecode(data) end) if ok and type(t) == "table" then return t end end
+        end
+        return nil
+    end
+    function PresetsManager:DeletePreset(name)
+        self:Init()
+        local path = self._presetsFolder .. "/" .. name .. ".json"
+        if typeof(delfile) == "function" and isfile(path) then delfile(path) end
+    end
+    function PresetsManager:ListPresets()
+        self:Init()
+        if typeof(listfiles) == "function" then
+            local files = listfiles(self._presetsFolder)
+            local out = {}
+            for _, f in ipairs(files) do local n = f:match("([^/\\]+)%.json$") if n then table.insert(out, n) end end
+            return out
+        end
+        return {}
+    end
+    Library.Managers.Presets = PresetsManager
+
+    --[[
+        ProfileManager: Multi-user settings (theme + settings per profile)
+        Methods: Init, SaveProfile, LoadProfile, DeleteProfile, ListProfiles
+    ]]
+    local ProfileManager = {}
+    ProfileManager._profileFolder = "AxiUI_Profiles"
+    function ProfileManager:Init()
+        if typeof(makefolder) == "function" and not isfolder(self._profileFolder) then
+            makefolder(self._profileFolder)
+        end
+    end
+    function ProfileManager:SaveProfile(name, themeTable, settingsTable)
+        self:Init()
+        local path = self._profileFolder .. "/" .. name .. ".json"
+        local profile = { Theme = themeTable, Settings = settingsTable }
+        local data = HttpService and HttpService:JSONEncode(profile) or "{}"
+        if typeof(writefile) == "function" then writefile(path, data) end
+    end
+    function ProfileManager:LoadProfile(name)
+        self:Init()
+        local path = self._profileFolder .. "/" .. name .. ".json"
+        if typeof(readfile) == "function" and isfile(path) then
+            local data = readfile(path)
+            if HttpService then local ok, t = pcall(function() return HttpService:JSONDecode(data) end) if ok and type(t) == "table" then return t end end
+        end
+        return nil
+    end
+    function ProfileManager:DeleteProfile(name)
+        self:Init()
+        local path = self._profileFolder .. "/" .. name .. ".json"
+        if typeof(delfile) == "function" and isfile(path) then delfile(path) end
+    end
+    function ProfileManager:ListProfiles()
+        self:Init()
+        if typeof(listfiles) == "function" then
+            local files = listfiles(self._profileFolder)
+            local out = {}
+            for _, f in ipairs(files) do local n = f:match("([^/\\]+)%.json$") if n then table.insert(out, n) end end
+            return out
+        end
+        return {}
+    end
+    Library.Managers.Profile = ProfileManager
+
+    --[[
+        NotificationManager: Advanced notifications (queue, persistent, clear)
+        Methods: Notify, ProcessQueue, NotifyPersistent, ClearAll
+    ]]
+    local NotificationManager = {}
+    NotificationManager._queue = {}
+    NotificationManager._active = false
+    function NotificationManager:Notify(opts)
+        table.insert(self._queue, opts)
+        self:ProcessQueue()
+    end
+    function NotificationManager:ProcessQueue()
+        if self._active or #self._queue == 0 then return end
+        self._active = true
+        local opts = table.remove(self._queue, 1)
+        Library:Notify(opts)
+        local duration = (opts and opts.Duration) or 4
+        task.delay(duration + 0.5, function()
+            self._active = false
+            self:ProcessQueue()
+        end)
+    end
+    function NotificationManager:NotifyPersistent(opts)
+        opts = opts or {}
+        opts.Duration = 1e6 -- effectively persistent
+        Library:Notify(opts)
+    end
+    function NotificationManager:ClearAll()
+        if Library._notifHolder then for _, c in ipairs(Library._notifHolder:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end end
+        self._queue = {}
+        self._active = false
+    end
+    Library.Managers.Notification = NotificationManager
+
+    --[[
+        CustomWidgets: User-defined UI controls
+        Methods: RegisterWidget, CreateWidget, GetWidgetNames
+    ]]
+    local CustomWidgets = {}
+    CustomWidgets._registry = {}
+    function CustomWidgets:RegisterWidget(name, constructor)
+        self._registry[name] = constructor
+    end
+    function CustomWidgets:CreateWidget(name, ...)
+        local ctor = self._registry[name]
+        if ctor then return ctor(...) end
+        return nil
+    end
+    function CustomWidgets:GetWidgetNames()
+        local out = {}
+        for k in pairs(self._registry) do table.insert(out, k) end
+        return out
+    end
+    Library.Managers.CustomWidgets = CustomWidgets
+
+    --[[
+        CommandPalette: Searchable command bar
+        Methods: RegisterCommand, Open
+    ]]
+    local CommandPalette = {}
+    CommandPalette._commands = {}
+    function CommandPalette:RegisterCommand(name, desc, callback)
+        table.insert(self._commands, {Name = name, Desc = desc, Callback = callback})
+    end
+    function CommandPalette:Open()
+        local sg = New("ScreenGui", { Name = "AxiUI_CommandPalette", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 10001, Parent = GetRoot() })
+        local frame = New("Frame", { BackgroundColor3 = Theme.Panel, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.2, 0), Size = UDim2.new(0, 400, 0, 60), Parent = sg })
+        Corner(frame, 8)
+        Stroke(frame, Theme.Border, 1)
+        local box = New("TextBox", { Text = "", PlaceholderText = "Type a command...", Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = Theme.Text, BackgroundColor3 = Theme.Element, Size = UDim2.new(1, -20, 0, 28), Position = UDim2.new(0, 10, 0, 10), BorderSizePixel = 0, Parent = frame })
+        Corner(box, 5)
+        local results = New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 40), Size = UDim2.new(1, -20, 0, 16), Parent = frame })
+        local lbl = New("TextLabel", { Text = "", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.SubText, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Parent = results })
+        local function updateResults()
+            local q = box.Text:lower()
+            for _, cmd in ipairs(self._commands) do
+                if cmd.Name:lower():find(q, 1, true) or (cmd.Desc and cmd.Desc:lower():find(q, 1, true)) then
+                    lbl.Text = cmd.Name .. " — " .. (cmd.Desc or "")
+                    return cmd
+                end
+            end
+            lbl.Text = "No command found"
+            return nil
+        end
+        box:GetPropertyChangedSignal("Text"):Connect(updateResults)
+        box.FocusLost:Connect(function(enter)
+            if enter then local cmd = updateResults() if cmd then pcall(cmd.Callback) end sg:Destroy() end
+        end)
+        box.FocusLost:Connect(function() sg:Destroy() end)
+        box.Focus()
+    end
+    Library.Managers.CommandPalette = CommandPalette
+
+    --[[
+        Localization: Multi-language support
+        Methods: RegisterLanguage, SetLanguage, Get, GetCurrent, GetLanguages
+    ]]
+    local Localization = {}
+    Localization._languages = {}
+    Localization._current = "en"
+    function Localization:RegisterLanguage(code, table) self._languages[code] = table end
+    function Localization:SetLanguage(code) if self._languages[code] then self._current = code end end
+    function Localization:Get(key) local lang = self._languages[self._current] or {} return lang[key] or key end
+    function Localization:GetCurrent() return self._current end
+    function Localization:GetLanguages() local out = {} for k in pairs(self._languages) do table.insert(out, k) end return out end
+    Library.Managers.Localization = Localization
 -- ── Sound ─────────────────────────────────────────────────────
 -- Module-level sound config; Library.Sounds aliases this at runtime.
 -- Set any ID to 0 to silence that event. All IDs are rbxassetid numbers.
@@ -2057,14 +2821,20 @@ function Library:CreateWindow(opts)
             end
 
             -- ──────────────────────────────────────────────────
-            --  TOGGLE
+            --  TOGGLE (Modular, Documented, Icon-ready)
             -- ──────────────────────────────────────────────────
+            ---
+            -- Adds a toggle switch to the groupbox.
+            -- @param idx (string) Unique identifier
+            -- @param opts (table) Options: Text, Default, Tooltip, Callback, Icon
+            -- @return Toggle object with SetValue, OnChanged, GetValue, SetCallback
             function go:AddToggle(idx, opts)
                 opts = opts or {}
                 local text    = opts.Text    or idx
                 local default = opts.Default ~= nil and opts.Default or false
                 local tooltip = opts.Tooltip
                 local cb      = opts.Callback or function() end
+                local icon    = opts.Icon     -- (optional) icon name from icon library
 
                 local obj = { Value = default, _cbs = {} }
                 Toggles[idx] = obj
@@ -2079,6 +2849,19 @@ function Library:CreateWindow(opts)
                 })
                 Corner(row, 6)
 
+                -- Optional icon (placeholder for icon library integration)
+                if icon then
+                    -- TODO: Integrate icon library lookup here
+                    New("ImageLabel", {
+                        Image = "rbxassetid://ICON_ASSET_ID", -- Replace with icon lookup
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(0, 18, 0, 18),
+                        Position = UDim2.new(0, 6, 0.5, -9),
+                        ZIndex = 3,
+                        Parent = row,
+                    })
+                end
+
                 -- label
                 New("TextLabel", {
                     Text             = text,
@@ -2087,7 +2870,7 @@ function Library:CreateWindow(opts)
                     TextColor3       = Theme.Text,
                     TextXAlignment   = Enum.TextXAlignment.Left,
                     BackgroundTransparency = 1,
-                    Position         = UDim2.new(0, 10, 0, 0),
+                    Position         = UDim2.new(0, icon and 28 or 10, 0, 0),
                     Size             = UDim2.new(1, -58, 1, 0),
                     ZIndex           = 2,
                     Parent           = row,
