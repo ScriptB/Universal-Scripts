@@ -902,6 +902,7 @@ local function Draggable(frame, handle, cutoff)
         if t == Enum.UserInputType.MouseMovement
         or t == Enum.UserInputType.Touch then
             dragInput = input
+        end
 
     -- ══════════════════════════════════════════════════════════════
     --  THEME MANAGER (save/load/delete custom themes)
