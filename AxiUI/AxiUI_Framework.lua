@@ -12,6 +12,61 @@ local Library = _env.Library or {
     Theme          = {},
     Utils          = {}
 }
+-- ══════════════════════════════════════════════════════════════
+--  Defaults Table for Configurable UI (No Hardcoded Values)
+-- ══════════════════════════════════════════════════════════════
+local Defaults = {
+    Window = {
+        Name = nil,
+        Subtitle = nil,
+        Size = nil,
+        ToggleKey = nil,
+    },
+    Typography = {
+        TitleFont = nil,
+        TitleSize = nil,
+        BodyFont = nil,
+        BodySize = nil,
+        SmallFont = nil,
+        SmallSize = nil,
+    },
+    Layout = {
+        HeaderHeight = nil,
+        TabBarHeight = nil,
+        ContentTop = nil,
+        GroupHeaderHeight = nil,
+        RowHeight = nil,
+        SliderRowHeight = nil,
+        InputRowHeight = nil,
+        DropdownRowHeight = nil,
+        Padding = nil,
+        Corner = {
+            Window = nil,
+            Header = nil,
+            Groupbox = nil,
+            Element = nil,
+            Small = nil,
+            Slider = nil,
+        }
+    },
+    Text = {
+        FrameworkName = nil,
+        FrameworkSubtitle = nil,
+        SelectPlaceholder = nil,
+        InputPlaceholder = nil,
+    }
+}
+
+local function Resolve(path, fallback)
+    local node = Library.Config
+    for key in string.gmatch(path, "[^%.]+") do
+        node = node and node[key]
+    end
+    if node ~= nil then
+        return node
+    end
+    return fallback
+end
 Library._windows = Library._windows or {}
 Library._conns   = Library._conns   or {}
 Library.Theme    = Library.Theme    or {}
@@ -148,7 +203,7 @@ local function MakeRipple(btn, x, y, color)
         ZIndex                 = btn.ZIndex + 1,
         Parent                 = btn,
     })
-    Utils.Corner(r, 100)
+    Utils.Corner(r, Resolve("Layout.Corner.Small", 100))
     Utils.Tween(r, { Size = UDim2.new(0, 300, 0, 300), Position = UDim2.new(0, x - 150, 0, y - 150), BackgroundTransparency = 1 }, 0.6)
     task.delay(0.6, function() r:Destroy() end)
 end
@@ -174,16 +229,51 @@ end
 
 function Library:CreateWindow(opts)
     opts = opts or {}
-    local name = opts.Name or opts.Title or "AxiUI"; local sub = opts.SubTitle or opts.Sub or "Framework"; local size = opts.Size or UDim2.new(0, 580, 0, 420); local Theme = self.Theme; local _tKey = { v = Enum.KeyCode.RightControl }; self._conns = {}
+    local name = opts.Name
+        or opts.Title
+        or Resolve("Text.FrameworkName", "AxiUI")
+    local sub = opts.SubTitle
+        or opts.Sub
+        or Resolve("Text.FrameworkSubtitle", "Framework")
+    local size = opts.Size
+        or Resolve("Window.Size", UDim2.new(0, 580, 0, 420))
+    local Theme = self.Theme
+    local _tKey = {
+        v = opts.ToggleKey
+            or Resolve("Window.ToggleKey", Enum.KeyCode.RightControl)
+    }
+    self._conns = {}
     local sg = Utils.New("ScreenGui", { Name = "AxiUI_" .. name:gsub("%s+", ""), ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 9990, Parent = Utils.GetRoot() })
     local shadowWrap = Utils.New("CanvasGroup", { Name = "ShadowWrap", BackgroundTransparency = 1, Size = UDim2.new(1, 40, 1, 40), Position = UDim2.new(0, -20, 0, -20), Parent = sg })
-    local win = Utils.New("Frame", { Name = "Main", BackgroundColor3 = Theme.Background, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = size, Parent = shadowWrap }); Utils.Corner(win, 10); local winStroke = Utils.Stroke(win, Theme.Border, 1)
-    local header = Utils.New("Frame", { Name = "Header", BackgroundColor3 = Theme.Panel, Size = UDim2.new(1, 0, 0, 44), Parent = win }); Utils.Corner(header, 10); MakeDraggable(win, header)
-    Utils.New("TextLabel", { Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Theme.Accent, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 16, 0.25, 0), Size = UDim2.new(0.5, 0, 0, 16), Parent = header })
-    Utils.New("TextLabel", { Text = sub, Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = Theme.MutedText, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 16, 0.62, 0), Size = UDim2.new(0.5, 0, 0, 12), Parent = header })
-    local tabBar = Utils.New("Frame", { Name = "TabBar", BackgroundColor3 = Theme.PanelAlt, Size = UDim2.new(1, 0, 0, 32), Position = UDim2.new(0, 0, 0, 44), Parent = win })
+    local win = Utils.New("Frame", { Name = "Main", BackgroundColor3 = Theme.Background, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = size, Parent = shadowWrap }); Utils.Corner(win, Resolve("Layout.Corner.Window", 10)); local winStroke = Utils.Stroke(win, Theme.Border, 1)
+    local headerHeight = Resolve("Layout.HeaderHeight", 44)
+    local tabBarHeight = Resolve("Layout.TabBarHeight", 32)
+    local header = Utils.New("Frame", { Name = "Header", BackgroundColor3 = Theme.Panel, Size = UDim2.new(1, 0, 0, headerHeight), Parent = win }); Utils.Corner(header, Resolve("Layout.Corner.Header", 10)); MakeDraggable(win, header)
+    Utils.New("TextLabel", {
+        Text = name,
+        Font = Resolve("Typography.TitleFont", Enum.Font.GothamBold),
+        TextSize = Resolve("Typography.TitleSize", 14),
+        TextColor3 = Theme.Accent,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 16, 0.25, 0),
+        Size = UDim2.new(0.5, 0, 0, 16),
+        Parent = header
+    })
+    Utils.New("TextLabel", {
+        Text = sub,
+        Font = Resolve("Typography.SmallFont", Enum.Font.Gotham),
+        TextSize = Resolve("Typography.SmallSize", 11),
+        TextColor3 = Theme.MutedText,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 16, 0.62, 0),
+        Size = UDim2.new(0.5, 0, 0, 12),
+        Parent = header
+    })
+    local tabBar = Utils.New("Frame", { Name = "TabBar", BackgroundColor3 = Theme.PanelAlt, Size = UDim2.new(1, 0, 0, tabBarHeight), Position = UDim2.new(0, 0, 0, headerHeight), Parent = win })
     local tabScroll = Utils.New("ScrollingFrame", { BackgroundTransparency = 1, ScrollBarThickness = 0, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.X, Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), ZIndex = 4, Parent = tabBar }); Utils.List(tabScroll, 4, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center); Utils.Pad(tabScroll, 0, 0, 8, 8)
-    local content = Utils.New("Frame", { Name = "Content", BackgroundTransparency = 1, ClipsDescendants = true, Position = UDim2.new(0, 0, 0, 76), Size = UDim2.new(1, 0, 1, -76), ZIndex = 1, Parent = win })
+    local content = Utils.New("Frame", { Name = "Content", BackgroundTransparency = 1, ClipsDescendants = true, Position = UDim2.new(0, 0, 0, headerHeight + tabBarHeight), Size = UDim2.new(1, 0, 1, -(headerHeight + tabBarHeight)), ZIndex = 1, Parent = win })
 
     local Win = { _sg = sg, _win = win, _content = content, _tabs = {}, _activeTab = nil }
     Win.__index = Win
@@ -193,7 +283,16 @@ function Library:CreateWindow(opts)
 
     function Win:AddTab(tName, icon)
         local tab = { _name = tName, _win = self, _elements = {} }
-        local tBtn = Utils.New("TextButton", { Text = tName, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.MutedText, BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 1, 0), Parent = tabScroll })
+        local tBtn = Utils.New("TextButton", {
+            Text = tName,
+            Font = Resolve("Typography.BodyFont", Enum.Font.Gotham),
+            TextSize = Resolve("Typography.BodySize", 12),
+            TextColor3 = Theme.MutedText,
+            BackgroundTransparency = 1,
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2.new(0, 0, 1, 0),
+            Parent = tabScroll
+        })
         Utils.Pad(tBtn, 0, 0, 12, 12); local tInd = Utils.New("Frame", { BackgroundColor3 = Theme.Accent, Size = UDim2.new(0, 0, 0, 2), Position = UDim2.new(0.5, 0, 1, 0), AnchorPoint = Vector2.new(0.5, 1), Parent = tBtn })
         local page = Utils.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, Parent = content }); Utils.Pad(page, 10, 10, 12, 12)
         local function mkC(xP, xS) local sc = Utils.New("ScrollingFrame", { BackgroundTransparency = 1, ScrollBarThickness = 2, CanvasSize = UDim2.new(0,0,0,0), AutomaticCanvasSize = Enum.AutomaticSize.Y, Size = UDim2.new(xS, -8, 1, 0), Position = UDim2.new(xP, xP == 0 and 0 or 8, 0, 0), Parent = page }); Utils.List(sc, 8); return sc end
@@ -205,34 +304,48 @@ function Library:CreateWindow(opts)
 
         local function _newGB(gbN, pnt)
             local gb = {}
-            local wrap = Utils.New("Frame", { BackgroundColor3 = Theme.Panel, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = pnt }); Utils.Corner(wrap, 8); Utils.Stroke(wrap, Theme.Border, 1)
-            local hdr = Utils.New("Frame", { BackgroundColor3 = Theme.PanelAlt, Size = UDim2.new(1, 0, 0, 30), Parent = wrap }); Utils.Corner(hdr, 8); Utils.New("Frame", { BackgroundColor3 = Theme.PanelAlt, Size = UDim2.new(1, 0, 0.5, 0), Position = UDim2.new(0, 0, 0.5, 0), BorderSizePixel = 0, Parent = hdr })
-            Utils.New("TextLabel", { Text = gbN:upper(), Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Theme.SubText, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(1, -24, 1, 0), Parent = hdr })
+            local groupHeaderHeight = Resolve("Layout.GroupHeaderHeight", 30)
+            local wrap = Utils.New("Frame", { BackgroundColor3 = Theme.Panel, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = pnt }); Utils.Corner(wrap, Resolve("Layout.Corner.Groupbox", 8)); Utils.Stroke(wrap, Theme.Border, 1)
+            local hdr = Utils.New("Frame", { BackgroundColor3 = Theme.PanelAlt, Size = UDim2.new(1, 0, 0, groupHeaderHeight), Parent = wrap }); Utils.Corner(hdr, Resolve("Layout.Corner.Groupbox", 8)); Utils.New("Frame", { BackgroundColor3 = Theme.PanelAlt, Size = UDim2.new(1, 0, 0.5, 0), Position = UDim2.new(0, 0, 0.5, 0), BorderSizePixel = 0, Parent = hdr })
+            Utils.New("TextLabel", {
+                Text = gbN:upper(),
+                Font = Resolve("Typography.SmallFont", Enum.Font.GothamBold),
+                TextSize = Resolve("Typography.SmallSize", 10),
+                TextColor3 = Theme.SubText,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 12, 0, 0),
+                Size = UDim2.new(1, -24, 1, 0),
+                Parent = hdr
+            })
             local body = Utils.New("Frame", { BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 30), Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = wrap }); Utils.Pad(body, 8, 8, 8, 8); Utils.List(body, 6); gb._body = body
 
             function gb:AddToggle(idx, gO)
                 gO = gO or {}; local obj = { Value = gO.Default or false, _cbs = {} }; Toggles[idx] = obj
-                local row = Utils.New("TextButton", { Text = "", BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 32), Parent = body }); Utils.Corner(row, 6)
+                local rowHeight = Resolve("Layout.RowHeight", 32)
+                local row = Utils.New("TextButton", { Text = "", BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, rowHeight), Parent = body }); Utils.Corner(row, Resolve("Layout.Corner.Element", 6))
                 Utils.New("TextLabel", { Text = gO.Text or idx, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(1, -60, 1, 0), Parent = row })
-                local trk = Utils.New("Frame", { BackgroundColor3 = obj.Value and Theme.Accent or Theme.ToggleOff, Size = UDim2.new(0, 36, 0, 18), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Parent = row }); Utils.Corner(trk, 9)
-                local knb = Utils.New("Frame", { BackgroundColor3 = Theme.White, Size = UDim2.new(0, 14, 0, 14), Position = obj.Value and UDim2.new(0, 20, 0, 2) or UDim2.new(0, 2, 0, 2), Parent = trk }); Utils.Corner(knb, 7)
+                local trk = Utils.New("Frame", { BackgroundColor3 = obj.Value and Theme.Accent or Theme.ToggleOff, Size = UDim2.new(0, 36, 0, 18), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Parent = row }); Utils.Corner(trk, Resolve("Layout.Corner.Slider", 9))
+                local knb = Utils.New("Frame", { BackgroundColor3 = Theme.White, Size = UDim2.new(0, 14, 0, 14), Position = obj.Value and UDim2.new(0, 20, 0, 2) or UDim2.new(0, 2, 0, 2), Parent = trk }); Utils.Corner(knb, Resolve("Layout.Corner.Small", 7))
                 row.MouseButton1Click:Connect(function() obj.Value = not obj.Value; Utils.Tween(trk, { BackgroundColor3 = obj.Value and Theme.Accent or Theme.ToggleOff }, 0.15); Utils.Tween(knb, { Position = obj.Value and UDim2.new(0, 20, 0, 2) or UDim2.new(0, 2, 0, 2) }, 0.15); Library:_fire(gO.Callback, obj._cbs, obj.Value) end)
                 function obj:SetValue(v) self.Value = v; Utils.Tween(trk, { BackgroundColor3 = v and Theme.Accent or Theme.ToggleOff }, 0.1); Utils.Tween(knb, { Position = v and UDim2.new(0, 20, 0, 2) or UDim2.new(0, 2, 0, 2) }, 0.1); Library:_fire(nil, self._cbs, v) end
                 function obj:OnChanged(f) table.insert(self._cbs, f) end; return obj
             end
             
             function gb:AddButton(gO)
-                local btn = Utils.New("TextButton", { Text = gO.Text or "Button", Font = Enum.Font.GothamSemibold, TextSize = 12, TextColor3 = Theme.Text, BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 32), Parent = body }); Utils.Corner(btn, 6)
+                local rowHeight = Resolve("Layout.RowHeight", 32)
+                local btn = Utils.New("TextButton", { Text = gO.Text or "Button", Font = Enum.Font.GothamSemibold, TextSize = 12, TextColor3 = Theme.Text, BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, rowHeight), Parent = body }); Utils.Corner(btn, Resolve("Layout.Corner.Element", 6))
                 btn.MouseButton1Click:Connect(function() MakeRipple(btn, Mouse.X-btn.AbsolutePosition.X, Mouse.Y-btn.AbsolutePosition.Y); pcall(gO.Callback or gO.Func or function() end) end); return btn
             end
 
             function gb:AddSlider(idx, gO)
                 gO = gO or {}; local min, max = gO.Min or 0, gO.Max or 100; local obj = { Value = gO.Default or min, _cbs = {} }; Options[idx] = obj
-                local row = Utils.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44), Parent = body })
+                local sliderRowHeight = Resolve("Layout.SliderRowHeight", 44)
+                local row = Utils.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, sliderRowHeight), Parent = body })
                 Utils.New("TextLabel", { Text = gO.Text or idx, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = row })
                 local val = Utils.New("TextLabel", { Text = tostring(obj.Value) .. (gO.Suffix or ""), Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Theme.Accent, TextXAlignment = Enum.TextXAlignment.Right, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = row })
-                local trk = Utils.New("Frame", { BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 6), Position = UDim2.new(0, 0, 0, 28), Parent = row }); Utils.Corner(trk, 3)
-                local fill = Utils.New("Frame", { BackgroundColor3 = Theme.Accent, Size = UDim2.new((obj.Value - min)/(max - min), 0, 1, 0), Parent = trk }); Utils.Corner(fill, 3)
+                local trk = Utils.New("Frame", { BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 6), Position = UDim2.new(0, 0, 0, 28), Parent = row }); Utils.Corner(trk, Resolve("Layout.Corner.Slider", 3))
+                local fill = Utils.New("Frame", { BackgroundColor3 = Theme.Accent, Size = UDim2.new((obj.Value - min)/(max - min), 0, 1, 0), Parent = trk }); Utils.Corner(fill, Resolve("Layout.Corner.Slider", 3))
                 local dragging = false; local function update(input) local r = math.clamp((input.Position.X - trk.AbsolutePosition.X) / trk.AbsoluteSize.X, 0, 1); local v = math.floor(min + r * (max - min)); obj.Value = v; fill.Size = UDim2.new(r, 0, 1, 0); val.Text = tostring(v) .. (gO.Suffix or ""); Library:_fire(gO.Callback, obj._cbs, v) end
                 trk.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; update(i) end end)
                 UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then update(i) end end)
@@ -243,18 +356,42 @@ function Library:CreateWindow(opts)
 
             function gb:AddDropdown(idx, gO)
                 gO = gO or {}; local obj = { Value = gO.Default, _cbs = {} }; Options[idx] = obj; local items = gO.Values or {}
-                local row = Utils.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 50), Parent = body })
+                local dropdownRowHeight = Resolve("Layout.DropdownRowHeight", 50)
+                local row = Utils.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, dropdownRowHeight), Parent = body })
                 Utils.New("TextLabel", { Text = gO.Text or idx, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = row })
-                local btn = Utils.New("TextButton", { Text = tostring(obj.Value or "Select..."), Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.SubText, TextXAlignment = Enum.TextXAlignment.Left, BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 28), Position = UDim2.new(0, 0, 0, 20), Parent = row }); Utils.Corner(btn, 5); Utils.Pad(btn, 0, 0, 10, 10)
+                local btn = Utils.New("TextButton", {
+                    Text = tostring(obj.Value or Resolve("Text.SelectPlaceholder", "Select...")),
+                    Font = Enum.Font.Gotham,
+                    TextSize = 12,
+                    TextColor3 = Theme.SubText,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    BackgroundColor3 = Theme.Element,
+                    Size = UDim2.new(1, 0, 0, 28),
+                    Position = UDim2.new(0, 0, 0, 20),
+                    Parent = row
+                }); Utils.Corner(btn, Resolve("Layout.Corner.Element", 5)); Utils.Pad(btn, 0, 0, 10, 10)
                 function obj:SetValue(v) self.Value = v; btn.Text = tostring(v); Library:_fire(gO.Callback, self._cbs, v) end
                 function obj:SetValues(v) items = v end; return obj
             end
 
             function gb:AddInput(idx, gO)
                 gO = gO or {}; local obj = { Value = gO.Default or "", _cbs = {} }; Options[idx] = obj
-                local row = Utils.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 50), Parent = body })
+                local inputRowHeight = Resolve("Layout.InputRowHeight", 50)
+                local row = Utils.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, inputRowHeight), Parent = body })
                 Utils.New("TextLabel", { Text = gO.Text or idx, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Parent = row })
-                local box = Utils.New("TextBox", { Text = obj.Value, PlaceholderText = gO.PlaceholderText or "...", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Left, BackgroundColor3 = Theme.Element, Size = UDim2.new(1, 0, 0, 28), Position = UDim2.new(0, 0, 0, 20), BorderSizePixel = 0, Parent = row }); Utils.Corner(box, 5); Utils.Pad(box, 0, 0, 10, 10)
+                local box = Utils.New("TextBox", {
+                    Text = obj.Value,
+                    PlaceholderText = gO.PlaceholderText or Resolve("Text.InputPlaceholder", "..."),
+                    Font = Enum.Font.Gotham,
+                    TextSize = 12,
+                    TextColor3 = Theme.Text,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    BackgroundColor3 = Theme.Element,
+                    Size = UDim2.new(1, 0, 0, 28),
+                    Position = UDim2.new(0, 0, 0, 20),
+                    BorderSizePixel = 0,
+                    Parent = row
+                }); Utils.Corner(box, Resolve("Layout.Corner.Element", 5)); Utils.Pad(box, 0, 0, 10, 10)
                 box.FocusLost:Connect(function() obj.Value = box.Text; Library:_fire(gO.Callback, obj._cbs, box.Text) end)
                 function obj:SetValue(v) self.Value = v; box.Text = v; Library:_fire(nil, self._cbs, v) end
                 return obj
