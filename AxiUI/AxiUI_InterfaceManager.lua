@@ -7,6 +7,7 @@ local Library = _env.Library or {}
 -- ── Aliases ───────────────────────────────────────────────────
 local Utils              = Library.Utils or {}
 local New, Corner, Stroke, Pad, List, Gradient = Utils.New, Utils.Corner, Utils.Stroke, Utils.Pad, Utils.List, Utils.Gradient
+local Theme              = Library.Theme or {}
 local Tween, PlaySound   = Utils.Tween, Utils.PlaySound
 local GetRoot           = Utils.GetRoot
 
