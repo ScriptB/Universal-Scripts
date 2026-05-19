@@ -33,7 +33,11 @@ local function HRP()  local c = Char(); return c and c:FindFirstChild("HumanoidR
 local function Hum()  local c = Char(); return c and c:FindFirstChildOfClass("Humanoid") end
 
 -- ── EXECUTOR COMPAT ──────────────────────────────────────────────
-local HAS_DRAWING = type(Drawing) == "table"
+local HAS_DRAWING = false
+pcall(function()
+    local t = Drawing.new("Line"); t:Remove()
+    HAS_DRAWING = true
+end)
 
 -- ── SPEED STATE ──────────────────────────────────────────────────
 local _bvObj, _lvObj, _lvAttach
@@ -420,19 +424,19 @@ local TabESP = Window:AddTab("ESP")
 -- ── Drawing helpers ──────────────────────────────────────────
 local _dummy = { Visible = false, Remove = function() end }
 local function newLine(thick, col)
-    if not HAS_DRAWING then return setmetatable({}, {__index=_dummy}) end
+    if not HAS_DRAWING then return _dummy end
     local o = Drawing.new("Line"); o.Thickness=thick or 1.5; o.Color=col or Color3.new(1,1,1); o.Visible=false; return o
 end
 local function newSquare(filled, thick)
-    if not HAS_DRAWING then return setmetatable({}, {__index=_dummy}) end
+    if not HAS_DRAWING then return _dummy end
     local o = Drawing.new("Square"); o.Filled=filled; o.Thickness=thick or 1; o.Visible=false; return o
 end
 local function newText(sz)
-    if not HAS_DRAWING then return setmetatable({}, {__index=_dummy}) end
+    if not HAS_DRAWING then return _dummy end
     local o = Drawing.new("Text"); o.Size=sz or 13; o.Center=true; o.Outline=true; o.Visible=false; return o
 end
 local function newCircle(thick)
-    if not HAS_DRAWING then return setmetatable({}, {__index=_dummy}) end
+    if not HAS_DRAWING then return _dummy end
     local o = Drawing.new("Circle"); o.Thickness=thick or 1.5; o.Filled=false; o.Visible=false; return o
 end
 
@@ -536,8 +540,12 @@ BoxESPStyle:AddSlider("ESP_ChamOutline", {
 -- ── ESP render loop ───────────────────────────────────────────
 local function isTeammate(p)
     if not AxiUI.Flags["TeamCheck"] then return false end
-    if LP.Team ~= nil then return LP.Team == p.Team end
-    return LP.TeamColor == p.TeamColor
+    -- Only flag as teammate when both players have a real Team object assigned
+    -- Falling back to TeamColor would match everyone in games without a team system
+    local mt, pt = LP.Team, p.Team
+    if mt ~= nil and pt ~= nil then return mt == pt end
+    -- If LP is assigned to a team but target isn't (or vice versa), they're enemies
+    return false
 end
 
 RunService.RenderStepped:Connect(function()

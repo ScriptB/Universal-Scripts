@@ -982,32 +982,43 @@ function Groupbox:AddSlider(key, opts)
     valLbl.Size     = UDim2.fromOffset(30,30)
     valLbl.Position = UDim2.new(1,-38,0,0)
 
+    -- Transparent hit zone — full row height makes it easy to click anywhere near the bar
     local track = Instance.new("Frame")
-    track.Size             = UDim2.fromOffset(88,3)
-    track.AnchorPoint      = Vector2.new(1,0.5)
-    track.Position         = UDim2.new(1,-72,0.5,0)
-    track.BackgroundColor3 = Color3.fromRGB(50,45,70)
-    track.BackgroundTransparency = 0.18
-    track.BorderSizePixel  = 0
-    track.Parent           = row
-    AddCorner(track, UDim.new(1,0))
+    track.Size                  = UDim2.fromOffset(88, 28)
+    track.AnchorPoint           = Vector2.new(1, 0.5)
+    track.Position              = UDim2.new(1, -72, 0.5, 0)
+    track.BackgroundTransparency = 1
+    track.BorderSizePixel       = 0
+    track.Parent                = row
+
+    -- Visual bar (3 px tall, centred inside the hit zone)
+    local trackBar = Instance.new("Frame")
+    trackBar.Size             = UDim2.new(1, 0, 0, 3)
+    trackBar.AnchorPoint      = Vector2.new(0, 0.5)
+    trackBar.Position         = UDim2.new(0, 0, 0.5, 0)
+    trackBar.BackgroundColor3 = Color3.fromRGB(50, 45, 70)
+    trackBar.BackgroundTransparency = 0.18
+    trackBar.BorderSizePixel  = 0
+    trackBar.Parent           = track
+    AddCorner(trackBar, UDim.new(1, 0))
 
     local fill = Instance.new("Frame")
-    fill.BackgroundColor3      = T.Accent
+    fill.BackgroundColor3       = T.Accent
     fill.BackgroundTransparency = 1 - 0.62
-    fill.BorderSizePixel       = 0
-    fill.Size                  = UDim2.fromScale(0,1)
-    fill.Parent                = track
-    AddCorner(fill, UDim.new(1,0))
+    fill.BorderSizePixel        = 0
+    fill.Size                   = UDim2.fromScale(0, 1)
+    fill.Parent                 = trackBar
+    AddCorner(fill, UDim.new(1, 0))
 
+    -- Thumb sits in the hit zone so it's centred on the bar visually
     local thumb = Instance.new("Frame")
-    thumb.Size             = UDim2.fromOffset(11,11)
-    thumb.AnchorPoint      = Vector2.new(0.5,0.5)
-    thumb.Position         = UDim2.new(0,0,0.5,0)
+    thumb.Size             = UDim2.fromOffset(11, 11)
+    thumb.AnchorPoint      = Vector2.new(0.5, 0.5)
+    thumb.Position         = UDim2.new(0, 0, 0.5, 0)
     thumb.BackgroundColor3 = T.AccentStrong
     thumb.BorderSizePixel  = 0
     thumb.Parent           = track
-    AddCorner(thumb, UDim.new(1,0))
+    AddCorner(thumb, UDim.new(1, 0))
     AddStroke(thumb, T.Border, 0.2)
 
     local function SetSlider(val)
