@@ -436,35 +436,48 @@ function AxiUI:Notify(title, message, duration)
     duration = duration or 4
 
     local card = Instance.new("Frame")
-    card.BackgroundColor3      = T.WindowBg
+    card.BackgroundColor3       = T.WindowBg
     card.BackgroundTransparency = 1 - 0.88
-    card.BorderSizePixel       = 0
-    card.Size                  = UDim2.new(1,0,0,0)
-    card.AutomaticSize         = Enum.AutomaticSize.Y
-    card.Parent                = _notifHolder
-    AddCorner(card, UDim.new(0,7))
+    card.BorderSizePixel        = 0
+    card.Size                   = UDim2.new(1, 0, 0, 0)
+    card.AutomaticSize          = Enum.AutomaticSize.Y
+    card.Parent                 = _notifHolder
+    AddCorner(card, UDim.new(0, 7))
     local stroke = AddStroke(card, T.Accent, 0.22)
 
+    -- accentBar uses NO Scale Y — avoids circular AutomaticSize dependency
     local accentBar = Instance.new("Frame")
     accentBar.BackgroundColor3 = T.AccentStrong
     accentBar.BorderSizePixel  = 0
-    accentBar.Size             = UDim2.new(0,3,1,-10)
-    accentBar.Position         = UDim2.new(0,0,0,5)
-    accentBar.AnchorPoint      = Vector2.new(0,0)
+    accentBar.Size             = UDim2.fromOffset(3, 0)
+    accentBar.Position         = UDim2.fromOffset(0, 5)
     accentBar.Parent           = card
-    AddCorner(accentBar, UDim.new(1,0))
+    AddCorner(accentBar, UDim.new(1, 0))
 
-    AddPad(card, nil, 7, 7, 10, 8)
-    AddList(card, 2)
+    -- body drives AutomaticSize; accentBar is an absolute overlay, not in layout flow
+    local body = Instance.new("Frame")
+    body.BackgroundTransparency = 1
+    body.BorderSizePixel        = 0
+    body.Size                   = UDim2.new(1, -10, 0, 0)
+    body.Position               = UDim2.fromOffset(10, 6)
+    body.AutomaticSize          = Enum.AutomaticSize.Y
+    body.Parent                 = card
+    AddList(body, 2)
+    AddPad(body, 0, 6, 0, 0)
 
-    local titleL = MakeLabel(card, title or "Notification", 11, T.AccentStrong,
+    local titleL = MakeLabel(body, title or "Notification", 11, T.AccentStrong,
         Enum.TextXAlignment.Left, Enum.Font.GothamBold)
-    titleL.Size = UDim2.new(1,0,0,14)
+    titleL.Size = UDim2.new(1, 0, 0, 14)
 
-    local msgL = MakeLabel(card, message or "", 10, T.TextSecondary)
-    msgL.Size        = UDim2.new(1,0,0,0)
+    local msgL = MakeLabel(body, message or "", 10, T.TextSecondary)
+    msgL.Size         = UDim2.new(1, 0, 0, 0)
     msgL.AutomaticSize = Enum.AutomaticSize.Y
-    msgL.TextWrapped = true
+    msgL.TextWrapped  = true
+
+    -- Sync accentBar height to card height once card has been laid out
+    card:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        accentBar.Size = UDim2.fromOffset(3, math.max(0, card.AbsoluteSize.Y - 10))
+    end)
 
     task.delay(duration, function()
         if not card.Parent then return end
@@ -500,11 +513,14 @@ function AxiUI:CreateWindow(options)
     local w = options.Width  or 420
     local h = options.Height or 480
 
+    local _vp = workspace.CurrentCamera.ViewportSize
     local frame = Instance.new("Frame")
     frame.Name                   = "AxiWindow"
     frame.Size                   = UDim2.fromOffset(w, h)
-    frame.AnchorPoint            = Vector2.new(0.5, 0.5)
-    frame.Position               = options.Position or UDim2.fromScale(0.5, 0.5)
+    frame.AnchorPoint            = Vector2.new(0, 0)
+    frame.Position               = options.Position or UDim2.fromOffset(
+        math.floor(_vp.X / 2 - w / 2), math.floor(_vp.Y / 2 - h / 2)
+    )
     frame.BackgroundColor3       = T.WindowBg
     frame.BackgroundTransparency = 1 - T.WindowBgAlpha
     frame.BorderSizePixel        = 0
@@ -521,15 +537,6 @@ function AxiUI:CreateWindow(options)
     win:_BuildContentArea()
     win:_MakeDraggable()
     win:_BindToggleKey(options.ToggleKey or Enum.KeyCode.RightShift)
-
-    -- Switch to offset-based position on the next frame so AbsolutePosition is resolved
-    -- and drag can use pixel offsets without AnchorPoint(0.5,0.5) confusion.
-    task.defer(function()
-        if not frame or not frame.Parent then return end
-        local ap = frame.AbsolutePosition
-        frame.AnchorPoint = Vector2.new(0, 0)
-        frame.Position    = UDim2.fromOffset(ap.X, ap.Y)
-    end)
 
     table.insert(AxiUI.Windows, win)
     return win
@@ -632,25 +639,38 @@ end
 function AxiUI:_MakeDraggable()
     local bar    = self.TitleBar
     local frame  = self.Frame
-    local dragging = false
-    local offX, offY = 0, 0
+    local dragging  = false
+    local dragInput = nil
+    local mousePos
+    local startPos
 
     TrackConn(bar.InputBegan:Connect(function(inp)
-        if inp.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        dragging = true
-        local mp = UIS:GetMouseLocation()
-        local ap = frame.AbsolutePosition  -- always top-left regardless of AnchorPoint
-        offX = ap.X - mp.X
-        offY = ap.Y - mp.Y
+        if inp.UserInputType ~= Enum.UserInputType.MouseButton1
+            and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+        dragging  = true
+        mousePos  = inp.Position
+        startPos  = frame.Position  -- stored UDim2 offsets; reliable regardless of AnchorPoint
+        inp.Changed:Connect(function()
+            if inp.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end))
+
+    TrackConn(bar.InputChanged:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseMovement
+            or inp.UserInputType == Enum.UserInputType.Touch then
+            dragInput = inp
+        end
+    end))
+
     TrackConn(UIS.InputChanged:Connect(function(inp)
-        if not dragging or inp.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-        local mp = UIS:GetMouseLocation()
-        -- frame.AnchorPoint is (0,0) after task.defer in CreateWindow; position = top-left
-        frame.Position = UDim2.fromOffset(mp.X + offX, mp.Y + offY)
-    end))
-    TrackConn(UIS.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+        if inp ~= dragInput or not dragging then return end
+        local delta = inp.Position - mousePos
+        frame.Position = UDim2.fromOffset(
+            startPos.X.Offset + delta.X,
+            startPos.Y.Offset + delta.Y
+        )
     end))
 end
 
