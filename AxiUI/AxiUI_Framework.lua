@@ -503,11 +503,8 @@ function AxiUI:CreateWindow(options)
     local frame = Instance.new("Frame")
     frame.Name                   = "AxiWindow"
     frame.Size                   = UDim2.fromOffset(w, h)
-    frame.AnchorPoint            = Vector2.new(0, 0)
-    local _vp = workspace.CurrentCamera.ViewportSize
-    frame.Position               = options.Position or UDim2.fromOffset(
-        math.floor((_vp.X - w) * 0.5), math.floor((_vp.Y - h) * 0.5)
-    )
+    frame.AnchorPoint            = Vector2.new(0.5, 0.5)
+    frame.Position               = options.Position or UDim2.fromScale(0.5, 0.5)
     frame.BackgroundColor3       = T.WindowBg
     frame.BackgroundTransparency = 1 - T.WindowBgAlpha
     frame.BorderSizePixel        = 0
@@ -524,6 +521,15 @@ function AxiUI:CreateWindow(options)
     win:_BuildContentArea()
     win:_MakeDraggable()
     win:_BindToggleKey(options.ToggleKey or Enum.KeyCode.RightShift)
+
+    -- Switch to offset-based position on the next frame so AbsolutePosition is resolved
+    -- and drag can use pixel offsets without AnchorPoint(0.5,0.5) confusion.
+    task.defer(function()
+        if not frame or not frame.Parent then return end
+        local ap = frame.AbsolutePosition
+        frame.AnchorPoint = Vector2.new(0, 0)
+        frame.Position    = UDim2.fromOffset(ap.X, ap.Y)
+    end)
 
     table.insert(AxiUI.Windows, win)
     return win
@@ -624,20 +630,24 @@ function AxiUI:_BuildContentArea()
 end
 
 function AxiUI:_MakeDraggable()
-    local bar   = self.TitleBar
-    local frame = self.Frame
-    local dragging, dragStart, startPos
+    local bar    = self.TitleBar
+    local frame  = self.Frame
+    local dragging = false
+    local offX, offY = 0, 0
 
     TrackConn(bar.InputBegan:Connect(function(inp)
         if inp.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        dragging  = true
-        dragStart = inp.Position
-        startPos  = frame.AbsolutePosition  -- Vector2 pixel position; .Position is UDim2 and .Offset = 0 when scale-based
+        dragging = true
+        local mp = UIS:GetMouseLocation()
+        local ap = frame.AbsolutePosition  -- always top-left regardless of AnchorPoint
+        offX = ap.X - mp.X
+        offY = ap.Y - mp.Y
     end))
     TrackConn(UIS.InputChanged:Connect(function(inp)
         if not dragging or inp.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-        local d = inp.Position - dragStart
-        frame.Position = UDim2.fromOffset(startPos.X + d.X, startPos.Y + d.Y)
+        local mp = UIS:GetMouseLocation()
+        -- frame.AnchorPoint is (0,0) after task.defer in CreateWindow; position = top-left
+        frame.Position = UDim2.fromOffset(mp.X + offX, mp.Y + offY)
     end))
     TrackConn(UIS.InputEnded:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
