@@ -1,6 +1,6 @@
 # Core Scripts
 
-This folder contains the main scripts that form the foundation of the ScriptB Universal Scripts collection.
+This folder contains the main scripts that form the foundation of the Script loading and key systems.
 
 ## Files
 
