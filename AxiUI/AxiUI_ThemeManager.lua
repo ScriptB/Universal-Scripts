@@ -1,242 +1,308 @@
--- ══════════════════════════════════════════════════════════════
---  AxiUI — ThemeManager Module
--- ══════════════════════════════════════════════════════════════
-local _env = (typeof(getgenv) == "function" and getgenv()) or _G
-local Library     = _env.Library or {}
-local Utils       = Library.Utils
+--[[
+    AxiUI — ThemeManager v1.0.0
+    Requires AxiUI_Framework to be loaded first.
 
--- ── Default Theme (Unique dark-violet / electric-cyan) ────────
-local Theme = {
-    Background  = Color3.fromRGB(10,  10,  18),
-    Panel       = Color3.fromRGB(16,  16,  28),
-    PanelAlt    = Color3.fromRGB(22,  22,  38),
-    PanelDeep   = Color3.fromRGB(13,  13,  23),
-    Element     = Color3.fromRGB(28,  28,  48),
-    ElementHov  = Color3.fromRGB(36,  36,  62),
-    ElementAct  = Color3.fromRGB(44,  44,  74),
-    Accent      = Color3.fromRGB(82,  210, 255),
-    AccentDim   = Color3.fromRGB(40,  120, 160),
-    AccentGlow  = Color3.fromRGB(120, 230, 255),
-    Violet      = Color3.fromRGB(140, 100, 255),
-    VioletDim   = Color3.fromRGB(80,  55,  160),
-    Gold        = Color3.fromRGB(255, 200, 80),
-    Text        = Color3.fromRGB(225, 225, 240),
-    SubText     = Color3.fromRGB(130, 130, 165),
-    MutedText   = Color3.fromRGB(70,  70,  100),
-    Border      = Color3.fromRGB(42,  42,  70),
-    BorderBright= Color3.fromRGB(65,  65,  100),
-    ToggleOff   = Color3.fromRGB(44,  44,  72),
-    ToggleOn    = Color3.fromRGB(82,  210, 255),
-    SliderTrack = Color3.fromRGB(28,  28,  50),
-    SliderFill  = Color3.fromRGB(82,  210, 255),
-    SliderKnob  = Color3.fromRGB(240, 240, 255),
-    Danger      = Color3.fromRGB(240, 72,  72),
-    Success     = Color3.fromRGB(72,  215, 135),
-    Warning     = Color3.fromRGB(255, 200, 70),
-    Info        = Color3.fromRGB(82,  210, 255),
-    White       = Color3.fromRGB(255, 255, 255),
-    Black       = Color3.fromRGB(0,   0,   0),
-    Transparent = Color3.fromRGB(0,   0,   0),
-    TitleLeft   = Color3.fromRGB(18,  18,  34),
-    TitleRight  = Color3.fromRGB(24,  16,  44),
+    Usage:
+        local ThemeManager = loadstring(game:HttpGet("...AxiUI_ThemeManager.lua"))()
+        ThemeManager:Apply("Ocean")
+        ThemeManager:ApplyToTab(tab)
+        ThemeManager:ApplyToGroupbox(gb)
+]]
+
+local _env  = (typeof(getgenv) == "function" and getgenv()) or _G
+local AxiUI = _env.AxiUI
+assert(AxiUI, "[AxiUI] ThemeManager: AxiUI_Framework must be loaded first.")
+
+local RunSvc  = game:GetService("RunService")
+local HttpSvc = game:GetService("HttpService")
+local T       = AxiUI.Theme
+
+-- Keys that can be swapped by a theme (colors only — translucency stack stays fixed)
+local COLOR_KEYS = {
+    "WindowBg", "Accent", "AccentStrong",
+    "TextPrimary", "TextSecondary", "TextMuted",
+}
+local ALPHA_KEYS = { "WindowBgAlpha", "AccentAlpha" }
+
+-- ═══════════════════════════════════════════════════════════════
+--  BUILT-IN THEMES
+-- ═══════════════════════════════════════════════════════════════
+local Themes = {}
+
+Themes.Default = {
+    WindowBg      = Color3.fromRGB(14,  16,  26),   WindowBgAlpha  = 0.82,
+    Accent        = Color3.fromRGB(160, 130, 255),  AccentAlpha    = 0.35,
+    AccentStrong  = Color3.fromRGB(200, 185, 255),
+    TextPrimary   = Color3.fromRGB(220, 215, 255),
+    TextSecondary = Color3.fromRGB(140, 130, 160),
+    TextMuted     = Color3.fromRGB(80,  75,  100),
 }
 
--- ── Preset Themes ─────────────────────────────────────────────
-local Themes = {
-    Default = (function() local t={} for k,v in pairs(Theme) do t[k]=v end return t end)(),
-    Ocean = {
-        Background = Color3.fromRGB(6, 14, 22), Panel = Color3.fromRGB(10, 20, 34), PanelAlt = Color3.fromRGB(14, 26, 44), PanelDeep = Color3.fromRGB(8, 16, 26),
-        Element = Color3.fromRGB(16, 30, 52), ElementHov = Color3.fromRGB(22, 40, 68), ElementAct = Color3.fromRGB(28, 50, 82),
-        Accent = Color3.fromRGB(50, 200, 180), AccentDim = Color3.fromRGB(28, 110, 100), AccentGlow = Color3.fromRGB(90, 230, 210),
-        Violet = Color3.fromRGB(60, 160, 220), VioletDim = Color3.fromRGB(30, 90, 130), Gold = Color3.fromRGB(255, 210, 90),
-        Text = Color3.fromRGB(210, 230, 235), SubText = Color3.fromRGB(100, 140, 155), MutedText = Color3.fromRGB(55, 80, 95),
-        Border = Color3.fromRGB(28, 50, 72), BorderBright = Color3.fromRGB(50, 80, 110), ToggleOff = Color3.fromRGB(22, 48, 72), ToggleOn = Color3.fromRGB(50, 200, 180),
-        SliderTrack = Color3.fromRGB(16, 36, 58), SliderFill = Color3.fromRGB(50, 200, 180), SliderKnob = Color3.fromRGB(220, 245, 245),
-        Danger = Color3.fromRGB(240, 72, 72), Success = Color3.fromRGB(60, 210, 140), Warning = Color3.fromRGB(240, 190, 60), Info = Color3.fromRGB(50, 200, 180),
-        White = Color3.fromRGB(255, 255, 255), Black = Color3.fromRGB(0, 0, 0), Transparent = Color3.fromRGB(0, 0, 0),
-        TitleLeft = Color3.fromRGB(10, 22, 38), TitleRight = Color3.fromRGB(12, 28, 50),
-    },
-    Rose = {
-        Background = Color3.fromRGB(18, 10, 16), Panel = Color3.fromRGB(28, 14, 24), PanelAlt = Color3.fromRGB(36, 18, 32), PanelDeep = Color3.fromRGB(22, 12, 20),
-        Element = Color3.fromRGB(44, 22, 40), ElementHov = Color3.fromRGB(58, 28, 52), ElementAct = Color3.fromRGB(70, 34, 62),
-        Accent = Color3.fromRGB(255, 110, 160), AccentDim = Color3.fromRGB(150, 60, 100), AccentGlow = Color3.fromRGB(255, 150, 190),
-        Violet = Color3.fromRGB(200, 80, 230), VioletDim = Color3.fromRGB(110, 44, 130), Gold = Color3.fromRGB(255, 200, 80),
-        Text = Color3.fromRGB(240, 220, 230), SubText = Color3.fromRGB(160, 110, 140), MutedText = Color3.fromRGB(90, 55, 80),
-        Border = Color3.fromRGB(68, 30, 58), BorderBright = Color3.fromRGB(100, 48, 86), ToggleOff = Color3.fromRGB(58, 26, 50), ToggleOn = Color3.fromRGB(255, 110, 160),
-        SliderTrack = Color3.fromRGB(44, 22, 40), SliderFill = Color3.fromRGB(255, 110, 160), SliderKnob = Color3.fromRGB(255, 235, 245),
-        Danger = Color3.fromRGB(255, 70, 70), Success = Color3.fromRGB(80, 220, 130), Warning = Color3.fromRGB(255, 200, 80), Info = Color3.fromRGB(255, 110, 160),
-        White = Color3.fromRGB(255, 255, 255), Black = Color3.fromRGB(0, 0, 0), Transparent = Color3.fromRGB(0, 0, 0),
-        TitleLeft = Color3.fromRGB(28, 14, 26), TitleRight = Color3.fromRGB(40, 16, 36),
-    },
-    Raycast = {
-        Background = Color3.fromRGB(15, 15, 20), Panel = Color3.fromRGB(24, 25, 34), PanelAlt = Color3.fromRGB(31, 33, 48), PanelDeep = Color3.fromRGB(22, 24, 37),
-        Element = Color3.fromRGB(20, 22, 36), ElementHov = Color3.fromRGB(32, 35, 56), ElementAct = Color3.fromRGB(42, 45, 65),
-        Accent = Color3.fromRGB(255, 46, 99), AccentDim = Color3.fromRGB(224, 38, 88), AccentGlow = Color3.fromRGB(0, 229, 168),
-        Violet = Color3.fromRGB(108, 99, 255), VioletDim = Color3.fromRGB(90, 82, 224), Gold = Color3.fromRGB(255, 176, 32),
-        Text = Color3.fromRGB(245, 247, 255), SubText = Color3.fromRGB(184, 190, 214), MutedText = Color3.fromRGB(122, 128, 153),
-        Border = Color3.fromRGB(42, 45, 61), BorderBright = Color3.fromRGB(47, 51, 74), ToggleOff = Color3.fromRGB(42, 45, 61), ToggleOn = Color3.fromRGB(255, 46, 99),
-        SliderTrack = Color3.fromRGB(35, 37, 54), SliderFill = Color3.fromRGB(255, 46, 99), SliderKnob = Color3.fromRGB(245, 247, 255),
-        Danger = Color3.fromRGB(255, 59, 59), Success = Color3.fromRGB(0, 230, 118), Warning = Color3.fromRGB(255, 176, 32), Info = Color3.fromRGB(108, 99, 255),
-        White = Color3.fromRGB(255, 255, 255), Black = Color3.fromRGB(0, 0, 0), Transparent = Color3.fromRGB(0, 0, 0),
-        TitleLeft = Color3.fromRGB(22, 24, 37), TitleRight = Color3.fromRGB(31, 33, 48),
-    },
-    Carbon = {
-        Background = Color3.fromRGB(10, 10, 10), Panel = Color3.fromRGB(18, 18, 18), PanelAlt = Color3.fromRGB(26, 26, 26), PanelDeep = Color3.fromRGB(13, 13, 13),
-        Element = Color3.fromRGB(30, 30, 30), ElementHov = Color3.fromRGB(42, 42, 42), ElementAct = Color3.fromRGB(55, 55, 55),
-        Accent = Color3.fromRGB(228, 228, 228), AccentDim = Color3.fromRGB(165, 165, 165), AccentGlow = Color3.fromRGB(255, 255, 255),
-        Violet = Color3.fromRGB(140, 140, 255), VioletDim = Color3.fromRGB(90, 90, 200), Gold = Color3.fromRGB(255, 198, 60),
-        Text = Color3.fromRGB(235, 235, 235), SubText = Color3.fromRGB(155, 155, 155), MutedText = Color3.fromRGB(88, 88, 88),
-        Border = Color3.fromRGB(44, 44, 44), BorderBright = Color3.fromRGB(62, 62, 62), ToggleOff = Color3.fromRGB(44, 44, 44), ToggleOn = Color3.fromRGB(228, 228, 228),
-        SliderTrack = Color3.fromRGB(26, 26, 26), SliderFill = Color3.fromRGB(228, 228, 228), SliderKnob = Color3.fromRGB(16, 16, 16),
-        Danger = Color3.fromRGB(255, 65, 65), Success = Color3.fromRGB(60, 220, 110), Warning = Color3.fromRGB(255, 185, 35), Info = Color3.fromRGB(100, 185, 255),
-        White = Color3.fromRGB(255, 255, 255), Black = Color3.fromRGB(0, 0, 0), Transparent = Color3.fromRGB(0, 0, 0),
-        TitleLeft = Color3.fromRGB(16, 16, 16), TitleRight = Color3.fromRGB(26, 26, 26),
-    },
-    Midnight = {
-        Background = Color3.fromRGB(4, 8, 22), Panel = Color3.fromRGB(8, 14, 34), PanelAlt = Color3.fromRGB(12, 20, 46), PanelDeep = Color3.fromRGB(6, 10, 26),
-        Element = Color3.fromRGB(14, 24, 54), ElementHov = Color3.fromRGB(20, 34, 70), ElementAct = Color3.fromRGB(28, 46, 90),
-        Accent = Color3.fromRGB(115, 155, 255), AccentDim = Color3.fromRGB(75, 105, 200), AccentGlow = Color3.fromRGB(160, 195, 255),
-        Violet = Color3.fromRGB(165, 105, 255), VioletDim = Color3.fromRGB(110, 68, 195), Gold = Color3.fromRGB(255, 212, 80),
-        Text = Color3.fromRGB(218, 228, 255), SubText = Color3.fromRGB(125, 145, 200), MutedText = Color3.fromRGB(65, 82, 130),
-        Border = Color3.fromRGB(22, 36, 82), BorderBright = Color3.fromRGB(34, 52, 112), ToggleOff = Color3.fromRGB(18, 30, 68), ToggleOn = Color3.fromRGB(115, 155, 255),
-        SliderTrack = Color3.fromRGB(12, 22, 52), SliderFill = Color3.fromRGB(115, 155, 255), SliderKnob = Color3.fromRGB(218, 228, 255),
-        Danger = Color3.fromRGB(255, 72, 92), Success = Color3.fromRGB(58, 220, 140), Warning = Color3.fromRGB(255, 192, 52), Info = Color3.fromRGB(100, 182, 255),
-        White = Color3.fromRGB(255, 255, 255), Black = Color3.fromRGB(0, 0, 0), Transparent = Color3.fromRGB(0, 0, 0),
-        TitleLeft = Color3.fromRGB(6, 12, 30), TitleRight = Color3.fromRGB(14, 24, 54),
-    },
-    Emerald = {
-        Background = Color3.fromRGB(6, 14, 10), Panel = Color3.fromRGB(10, 22, 16), PanelAlt = Color3.fromRGB(14, 30, 22), PanelDeep = Color3.fromRGB(8, 16, 12),
-        Element = Color3.fromRGB(16, 36, 26), ElementHov = Color3.fromRGB(22, 48, 34), ElementAct = Color3.fromRGB(30, 62, 44),
-        Accent = Color3.fromRGB(48, 218, 138), AccentDim = Color3.fromRGB(30, 152, 92), AccentGlow = Color3.fromRGB(88, 255, 168),
-        Violet = Color3.fromRGB(96, 178, 255), VioletDim = Color3.fromRGB(58, 118, 200), Gold = Color3.fromRGB(255, 210, 58),
-        Text = Color3.fromRGB(212, 240, 222), SubText = Color3.fromRGB(118, 162, 138), MutedText = Color3.fromRGB(62, 98, 78),
-        Border = Color3.fromRGB(24, 54, 38), BorderBright = Color3.fromRGB(36, 76, 54), ToggleOff = Color3.fromRGB(20, 46, 32), ToggleOn = Color3.fromRGB(48, 218, 138),
-        SliderTrack = Color3.fromRGB(12, 28, 20), SliderFill = Color3.fromRGB(48, 218, 138), SliderKnob = Color3.fromRGB(212, 240, 222),
-        Danger = Color3.fromRGB(255, 72, 80), Success = Color3.fromRGB(48, 218, 138), Warning = Color3.fromRGB(255, 196, 50), Info = Color3.fromRGB(58, 182, 255),
-        White = Color3.fromRGB(255, 255, 255), Black = Color3.fromRGB(0, 0, 0), Transparent = Color3.fromRGB(0, 0, 0),
-        TitleLeft = Color3.fromRGB(8, 18, 13), TitleRight = Color3.fromRGB(16, 34, 24),
-    }
+Themes.Ocean = {
+    WindowBg      = Color3.fromRGB(6,   14,  22),   WindowBgAlpha  = 0.84,
+    Accent        = Color3.fromRGB(50,  200, 180),  AccentAlpha    = 0.35,
+    AccentStrong  = Color3.fromRGB(90,  230, 210),
+    TextPrimary   = Color3.fromRGB(210, 230, 235),
+    TextSecondary = Color3.fromRGB(100, 140, 155),
+    TextMuted     = Color3.fromRGB(55,  80,  95),
 }
 
--- ── ThemeManager Object ───────────────────────────────────────
-local ThemeManager = { _themeFolder = "AxiUI_Themes" }
+Themes.Rose = {
+    WindowBg      = Color3.fromRGB(22,  10,  18),   WindowBgAlpha  = 0.84,
+    Accent        = Color3.fromRGB(255, 110, 160),  AccentAlpha    = 0.38,
+    AccentStrong  = Color3.fromRGB(255, 150, 190),
+    TextPrimary   = Color3.fromRGB(240, 220, 230),
+    TextSecondary = Color3.fromRGB(160, 110, 140),
+    TextMuted     = Color3.fromRGB(90,  55,  80),
+}
 
-function ThemeManager:Init()
-    if typeof(makefolder) == "function" and not isfolder(self._themeFolder) then makefolder(self._themeFolder) end
+Themes.Midnight = {
+    WindowBg      = Color3.fromRGB(4,   8,   22),   WindowBgAlpha  = 0.86,
+    Accent        = Color3.fromRGB(115, 155, 255),  AccentAlpha    = 0.38,
+    AccentStrong  = Color3.fromRGB(160, 195, 255),
+    TextPrimary   = Color3.fromRGB(218, 228, 255),
+    TextSecondary = Color3.fromRGB(125, 145, 200),
+    TextMuted     = Color3.fromRGB(65,  82,  130),
+}
+
+Themes.Emerald = {
+    WindowBg      = Color3.fromRGB(6,   14,  10),   WindowBgAlpha  = 0.84,
+    Accent        = Color3.fromRGB(48,  218, 138),  AccentAlpha    = 0.35,
+    AccentStrong  = Color3.fromRGB(88,  255, 168),
+    TextPrimary   = Color3.fromRGB(212, 240, 222),
+    TextSecondary = Color3.fromRGB(118, 162, 138),
+    TextMuted     = Color3.fromRGB(62,  98,  78),
+}
+
+Themes.Neon = {
+    WindowBg      = Color3.fromRGB(8,   8,   14),   WindowBgAlpha  = 0.84,
+    Accent        = Color3.fromRGB(180, 80,  255),  AccentAlpha    = 0.38,
+    AccentStrong  = Color3.fromRGB(210, 120, 255),
+    TextPrimary   = Color3.fromRGB(230, 220, 255),
+    TextSecondary = Color3.fromRGB(140, 120, 190),
+    TextMuted     = Color3.fromRGB(75,  60,  110),
+}
+
+Themes.Carbon = {
+    WindowBg      = Color3.fromRGB(12,  12,  12),   WindowBgAlpha  = 0.88,
+    Accent        = Color3.fromRGB(228, 228, 228),  AccentAlpha    = 0.32,
+    AccentStrong  = Color3.fromRGB(248, 248, 250),  -- near-white; pure white collides with translucent overlay repaint
+    TextPrimary   = Color3.fromRGB(235, 235, 235),
+    TextSecondary = Color3.fromRGB(155, 155, 155),
+    TextMuted     = Color3.fromRGB(88,  88,  88),
+}
+
+Themes.Sunset = {
+    WindowBg      = Color3.fromRGB(22,  10,  8),    WindowBgAlpha  = 0.84,
+    Accent        = Color3.fromRGB(255, 130, 60),   AccentAlpha    = 0.38,
+    AccentStrong  = Color3.fromRGB(255, 175, 100),
+    TextPrimary   = Color3.fromRGB(255, 235, 220),
+    TextSecondary = Color3.fromRGB(180, 130, 110),
+    TextMuted     = Color3.fromRGB(100, 65,  55),
+}
+
+-- ═══════════════════════════════════════════════════════════════
+--  REPAINT  (scans descendant tree and swaps matched Color3s)
+-- ═══════════════════════════════════════════════════════════════
+local function c2s(c)
+    return math.floor(c.R*255+.5)..","..math.floor(c.G*255+.5)..","..math.floor(c.B*255+.5)
 end
 
-function ThemeManager:SaveTheme(name, themeTable)
-    self:Init()
-    Utils.SafeWrite(self._themeFolder .. "/" .. name .. ".json", Utils.SafeJSON(themeTable))
-end
-
-function ThemeManager:LoadTheme(name)
-    self:Init()
-    local data = Utils.SafeRead(self._themeFolder .. "/" .. name .. ".json")
-    return data and Utils.SafeParse(data) or nil
-end
-
-function ThemeManager:DeleteTheme(name)
-    self:Init()
-    Utils.SafeDelete(self._themeFolder .. "/" .. name .. ".json")
-end
-
-function ThemeManager:ListThemes()
-    self:Init()
-    local files = Utils.SafeList(self._themeFolder)
-    local out = {}
-    for _, f in ipairs(files) do local n = f:match("([^/\\]+)%.json$") if n then table.insert(out, n) end end
-    return out
-end
-
-function ThemeManager:GetNames() return Library:GetThemeNames() end
-function ThemeManager:Apply(name) Library:SetTheme(name) end
-
--- ── Integration functions ─────────────────────────────────────
-local function repaintTree(root, oldMap, activeTheme)
+local function repaintTree(root, oldMap, newTheme)
     local props = { "BackgroundColor3", "TextColor3", "ImageColor3" }
-    local function c2s(c) return math.floor(c.R*255+0.5)..","..math.floor(c.G*255+0.5)..","..math.floor(c.B*255+0.5) end
-    
     local stack = { root }
     while #stack > 0 do
         local inst = table.remove(stack)
         pcall(function()
-            for _, prop in ipairs(props) do
-                local ok, v = pcall(function() return inst[prop] end)
+            for _, p in ipairs(props) do
+                local ok, v = pcall(function() return inst[p] end)
                 if ok and typeof(v) == "Color3" then
                     local key = oldMap[c2s(v)]
-                    if key then pcall(function() inst[prop] = activeTheme[key] end) end
+                    if key and newTheme[key] then
+                        pcall(function() inst[p] = newTheme[key] end)
+                    end
                 end
             end
             local sk = inst:FindFirstChildOfClass("UIStroke")
             if sk then
                 local ok, v = pcall(function() return sk.Color end)
-                if ok then local key = oldMap[c2s(v)] if key then sk.Color = activeTheme[key] end end
-            end
-            local gd = inst:FindFirstChildOfClass("UIGradient")
-            if gd then
-                pcall(function()
-                    local kps = gd.Color.Keypoints
-                    local changed, newKps = false, {}
-                    for i, kp in ipairs(kps) do
-                        local key = oldMap[c2s(kp.Value)]
-                        newKps[i] = ColorSequenceKeypoint.new(kp.Time, key and activeTheme[key] or kp.Value)
-                        if key then changed = true end
+                if ok and typeof(v) == "Color3" then
+                    local key = oldMap[c2s(v)]
+                    if key and newTheme[key] then
+                        pcall(function() sk.Color = newTheme[key] end)
                     end
-                    if changed then gd.Color = ColorSequence.new(newKps) end
-                end)
+                end
             end
         end)
-        for _, child in ipairs(inst:GetChildren()) do table.insert(stack, child) end
+        for _, child in ipairs(inst:GetChildren()) do
+            stack[#stack+1] = child
+        end
     end
 end
 
--- ── Library Methods ───────────────────────────────────────────
-function Library:SetTheme(name)
-    local t = Themes[name]
-    if not t then return end
-    if self._themeSwitching then return end
-    self._themeSwitching = true
-
-    local function c2s(c) return math.floor(c.R*255+0.5)..","..math.floor(c.G*255+0.5)..","..math.floor(c.B*255+0.5) end
-    local oldMap = {}
-    for k, v in pairs(Library.Theme) do oldMap[c2s(v)] = k end
-
-    -- Update the active theme
-    for k, v in pairs(t) do Library.Theme[k] = v end
-
-    for _, w in ipairs(Library._windows or {}) do pcall(function() repaintTree(w._sg, oldMap, Library.Theme) end) end
-    if Library._wmSG then pcall(function() repaintTree(Library._wmSG, oldMap, Library.Theme) end) end
-    if Library._kbSG then pcall(function() repaintTree(Library._kbSG, oldMap, Library.Theme) end) end
-    if Library._notifSG then pcall(function() repaintTree(Library._notifSG, oldMap, Library.Theme) end) end
-
-    if self._onThemeChanged then for _, fn in ipairs(self._onThemeChanged) do pcall(fn, name) end end
-    self._themeSwitching = false
+local function scanAndRepaint(oldMap, newTheme)
+    -- Repaint open windows
+    for _, win in ipairs(AxiUI.Windows) do
+        pcall(repaintTree, win.Gui, oldMap, newTheme)
+    end
+    -- Repaint floating ScreenGuis (Notifs, Watermark, etc.)
+    local function tryParent(p)
+        if not p then return end
+        for _, c in ipairs(p:GetChildren()) do
+            if c.Name:sub(1, 5) == "AxiUI" then
+                pcall(repaintTree, c, oldMap, newTheme)
+            end
+        end
+    end
+    pcall(tryParent, typeof(gethui) == "function" and gethui() or nil)
+    pcall(tryParent, game:GetService("CoreGui"))
+    pcall(function()
+        local lp = game:GetService("Players").LocalPlayer
+        if lp then tryParent(lp.PlayerGui) end
+    end)
 end
 
-function Library:OnThemeChanged(fn) self._onThemeChanged = self._onThemeChanged or {} table.insert(self._onThemeChanged, fn) end
-function Library:GetThemeNames() local n = {} for k in pairs(Themes) do table.insert(n, k) end return n end
-function Library:GetTheme() return self._theme or Theme end
-function Library:GetThemeValue(key) return (self._theme or Theme)[key] end
+-- ═══════════════════════════════════════════════════════════════
+--  THEME MANAGER
+-- ═══════════════════════════════════════════════════════════════
+local ThemeManager         = {}
+ThemeManager._themes       = Themes
+ThemeManager._current      = "Default"
+ThemeManager._listeners    = {}
+ThemeManager._rainbowConn  = nil
 
--- ── UI Builder ────────────────────────────────────────────────
+function ThemeManager:GetNames()
+    local n = {}
+    for k in pairs(self._themes) do n[#n+1] = k end
+    table.sort(n)
+    return n
+end
+
+function ThemeManager:AddTheme(name, themeTable)
+    self._themes[name] = themeTable
+end
+
+function ThemeManager:GetCurrent()
+    return self._current
+end
+
+function ThemeManager:Apply(name)
+    local t = self._themes[name]
+    if not t then return end
+
+    -- Build reverse map from current COLOR_KEYS in AxiUI.Theme
+    local oldMap = {}
+    for _, k in ipairs(COLOR_KEYS) do
+        local v = T[k]
+        if typeof(v) == "Color3" then oldMap[c2s(v)] = k end
+    end
+
+    -- Mutate AxiUI.Theme in-place (T is a reference so Framework picks it up automatically)
+    for _, k in ipairs(COLOR_KEYS) do
+        if t[k] then T[k] = t[k] end
+    end
+    for _, k in ipairs(ALPHA_KEYS) do
+        if t[k] then T[k] = t[k] end
+    end
+
+    -- Repaint existing GUI
+    scanAndRepaint(oldMap, T)
+
+    self._current = name
+    for _, fn in ipairs(self._listeners) do pcall(fn, name) end
+end
+
+function ThemeManager:OnChanged(fn)
+    table.insert(self._listeners, fn)
+end
+
+-- ─── RAINBOW ACCENT ─────────────────────────────────────────────
+function ThemeManager:SetRainbow(enabled, speed)
+    if self._rainbowConn then
+        self._rainbowConn:Disconnect()
+        self._rainbowConn = nil
+    end
+    if not enabled then return end
+    speed = speed or 0.4
+    local clock = 0
+    self._rainbowConn = RunSvc.Heartbeat:Connect(function(dt)
+        clock = (clock + dt * speed) % 1
+        T.Accent       = Color3.fromHSV(clock, 0.78, 1)
+        T.AccentStrong = Color3.fromHSV(clock, 0.55, 1)
+    end)
+end
+
+-- ─── CUSTOM THEME FILE I/O ──────────────────────────────────────
+function ThemeManager:SaveCustom(name)
+    local data = {}
+    for _, k in ipairs(COLOR_KEYS) do
+        local v = T[k]
+        if typeof(v) == "Color3" then data[k] = { r = v.R, g = v.G, b = v.B } end
+    end
+    for _, k in ipairs(ALPHA_KEYS) do
+        if T[k] then data[k] = T[k] end
+    end
+    pcall(function()
+        if typeof(makefolder) == "function" then
+            if not isfolder("AxiUI_Themes") then makefolder("AxiUI_Themes") end
+        end
+        writefile("AxiUI_Themes/" .. name .. ".json", HttpSvc:JSONEncode(data))
+    end)
+end
+
+function ThemeManager:LoadCustom(name)
+    local path = "AxiUI_Themes/" .. name .. ".json"
+    if typeof(isfile) == "function" and not isfile(path) then return false end
+    local ok, raw = pcall(readfile, path)
+    if not ok then return false end
+    local ok2, data = pcall(function() return HttpSvc:JSONDecode(raw) end)
+    if not ok2 then return false end
+    local t = {}
+    for k, v in pairs(data) do
+        if type(v) == "table" and v.r ~= nil then
+            t[k] = Color3.new(v.r, v.g, v.b)
+        elseif type(v) == "number" then
+            t[k] = v
+        end
+    end
+    local n = "_custom_" .. name
+    self._themes[n] = t
+    self:Apply(n)
+    return true
+end
+
+-- ─── UI BUILDERS ────────────────────────────────────────────────
 function ThemeManager:BuildUI(gb)
-    if not gb then return end
-    local themeDD = gb:AddDropdown("TM_ThemePicker", {
-        Text     = "Active Theme",
-        Values   = self:GetNames(),
-        Default  = self._current,
+    gb:AddDropdown("TM_Theme", {
+        Text    = "Theme",
+        Items   = self:GetNames(),
+        Default = self._current,
         Callback = function(v) self:Apply(v) end,
     })
-    gb:AddButton({ Text = "Refresh Themes", Callback = function() themeDD:SetValues(self:GetNames()) end })
-    gb:AddButton({ Text = "Save Theme", Callback = function() self:SaveTheme("custom", Library:GetTheme()) end })
+    gb:AddToggle("TM_Rainbow", {
+        Text    = "Rainbow Accent",
+        Default = false,
+        Callback = function(on) self:SetRainbow(on) end,
+    })
+    gb:AddButton({ Text = "Save as Custom", Callback = function()
+        self:SaveCustom("custom")
+        AxiUI:Notify("Theme", "Current theme saved as 'custom'", 3)
+    end })
+    gb:AddButton({ Text = "Load Custom", Callback = function()
+        local ok = self:LoadCustom("custom")
+        AxiUI:Notify("Theme", ok and "Loaded 'custom' theme" or "No custom theme found", 3)
+    end })
 end
 
--- Attach to Library
-Library.ThemeManager = ThemeManager
-Library.Themes       = Themes
+function ThemeManager:ApplyToTab(tab)
+    if not tab then return end
+    self:BuildUI(tab:AddGroupbox("Theme"))
+end
 
--- Initialize Default
-if not next(Library.Theme) then Library:SetTheme("Default") end
+function ThemeManager:ApplyToGroupbox(gb)
+    if gb then self:BuildUI(gb) end
+end
 
+-- ─── ATTACH ─────────────────────────────────────────────────────
+AxiUI.ThemeManager = ThemeManager
 return ThemeManager
