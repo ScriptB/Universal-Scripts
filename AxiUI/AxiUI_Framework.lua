@@ -197,8 +197,9 @@ local function BuildColourPopup(anchor, initColor, onChange, onClose)
     local h, s, v = initColor:ToHSV()
     local W, SVH, HUEH = 188, 132, 12
 
+    local obj  -- forward-declared so overlay click can call obj:Destroy()
     local ov = MakeOverlay(function()
-        onClose()
+        if obj then obj:Destroy() end
     end)
 
     local ap = anchor.AbsolutePosition
@@ -389,10 +390,14 @@ local function BuildColourPopup(anchor, initColor, onChange, onClose)
 
     refreshUI()
 
-    local obj = {}
+    obj = {}
+    local _destroyed = false
     function obj:Destroy()
+        if _destroyed then return end
+        _destroyed = true
         mc:Disconnect(); me:Disconnect()
-        popup:Destroy(); ov:Destroy()
+        pcall(function() popup:Destroy() end)
+        pcall(function() ov:Destroy() end)
         onClose()
     end
     function obj:SetColor(c) h,s,v = c:ToHSV(); refreshUI() end
@@ -463,10 +468,11 @@ function AxiUI:Notify(title, message, duration)
 
     task.delay(duration, function()
         if not card.Parent then return end
-        Tween(card,   { BackgroundTransparency = 1 }, 0.3)
-        Tween(stroke, { Transparency = 1 }, 0.3)
-        Tween(titleL, { TextTransparency = 1 }, 0.3)
-        Tween(msgL,   { TextTransparency = 1 }, 0.3)
+        Tween(card,      { BackgroundTransparency = 1 }, 0.3)
+        Tween(stroke,    { Transparency = 1 }, 0.3)
+        Tween(accentBar, { BackgroundTransparency = 1 }, 0.3)
+        Tween(titleL,    { TextTransparency = 1 }, 0.3)
+        Tween(msgL,      { TextTransparency = 1 }, 0.3)
         task.wait(0.32)
         pcall(function() card:Destroy() end)
     end)
@@ -497,8 +503,11 @@ function AxiUI:CreateWindow(options)
     local frame = Instance.new("Frame")
     frame.Name                   = "AxiWindow"
     frame.Size                   = UDim2.fromOffset(w, h)
-    frame.Position               = options.Position or UDim2.fromScale(0.5, 0.5)
-    frame.AnchorPoint            = Vector2.new(0.5, 0.5)
+    frame.AnchorPoint            = Vector2.new(0, 0)
+    local _vp = workspace.CurrentCamera.ViewportSize
+    frame.Position               = options.Position or UDim2.fromOffset(
+        math.floor((_vp.X - w) * 0.5), math.floor((_vp.Y - h) * 0.5)
+    )
     frame.BackgroundColor3       = T.WindowBg
     frame.BackgroundTransparency = 1 - T.WindowBgAlpha
     frame.BorderSizePixel        = 0
@@ -627,12 +636,8 @@ function AxiUI:_MakeDraggable()
     end))
     TrackConn(UIS.InputChanged:Connect(function(inp)
         if not dragging or inp.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-        local d  = inp.Position - dragStart
-        local vp = workspace.CurrentCamera.ViewportSize
-        local fw, fh = frame.AbsoluteSize.X, frame.AbsoluteSize.Y
-        local nx = math.clamp(startPos.X + d.X, 0, vp.X - fw)
-        local ny = math.clamp(startPos.Y + d.Y, 0, vp.Y - fh)
-        frame.Position = UDim2.fromOffset(nx, ny)
+        local d = inp.Position - dragStart
+        frame.Position = UDim2.fromOffset(startPos.X + d.X, startPos.Y + d.Y)
     end))
     TrackConn(UIS.InputEnded:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
